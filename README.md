@@ -40,7 +40,7 @@ flowchart LR
 
 ## Architecture
 
-```mermaid
+%%{init: {'themeVariables': { 'lineColor': '#0f172a'}}}%%
 flowchart TB
     subgraph Client["Frontend — Next.js"]
         P["Patient Portal"]
@@ -50,20 +50,20 @@ flowchart TB
 
     subgraph API["Backend — FastAPI on AWS Lambda"]
         GW["API Gateway"]
-        Auth["Cognito Auth\n+ RBAC Middleware"]
-        Routes["22+ REST Endpoints\n6 Route Modules"]
-        Agent["AgentLoop\nOrchestrator"]
+        Auth["Cognito Auth<br/>+ RBAC Middleware"]
+        Routes["22+ REST Endpoints<br/>6 Route Modules"]
+        Agent["AgentLoop<br/>Orchestrator"]
     end
 
     subgraph Data["Data Layer"]
-        RDS["Amazon RDS\nPostgreSQL\n3 Schemas"]
-        DDB["DynamoDB\nSession State"]
-        SQS["Amazon SQS\nAI Task Queue"]
-        S3["Amazon S3\nExports + Audits"]
+        RDS["Amazon RDS<br/>PostgreSQL<br/>3 Schemas"]
+        DDB["DynamoDB<br/>Session State"]
+        SQS["Amazon SQS<br/>AI Task Queue"]
+        S3["Amazon S3<br/>Exports + Audits"]
     end
 
     subgraph AI["AI Layer"]
-        Bedrock["Amazon Bedrock\nClaude Sonnet 4.5"]
+        Bedrock["Amazon Bedrock<br/>Claude Sonnet 4.5"]
         PII["PII Stripper"]
         Filter["Output Filter"]
     end
@@ -78,12 +78,14 @@ flowchart TB
     Routes --> DDB
     Agent --> S3
 
-    style AI fill:#0F172A,stroke:#334155,color:#94a3b8
-    style Client fill:#EFF6FF,stroke:#2563EB,color:#0f172a
-    style API fill:#F8FAFC,stroke:#E2E8F0,color:#0f172a
-    style Data fill:#F0FDF4,stroke:#10B981,color:#0f172a
-```
+    %% Setting dark flow lines for visibility across all renderers
+    linkStyle default stroke:#0f172a,stroke-width:2px
+    linkStyle 0 stroke:#0f172a,stroke-width:2px
 
+    style Client fill:#EFF6FF,stroke:#2563EB,color:#0f172a,stroke-width:2px
+    style API fill:#F8FAFC,stroke:#94A3B8,color:#0f172a,stroke-width:2px
+    style Data fill:#F0FDF4,stroke:#10B981,color:#0f172a,stroke-width:2px
+    style AI fill:#F5F3FF,stroke:#8B5CF6,color:#0f172a,stroke-width:2px
 <br/>
 
 ## Tech Stack
