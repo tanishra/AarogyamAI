@@ -1,5 +1,21 @@
+# Secrets
+.env
+.env.*
+alembic.ini
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+
+# Misc
+*.log
 .DS_Store
-venv
 DOCS
 Images
 Aarogyam.pdf
