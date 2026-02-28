@@ -22,11 +22,11 @@ A typical clinic visit involves 4–6 disconnected steps across different tools 
 
 ```mermaid
 flowchart LR
-    A["🧑 Patient\nConsent + Intake\nQuestionnaire"] -->|"Encrypted\nSession"| B["👩‍⚕️ Nurse\nVitals Capture\n+ Observation"]
-    B -->|"SQS\nJob Fire"| C["⚡ AgentLoop\nAI Orchestrator"]
-    C -->|"Claude on\nBedrock"| D["🤖 AI Synthesis\nDifferential\nDiagnosis"]
-    D -->|"Review\nInterface"| E["👨‍⚕️ Doctor\nAccept / Modify\n+ Commit"]
-    E -->|"Audit\nChain"| F["📋 Signed\nMedical Record\n+ S3 Export"]
+    A["🧑 Patient<br/>Consent + Intake<br/>Questionnaire"] -->|"Encrypted<br/>Session"| B["👩‍⚕️ Nurse<br/>Vitals Capture<br/>+ Observation"]
+    B -->|"SQS<br/>Job Fire"| C["⚡ AgentLoop<br/>AI Orchestrator"]
+    C -->|"Claude on<br/>Bedrock"| D["🤖 AI Synthesis<br/>Differential<br/>Diagnosis"]
+    D -->|"Review<br/>Interface"| E["👨‍⚕️ Doctor<br/>Accept / Modify<br/>+ Commit"]
+    E -->|"Audit<br/>Chain"| F["📋 Signed<br/>Medical Record<br/>+ S3 Export"]
 
     style A fill:#EFF6FF,stroke:#2563EB,color:#1e40af
     style B fill:#EEF2FF,stroke:#4F46E5,color:#3730a3
@@ -40,7 +40,7 @@ flowchart LR
 
 ## Architecture
 
-%%{init: {'themeVariables': { 'lineColor': '#0f172a'}}}%%
+```mermaid
 flowchart TB
     subgraph Client["Frontend — Next.js"]
         P["Patient Portal"]
@@ -78,15 +78,13 @@ flowchart TB
     Routes --> DDB
     Agent --> S3
 
-    %% Setting dark flow lines for visibility across all renderers
     linkStyle default stroke:#0f172a,stroke-width:2px
-    linkStyle 0 stroke:#0f172a,stroke-width:2px
 
     style Client fill:#EFF6FF,stroke:#2563EB,color:#0f172a,stroke-width:2px
     style API fill:#F8FAFC,stroke:#94A3B8,color:#0f172a,stroke-width:2px
     style Data fill:#F0FDF4,stroke:#10B981,color:#0f172a,stroke-width:2px
     style AI fill:#F5F3FF,stroke:#8B5CF6,color:#0f172a,stroke-width:2px
-<br/>
+```
 
 ## Tech Stack
 
