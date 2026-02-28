@@ -63,7 +63,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-nv = [
+env = [
     "DATABASE_URL=postgresql+asyncpg://clinical_user:clinical_pass@localhost:5432/clinical_ai_test",
     "SQS_AI_TASK_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/123/test",
     "DEV_SKIP_COGNITO_VERIFY=true",

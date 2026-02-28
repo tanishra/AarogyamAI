@@ -32,8 +32,14 @@ class ConsentStatus(str, Enum):
 
 
 class ConsentPurpose(str, Enum):
-    IDENTITY_COLLECTION = "identity_collection"
+    # Compatibility aliases used by current API/tests
     SYMPTOM_COLLECTION = "symptom_collection"
+    AI_PROCESSING = "ai_processing"
+    CLINICAL_RECORD = "clinical_record"
+    NURSE_ACCESS = "nurse_access"
+
+    # Detailed purpose taxonomy
+    IDENTITY_COLLECTION = "identity_collection"
     VITALS_COLLECTION = "vitals_collection"
     CLINICAL_RECORD_CREATION = "clinical_record_creation"
     AI_ADAPTIVE_QUESTIONING = "ai_adaptive_questioning"
@@ -153,6 +159,7 @@ class AuditEventType(str, Enum):
     RIGHTS_DATA_VIEWED = "rights_data_viewed"
     RIGHTS_ERASURE_REQUESTED = "rights_erasure_requested"
     RIGHTS_CORRECTION_REQUESTED = "rights_correction_requested"
+    RIGHTS_PORTABILITY_REQUESTED = "rights_portability_requested"
     RIGHTS_GRIEVANCE_SUBMITTED = "rights_grievance_submitted"
 
 

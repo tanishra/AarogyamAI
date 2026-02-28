@@ -92,3 +92,41 @@ class ErasureResponse(BaseModel):
     submitted_at: str
     sla_days: int
     note: str
+
+class PortabilityRequest(BaseModel):
+    format: str = Field(default="json", max_length=10)
+
+
+class PortabilityResponse(BaseModel):
+    request_id: str
+    submitted_at: str
+    estimated_ready_hours: int
+    delivery_method: str
+    format: str
+
+
+class CorrectionRequest(BaseModel):
+    field_to_correct: str = Field(min_length=1, max_length=100)
+    correction_description: str = Field(min_length=1, max_length=500)
+
+
+class CorrectionResponse(BaseModel):
+    request_id: str
+    submitted_at: str
+    sla_days: int
+
+class ConsentEventSummary(BaseModel):
+    event_type: str
+    tier: int
+    timestamp: str
+    clinic_id: str
+    patient_ref: str | None = None
+
+
+class GrievanceItem(BaseModel):
+    grievance_id: str
+    subject: str
+    status: str
+    submitted_at: str
+    sla_deadline: str
+    response: str | None = None

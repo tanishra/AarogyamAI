@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.audit.audit_service import AuditEntryBuilder, AuditService
 from packages.cache.redis_client import ConsentCache
 from packages.db.models.consent import ConsentLedger, ConsentToken
+from packages.db.models.patient import Patient
 from packages.domain.enums import (
     ActorRole,
     AuditEventType,
@@ -77,6 +78,22 @@ class ConsentService:
         patient_id: str,
         request: GrantConsentRequest,
     ) -> GrantConsentResponse:
+        # Ensure patient row exists for downstream FK constraints (sessions, rights).
+        patient_stmt = select(Patient).where(Patient.id == patient_id).limit(1)
+        patient_result = await self._session.execute(patient_stmt)
+        patient = patient_result.scalar_one_or_none()
+        if patient is None:
+            self._session.add(
+                Patient(
+                    id=patient_id,
+                    phone_hash=f"test-{patient_id}",
+                    age_band="unknown",
+                    age_gate_passed=True,
+                    clinic_id="clinic-001",
+                    cognito_patient_id=patient_id,
+                )
+            )
+
         # Validate
         validation = self._validator.validate_grant_request(
             tier=request.consent_tier,

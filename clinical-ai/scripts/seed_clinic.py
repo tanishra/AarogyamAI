@@ -9,13 +9,46 @@ import asyncio
 import hashlib
 from datetime import datetime, timezone
 from uuid import uuid4
+import os
+import sys
+from pathlib import Path
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
-import os
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from packages.db.models import Base
+
+
+def _get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return database_url
+
+    class _SeedSettings(BaseSettings):
+        model_config = SettingsConfigDict(
+            env_file=".env",
+            env_file_encoding="utf-8",
+            case_sensitive=False,
+            extra="ignore",
+        )
+        database_url: str | None = None
+
+    settings = _SeedSettings()
+    if settings.database_url:
+        return settings.database_url
+
+    raise RuntimeError(
+        "DATABASE_URL not found. Set it in shell or add DATABASE_URL to .env"
+    )
+
+
+DATABASE_URL = _get_database_url()
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -28,6 +61,13 @@ PATIENT_ID = "patient-demo-001"
 
 
 async def seed():
+    # Ensure schemas/tables exist before inserting seed rows.
+    async with engine.begin() as conn:
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS app"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS consent"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit"))
+        await conn.run_sync(Base.metadata.create_all)
+
     async with SessionLocal() as session:
         async with session.begin():
 

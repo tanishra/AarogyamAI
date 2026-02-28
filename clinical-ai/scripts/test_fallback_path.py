@@ -11,7 +11,13 @@ Usage:
     uv run python scripts/test_fallback_path.py
 """
 import asyncio
+import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from agent_worker.agent.agent_loop import AgentLoop
 from agent_worker.agent.context import ContextObject

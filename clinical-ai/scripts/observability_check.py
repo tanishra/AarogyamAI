@@ -7,7 +7,59 @@ Usage:
 """
 import asyncio
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+
+class _ObsSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    database_url: str | None = None
+    llm_api_key: str = ""
+    dev_skip_cognito_verify: bool = False
+    app_env: str = "development"
+    log_level: str = "INFO"
+    redis_url: str = "redis://localhost:6379/0"
+    sqs_ai_task_queue_url: str | None = None
+    cors_origins: list[str] | str | None = [
+        "https://app.clinicaldomain.in",
+        "https://clinic.clinicaldomain.in",
+    ]
+    cognito_patient_pool_id: str | None = None
+
+
+_SETTINGS = _ObsSettings()
+
+
+def _env(name: str, default=None):
+    value = os.environ.get(name)
+    if value not in (None, ""):
+        return value
+    mapping = {
+        "DATABASE_URL": _SETTINGS.database_url,
+        "LLM_API_KEY": _SETTINGS.llm_api_key,
+        "DEV_SKIP_COGNITO_VERIFY": str(_SETTINGS.dev_skip_cognito_verify).lower(),
+        "APP_ENV": _SETTINGS.app_env,
+        "LOG_LEVEL": _SETTINGS.log_level,
+        "REDIS_URL": _SETTINGS.redis_url,
+        "SQS_AI_TASK_QUEUE_URL": _SETTINGS.sqs_ai_task_queue_url,
+        "CORS_ORIGINS": _SETTINGS.cors_origins,
+        "COGNITO_PATIENT_POOL_ID": _SETTINGS.cognito_patient_pool_id,
+    }
+    fallback = mapping.get(name, default)
+    return fallback if fallback not in (None, "") else default
 
 PASS = "✅"
 FAIL = "❌"
@@ -26,7 +78,10 @@ async def check_db():
         from sqlalchemy.ext.asyncio import create_async_engine
         from sqlalchemy import text
 
-        engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+        database_url = _env("DATABASE_URL")
+        if not database_url:
+            raise RuntimeError("DATABASE_URL is not configured (.env or shell)")
+        engine = create_async_engine(database_url, echo=False)
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT 1"))
             assert result.scalar() == 1
@@ -70,7 +125,7 @@ async def check_redis():
         import redis.asyncio as aioredis
 
         redis = aioredis.from_url(
-            os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+            _env("REDIS_URL", "redis://localhost:6379/0")
         )
         await redis.ping()
         print(f"  {PASS} Redis ping OK")
@@ -99,7 +154,10 @@ async def check_audit_chain():
         from sqlalchemy.orm import sessionmaker
         from packages.audit.audit_service import get_audit_service
 
-        engine = create_async_engine(os.environ["DATABASE_URL"], echo=False)
+        database_url = _env("DATABASE_URL")
+        if not database_url:
+            raise RuntimeError("DATABASE_URL is not configured (.env or shell)")
+        engine = create_async_engine(database_url, echo=False)
         SessionLocal = sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -218,36 +276,37 @@ async def check_output_filter():
 async def check_production_readiness():
     _section("PRODUCTION READINESS CHECKLIST")
 
-    checks = {
-        "DATABASE_URL set": bool(os.environ.get("DATABASE_URL")),
-        "LLM_API_KEY set": bool(os.environ.get("LLM_API_KEY")),
-        "DEV_SKIP_COGNITO_VERIFY is False in prod": (
-            os.environ.get("DEV_SKIP_COGNITO_VERIFY", "false").lower()
-            not in ("true", "1")
+    app_env = str(_env("APP_ENV", "development")).lower()
+    is_prod_like = app_env in {"production", "staging"}
+
+    checks: list[tuple[str, bool, str]] = [
+        ("DATABASE_URL set", bool(_env("DATABASE_URL")), "required"),
+        ("LLM_API_KEY set", bool(_env("LLM_API_KEY")), "required"),
+        (
+            "DEV_SKIP_COGNITO_VERIFY is False in prod",
+            str(_env("DEV_SKIP_COGNITO_VERIFY", "false")).lower() not in ("true", "1"),
+            "required" if is_prod_like else "warning",
         ),
-        "APP_ENV not development": (
-            os.environ.get("APP_ENV", "development") != "development"
-        ),
-        "LOG_LEVEL set": bool(os.environ.get("LOG_LEVEL")),
-        "REDIS_URL set": bool(os.environ.get("REDIS_URL")),
-        "SQS_AI_TASK_QUEUE_URL set": bool(
-            os.environ.get("SQS_AI_TASK_QUEUE_URL")
-        ),
-        "CORS origins configured": bool(os.environ.get("CORS_ORIGINS")),
-        "Cognito pool IDs set": bool(
-            os.environ.get("COGNITO_PATIENT_POOL_ID")
-        ),
-    }
+        ("APP_ENV not development", app_env != "development", "warning"),
+        ("LOG_LEVEL set", bool(_env("LOG_LEVEL")), "required"),
+        ("REDIS_URL set", bool(_env("REDIS_URL")), "required"),
+        ("SQS_AI_TASK_QUEUE_URL set", bool(_env("SQS_AI_TASK_QUEUE_URL")), "required"),
+        ("CORS origins configured", bool(_env("CORS_ORIGINS")), "required"),
+        ("Cognito pool IDs set", bool(_env("COGNITO_PATIENT_POOL_ID")), "required"),
+    ]
 
     passed = 0
     failed = 0
-    for check, result in checks.items():
+    for check, result, severity in checks:
         if result:
             print(f"  {PASS} {check}")
             passed += 1
+            continue
+
+        if severity == "warning":
+            print(f"  {WARN} {check}")
         else:
-            status = WARN if "development" in check.lower() else FAIL
-            print(f"  {status} {check}")
+            print(f"  {FAIL} {check}")
             failed += 1
 
     print(f"\n  Passed: {passed}/{len(checks)}")

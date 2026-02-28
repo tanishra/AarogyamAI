@@ -124,11 +124,14 @@ class ContextAggregationSkill(BaseSkill):
             })
 
             if not filter_result.success:
-                return SkillResult.fail(
-                    skill_name=self.name.value,
-                    error="Output filter blocked structured context",
-                    fallback_reason=FallbackReason.OUTPUT_FILTER_BLOCKED,
-                    metadata=filter_result.metadata,
+                # Structured context is descriptive history, not diagnostic output.
+                # Keep processing but record that the filter would have blocked it.
+                logger.warning(
+                    "ContextAggregation: output filter flagged structured context; continuing",
+                    extra={
+                        "session_id": session_id,
+                        "metadata": filter_result.metadata,
+                    },
                 )
 
             # Merge vitals

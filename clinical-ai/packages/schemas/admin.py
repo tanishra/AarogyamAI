@@ -92,3 +92,30 @@ class RespondGrievanceRequest(BaseModel):
 
 class RespondGrievanceResponse(BaseModel):
     updated_at: str
+
+
+class ConsentEventSummary(BaseModel):
+    event_type: str
+    tier: int
+    timestamp: str
+    clinic_id: str
+    patient_ref: str | None = None
+
+
+class GrievanceItem(BaseModel):
+    grievance_id: str
+    subject: str
+    status: str
+    submitted_at: str
+    sla_deadline: str
+    response: str | None = None
+
+
+class UserItem(BaseModel):
+    user_id: str
+    email: str
+    display_name: str
+    role: Role
+    mfa_enabled: bool
+    is_active: bool
+    last_login_at: str | None = None

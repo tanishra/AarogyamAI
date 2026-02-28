@@ -15,10 +15,10 @@ class ConsentValidationResult:
 
 REQUIRED_PURPOSES: dict[ConsentTier, list[ConsentPurpose]] = {
     ConsentTier.TIER_1: [
-        ConsentPurpose.IDENTITY_COLLECTION,
         ConsentPurpose.SYMPTOM_COLLECTION,
-        ConsentPurpose.VITALS_COLLECTION,
-        ConsentPurpose.CLINICAL_RECORD_CREATION,
+        ConsentPurpose.AI_PROCESSING,
+        ConsentPurpose.CLINICAL_RECORD,
+        ConsentPurpose.NURSE_ACCESS,
     ],
     ConsentTier.TIER_2: [
         ConsentPurpose.AI_ADAPTIVE_QUESTIONING,

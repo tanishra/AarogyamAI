@@ -35,7 +35,6 @@ class TestSecurity:
     async def test_oversized_body_rejected(self, client: AsyncClient):
         resp = await client.post(
             "/api/v1/patient/session/answer",
-            headers={"Authorization": make_patient_token()},
             content=b"x" * (65 * 1024),  # 65KB — over limit
             headers={
                 "Authorization": make_patient_token(),

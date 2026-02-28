@@ -179,4 +179,5 @@ class RightsService:
             submitted_at=datetime.now(timezone.utc).isoformat(),
             estimated_ready_hours=24,
             delivery_method="sms",
+            format=request.format,
         )

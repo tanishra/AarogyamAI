@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -126,6 +126,17 @@ def _register_routes(app: FastAPI) -> None:
 
 def _register_exception_handlers(app: FastAPI) -> None:
     from uuid import uuid4
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        if isinstance(exc.detail, dict):
+            return JSONResponse(status_code=exc.status_code, content=exc.detail)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(

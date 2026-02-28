@@ -1,10 +1,74 @@
 from collections.abc import AsyncGenerator
+import os
+import time
+from typing import Any
 
 import redis.asyncio as aioredis
 from redis.asyncio import Redis
 
 # ── Module-level singleton ─────────────────────────────────────────────────────
 _redis: Redis | None = None
+
+
+class _InMemoryRedis:
+    """Minimal async Redis substitute for local dev/tests."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, Any] = {}
+        self._expiry: dict[str, float] = {}
+
+    def _is_expired(self, key: str) -> bool:
+        exp = self._expiry.get(key)
+        if exp is None:
+            return False
+        if exp <= time.time():
+            self._store.pop(key, None)
+            self._expiry.pop(key, None)
+            return True
+        return False
+
+    async def get(self, key: str):
+        if self._is_expired(key):
+            return None
+        return self._store.get(key)
+
+    async def setex(self, key: str, ttl_seconds: int, value: Any) -> bool:
+        self._store[key] = value
+        self._expiry[key] = time.time() + ttl_seconds
+        return True
+
+    async def delete(self, *keys: str) -> int:
+        deleted = 0
+        for key in keys:
+            if key in self._store:
+                deleted += 1
+            self._store.pop(key, None)
+            self._expiry.pop(key, None)
+        return deleted
+
+    async def incr(self, key: str) -> int:
+        if self._is_expired(key):
+            current = 0
+        else:
+            current = int(self._store.get(key, 0))
+        current += 1
+        self._store[key] = str(current)
+        return current
+
+    async def expire(self, key: str, ttl_seconds: int) -> bool:
+        if key not in self._store:
+            return False
+        self._expiry[key] = time.time() + ttl_seconds
+        return True
+
+    async def ping(self) -> bool:
+        return True
+
+    async def info(self, section: str | None = None) -> dict[str, Any]:
+        return {"used_memory": 0}
+
+    async def aclose(self) -> None:
+        return
 
 
 def init_redis(redis_url: str) -> None:
@@ -34,8 +98,13 @@ async def close_redis() -> None:
 
 
 def get_redis() -> Redis:
+    global _redis
     if _redis is None:
-        raise RuntimeError("Redis not initialised. Call init_redis() first.")
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env != "production":
+            _redis = _InMemoryRedis()  # type: ignore[assignment]
+        else:
+            raise RuntimeError("Redis not initialised. Call init_redis() first.")
     return _redis
 
 

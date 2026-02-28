@@ -56,10 +56,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 payload = _decode_unverified(token_str)
             else:
                 payload = await _verify_cognito_token(token_str, settings)
-
-            request.state.token = payload
-            return await call_next(request)
-
         except Exception as exc:
             logger.warning(
                 "AuthMiddleware: token rejected",
@@ -67,6 +63,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 error=str(exc),
             )
             return self._unauthorized("AUTHENTICATION_REQUIRED")
+
+        request.state.token = payload
+        return await call_next(request)
 
     def _is_public(self, request: Request) -> bool:
         return request.url.path in _PUBLIC_PATHS

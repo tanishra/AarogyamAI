@@ -4,6 +4,7 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from packages.db.models.base import Base
 from api.main import create_app
@@ -17,7 +18,7 @@ TEST_DB_URL = (
 )
 
 # ── Engine ────────────────────────────────────────────────────────────────────
-test_engine = create_async_engine(TEST_DB_URL, echo=False)
+test_engine = create_async_engine(TEST_DB_URL, echo=False, poolclass=NullPool)
 TestSessionLocal = sessionmaker(
     test_engine, class_=AsyncSession, expire_on_commit=False
 )
@@ -67,7 +68,13 @@ async def client(db_session: AsyncSession):
     app = create_app()
 
     async def override_get_db():
-        yield db_session
+        async with TestSessionLocal() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     app.dependency_overrides[get_db] = override_get_db
 

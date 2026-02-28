@@ -12,11 +12,17 @@ Usage:
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from agent_worker.agent.agent_loop import AgentLoop
 from agent_worker.agent.context import ContextObject
@@ -136,10 +142,12 @@ def build_agent_loop() -> AgentLoop:
 
 
 async def run():
+    settings = get_settings()
+
     _print_section("PHASE 4 — PROTOTYPE FLOW")
     print(f"  Started : {datetime.now(timezone.utc).isoformat()}")
-    print(f"  Provider: {os.environ.get('LLM_PROVIDER', 'anthropic')}")
-    print(f"  Model   : {os.environ.get('LLM_MODEL_ID', 'claude-sonnet-4-6')}")
+    print(f"  Provider: {settings.llm_provider}")
+    print(f"  Model   : {settings.llm_model_id}")
 
     # ── Step 1: Patient answers ───────────────────────────────────────────────
     _print_section("STEP 1 — PATIENT QUESTIONNAIRE")

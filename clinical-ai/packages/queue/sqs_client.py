@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
@@ -157,6 +158,24 @@ class SQSClient:
 _sqs_client: SQSClient | None = None
 
 
+class _NoopSQSClient:
+    """Minimal local/test SQS fallback."""
+
+    def send_ai_task(self, message: AITaskMessage) -> str:
+        return str(uuid4())
+
+    def receive_messages(
+        self,
+        max_messages: int = 1,
+        wait_time_seconds: int = 20,
+        visibility_timeout: int = 120,
+    ) -> list[SQSReceivedMessage]:
+        return []
+
+    def delete_message(self, receipt_handle: str) -> None:
+        return
+
+
 def init_sqs(
     queue_url: str,
     region: str = "ap-south-1",
@@ -173,5 +192,8 @@ def init_sqs(
 
 def get_sqs() -> SQSClient:
     if _sqs_client is None:
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env != "production":
+            return _NoopSQSClient()  # type: ignore[return-value]
         raise RuntimeError("SQS not initialised. Call init_sqs() first.")
     return _sqs_client
