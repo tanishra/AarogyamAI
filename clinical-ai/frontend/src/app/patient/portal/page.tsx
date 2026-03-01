@@ -8,12 +8,43 @@ import {
   Heart, ChevronRight, CheckCircle, Circle, ArrowRight,
   MapPin, Phone, BookOpen, Shield, CreditCard, Activity
 } from "lucide-react";
+import {
+  grantTier1Consent,
+  initIntakeSession,
+  startPatientSession,
+} from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 
 const navItems = ["Dashboard", "Appointments", "Medical Records", "Messages"];
 
 export default function PatientPortal() {
   const router = useRouter();
   const [tier2Hover, setTier2Hover] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const token = useAuthStore((s) => s.token);
+  const clinicId = useAuthStore((s) => s.clinicId);
+
+  const startIntakeFlow = async () => {
+    setStarting(true);
+    try {
+      if (!token) throw new Error("Missing session token");
+      await grantTier1Consent(token);
+      const start = await startPatientSession(token, clinicId);
+      await initIntakeSession(token, {
+        session_id: start.session_id,
+        preferred_mode: "voice_realtime",
+        locale: "en-IN",
+      });
+      router.push(`/patient/questionnaire?session_id=${start.session_id}`);
+      return;
+    } catch {
+      // Graceful demo fallback if backend is unreachable.
+      const sessionId = `demo-${Date.now()}`;
+      router.push(`/patient/questionnaire?session_id=${sessionId}&offline=1`);
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
     <div style={{
@@ -184,7 +215,10 @@ export default function PatientPortal() {
                       </div>
                     </div>
                     <button
-                      onClick={() => router.push(item.route)}
+                      onClick={() =>
+                        item.primary ? startIntakeFlow() : router.push(item.route)
+                      }
+                      disabled={item.primary && starting}
                       style={{
                         display: "flex", alignItems: "center", gap: "6px",
                         padding: "9px 16px", borderRadius: "10px",
@@ -192,11 +226,15 @@ export default function PatientPortal() {
                         background: item.primary ? "#2563EB" : "white",
                         fontSize: "12px", fontWeight: 700,
                         color: item.primary ? "white" : "#374151",
-                        cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                        cursor:
+                          item.primary && starting ? "not-allowed" : "pointer",
+                        opacity: item.primary && starting ? 0.8 : 1,
+                        fontFamily: "inherit", whiteSpace: "nowrap",
                         boxShadow: item.primary ? "0 4px 10px rgba(37,99,235,0.25)" : "none",
                       }}
                     >
-                      {item.action} {item.primary && <ArrowRight size={13} />}
+                      {item.primary && starting ? "Starting..." : item.action}{" "}
+                      {item.primary && <ArrowRight size={13} />}
                     </button>
                   </div>
                 );

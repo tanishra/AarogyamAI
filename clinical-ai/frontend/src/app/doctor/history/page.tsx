@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Activity, Heart, Pill, FileText, AlertTriangle,
   User, ChevronRight, Calendar, Download, Filter
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type EventType = "diagnosis" | "medication" | "lab" | "visit" | "alert";
 
@@ -19,7 +19,7 @@ interface TimelineEvent {
   badgeColor?: string;
 }
 
-const typeConfig: Record<EventType, { icon: any; color: string; bg: string }> = {
+const typeConfig: Record<EventType, { icon: LucideIcon; color: string; bg: string }> = {
   diagnosis: { icon: Activity, color: "#2563EB", bg: "#EFF6FF" },
   medication: { icon: Pill, color: "#7C3AED", bg: "#F5F3FF" },
   lab: { icon: FileText, color: "#059669", bg: "#ECFDF5" },
@@ -39,8 +39,6 @@ const timeline: TimelineEvent[] = [
 ];
 
 export default function PatientHistoryTimeline() {
-  const router = useRouter();
-
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 

@@ -1,233 +1,417 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  CheckCircle, Circle, User, Activity, Thermometer,
-  Heart, Wind, AlertTriangle, ChevronRight, ClipboardList, Send
+  AlertTriangle,
+  CheckCircle,
+  ChevronRight,
+  Loader2,
+  Send,
+  Shield,
 } from "lucide-react";
 
-const questions = [
-  { id: 1, q: "What is the nature of your primary complaint?", answer: "Sharp chest pain radiating to the left shoulder, worsening with physical activity." },
-  { id: 2, q: "How long have you been experiencing this?", answer: "Approximately 3 weeks, with increased frequency over the last 5 days." },
-  { id: 3, q: "Have you experienced this before?", answer: "Yes, mild episodes 6 months ago, resolved without treatment." },
-  { id: 4, q: "On a scale of 1–10, current pain intensity?", answer: "Currently 4/10, was 7/10 earlier this week." },
-  { id: 5, q: "Any associated symptoms?", answer: "Mild shortness of breath during exertion, occasional jaw tightness." },
-  { id: 6, q: "Are you currently taking any medications?", answer: "Atorvastatin 40mg — stopped 2 months ago. Nitroglycerin SL — prescribed last week." },
-  { id: 7, q: "Any known allergies?", answer: "Penicillin — severe reaction. Latex — mild reaction." },
-];
+import {
+  getNursePatientSummary,
+  getNurseQueue,
+  markNurseReady,
+  verifyNurseIntake,
+} from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 
-const vitals = [
-  { label: "Temperature", value: "101.4", unit: "°F", status: "elevated", icon: Thermometer },
-  { label: "Heart Rate", value: "94", unit: "BPM", status: "normal", icon: Activity },
-  { label: "SpO2", value: "96", unit: "%", status: "normal", icon: Wind },
-  { label: "Blood Pressure", value: "142/88", unit: "mmHg", status: "elevated", icon: Heart },
-];
+type QueueItem = {
+  session_id: string;
+  arrival_order: number;
+  questionnaire_complete: boolean;
+  waiting_since: string;
+  emergency_flagged: boolean;
+};
 
-const statusStyle = (s: string) => ({
-  color: s === "elevated" ? "#D97706" : "#10B981",
-  text: s === "elevated" ? "Elevated" : "Normal",
-  dot: s === "elevated" ? "#F59E0B" : "#10B981",
-});
+export default function NurseIntakePage() {
+  const token = useAuthStore((s) => s.token);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [selectedSession, setSelectedSession] = useState<string>("");
+  const [summary, setSummary] = useState<{
+    session_id: string;
+    chief_complaint: string;
+    emergency_flagged: boolean;
+    intake_summary_preview?: string;
+    intake_verified?: boolean;
+    active_mode?: string;
+    fallback_history?: Array<{ from_mode: string; to_mode: string; reason: string; at: string }>;
+  } | null>(null);
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [statusText, setStatusText] = useState("");
 
-export default function IntakeSplitView() {
-  const router = useRouter();
-  const [activeQ, setActiveQ] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  useEffect(() => {
+    const run = async () => {
+      if (!token) return;
+      setLoading(true);
+      try {
+        const q = await getNurseQueue(token);
+        const items = q.queue as QueueItem[];
+        setQueue(items);
+        if (items.length > 0) setSelectedSession(items[0].session_id);
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [token]);
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSubmitting(false);
-    setSubmitted(true);
-    setTimeout(() => router.push("/doctor/differential"), 1500);
+  useEffect(() => {
+    const run = async () => {
+      if (!token || !selectedSession) return;
+      const s = await getNursePatientSummary(token, selectedSession);
+      setSummary(s);
+    };
+    run();
+  }, [selectedSession, token]);
+
+  const onVerify = async (approved: boolean) => {
+    if (!token || !selectedSession) return;
+    setSaving(true);
+    setStatusText("");
+    try {
+      await verifyNurseIntake(token, selectedSession, approved, note);
+      const s = await getNursePatientSummary(token, selectedSession);
+      setSummary(s);
+      setStatusText(approved ? "Intake verified." : "Intake rejected for correction.");
+    } catch (e) {
+      setStatusText(`Verification failed: ${String(e)}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onMarkReady = async () => {
+    if (!token || !selectedSession) return;
+    setSaving(true);
+    setStatusText("");
+    try {
+      await markNurseReady(token, selectedSession);
+      setStatusText("Synthesis queued successfully.");
+    } catch (e) {
+      setStatusText(`Cannot mark ready: ${String(e)}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F0F4F8", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-
-      {/* Header */}
-      <div style={{ background: "white", borderBottom: "1px solid #E5E7EB", padding: "0 32px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "60px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#4F46E5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ClipboardList size={15} color="white" />
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#F0F4F8",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        padding: "22px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "320px 1fr",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            background: "white",
+            borderRadius: "16px",
+            border: "1px solid #E5E7EB",
+            padding: "14px",
+            height: "fit-content",
+          }}
+        >
+          <p style={{ fontSize: "12px", fontWeight: 800, color: "#4F46E5", margin: "0 0 10px" }}>
+            NURSE INTAKE QUEUE
+          </p>
+          {loading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748B" }}>
+              <Loader2 size={14} className="animate-spin" />
+              Loading queue...
             </div>
-            <div>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>Nurse Intake</span>
-              <span style={{ fontSize: "11px", color: "#94A3B8", marginLeft: "8px" }}>Split View — Patient + Vitals</span>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <User size={14} color="#4F46E5" />
-              </div>
-              <div>
-                <p style={{ fontSize: "12px", fontWeight: 700, color: "#0F172A", margin: 0 }}>Sarah Weaver, RN</p>
-                <p style={{ fontSize: "10px", color: "#94A3B8", margin: 0 }}>Lead Nurse</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Split Body */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", height: "calc(100vh - 60px)" }}>
-
-        {/* LEFT — Patient Questionnaire */}
-        <div style={{ borderRight: "1px solid #E5E7EB", background: "white", display: "flex", flexDirection: "column" }}>
-          {/* Panel header */}
-          <div style={{ padding: "16px 24px", borderBottom: "1px solid #F1F5F9", background: "#F8FAFC" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4F46E5" }} />
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "#4F46E5", letterSpacing: "0.1em" }}>PATIENT RESPONSES</span>
-              </div>
-              <span style={{ marginLeft: "auto", fontSize: "11px", color: "#94A3B8" }}>
-                {questions.length}/{questions.length} completed
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <User size={16} color="#4F46E5" />
-              </div>
-              <div>
-                <p style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", margin: 0 }}>James Sterling</p>
-                <p style={{ fontSize: "11px", color: "#94A3B8", margin: 0 }}>ID: 882-99-231 • Age 42</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Questions */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
-            {questions.map((q, i) => (
-              <motion.div
-                key={q.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => setActiveQ(i)}
+          ) : queue.length === 0 ? (
+            <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>No waiting sessions.</p>
+          ) : (
+            queue.map((item) => (
+              <button
+                key={item.session_id}
+                onClick={() => setSelectedSession(item.session_id)}
                 style={{
-                  marginBottom: "14px", cursor: "pointer",
-                  padding: "14px", borderRadius: "12px",
-                  border: activeQ === i ? "1.5px solid #4F46E5" : "1.5px solid #E5E7EB",
-                  background: activeQ === i ? "#EEF2FF" : "#F8FAFC",
-                  transition: "all 0.2s",
+                  width: "100%",
+                  textAlign: "left",
+                  marginBottom: "8px",
+                  borderRadius: "12px",
+                  padding: "11px 12px",
+                  border:
+                    selectedSession === item.session_id
+                      ? "1.5px solid #4F46E5"
+                      : "1.5px solid #E5E7EB",
+                  background:
+                    selectedSession === item.session_id ? "#EEF2FF" : "#F8FAFC",
+                  cursor: "pointer",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                  <CheckCircle size={16} color="#10B981" style={{ marginTop: "2px", flexShrink: 0 }} />
-                  <div>
-                    <p style={{ fontSize: "12px", fontWeight: 700, color: "#64748B", margin: "0 0 4px" }}>Q{q.id}. {q.q}</p>
-                    <p style={{ fontSize: "13px", color: "#0F172A", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
-                      "{q.answer}"
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
+                  Session {item.session_id.slice(0, 8)}
+                </p>
+                <p style={{ fontSize: "11px", color: "#64748B", margin: "3px 0 0" }}>
+                  {item.questionnaire_complete ? "Questionnaire complete" : "In progress"}
+                </p>
+              </button>
+            ))
+          )}
         </div>
 
-        {/* RIGHT — Nurse Vitals Panel */}
-        <div style={{ background: "#F8FAFC", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "16px 24px", borderBottom: "1px solid #E5E7EB", background: "white" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#F59E0B" }} />
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#D97706", letterSpacing: "0.1em" }}>NURSE VITALS PANEL</span>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: "white",
+            borderRadius: "16px",
+            border: "1px solid #E5E7EB",
+            padding: "18px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: "11px", color: "#64748B", fontWeight: 700, margin: 0 }}>
+                PATIENT HANDOFF
+              </p>
+              <h2 style={{ fontSize: "20px", color: "#0F172A", margin: "4px 0 0", fontWeight: 800 }}>
+                Intake Verification
+              </h2>
             </div>
+            {summary?.emergency_flagged ? (
+              <span
+                style={{
+                  borderRadius: "999px",
+                  padding: "5px 10px",
+                  background: "#FEE2E2",
+                  color: "#B91C1C",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                }}
+              >
+                Emergency Flag
+              </span>
+            ) : null}
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
-
-            {/* Vitals Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
-              {vitals.map((v) => {
-                const Icon = v.icon;
-                const s = statusStyle(v.status);
-                return (
-                  <div key={v.label} style={{
-                    background: "white", borderRadius: "14px",
-                    border: "1px solid #E5E7EB", padding: "16px",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#94A3B8", letterSpacing: "0.08em" }}>
-                        {v.label.toUpperCase()}
-                      </span>
-                      <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: s.dot }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
-                      <span style={{ fontSize: "28px", fontWeight: 800, color: v.status === "elevated" ? "#D97706" : "#0F172A" }}>
-                        {v.value}
-                      </span>
-                      <span style={{ fontSize: "12px", color: "#94A3B8" }}>{v.unit}</span>
-                    </div>
-                    <span style={{ fontSize: "10px", fontWeight: 700, color: s.color }}>
-                      {v.status === "elevated" ? "↑ " : "✓ "}{s.text}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Allergy Alert */}
-            <div style={{ background: "#FFFBEB", borderRadius: "12px", border: "1.5px solid #FDE68A", padding: "14px 16px", marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-                <AlertTriangle size={14} color="#D97706" />
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#D97706" }}>Allergy Alert</span>
-              </div>
-              <p style={{ fontSize: "12px", color: "#92400E", margin: 0 }}>
-                Penicillin — Severe • Latex — Mild
-              </p>
-            </div>
-
-            {/* Nurse Notes */}
-            <div style={{ background: "white", borderRadius: "14px", border: "1px solid #E5E7EB", padding: "16px", marginBottom: "16px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#94A3B8", letterSpacing: "0.08em" }}>NURSE NOTES</span>
-              <textarea
-                placeholder="Patient appears anxious. Observe for additional distress..."
-                defaultValue="Patient appears anxious but cooperative. Skin warm and dry. No visible diaphoresis. Gait steady on entry. Complains of mild jaw discomfort."
+          {!selectedSession || !summary ? (
+            <p style={{ marginTop: "14px", color: "#94A3B8" }}>Select a session to review intake.</p>
+          ) : (
+            <>
+              <div
                 style={{
-                  width: "100%", minHeight: "80px", marginTop: "10px",
-                  padding: "10px 12px", borderRadius: "10px",
-                  border: "1.5px solid #E5E7EB", background: "#F8FAFC",
-                  fontSize: "13px", color: "#374151", outline: "none",
-                  fontFamily: "inherit", resize: "none", lineHeight: 1.6,
+                  marginTop: "14px",
+                  borderRadius: "12px",
+                  border: "1px solid #E5E7EB",
+                  background: "#F8FAFC",
+                  padding: "12px",
+                }}
+              >
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "#334155", margin: "0 0 6px" }}>
+                  Chief Complaint
+                </p>
+                <p style={{ fontSize: "14px", color: "#0F172A", margin: 0 }}>
+                  {summary.chief_complaint || "Not provided"}
+                </p>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "10px",
+                  borderRadius: "12px",
+                  border: "1px solid #E5E7EB",
+                  background: "white",
+                  padding: "12px",
+                }}
+              >
+                <p style={{ fontSize: "12px", fontWeight: 700, color: "#334155", margin: "0 0 6px" }}>
+                  Intake Summary
+                </p>
+                <p style={{ fontSize: "13px", color: "#334155", margin: 0, lineHeight: 1.5 }}>
+                  {summary.intake_summary_preview || "No summary available yet."}
+                </p>
+              </div>
+
+              <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    borderRadius: "999px",
+                    padding: "5px 10px",
+                    background: "#EFF6FF",
+                    color: "#1D4ED8",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  Mode: {summary.active_mode || "unknown"}
+                </span>
+                <span
+                  style={{
+                    borderRadius: "999px",
+                    padding: "5px 10px",
+                    background:
+                      summary.intake_verified === true
+                        ? "#DCFCE7"
+                        : summary.intake_verified === false
+                        ? "#FEE2E2"
+                        : "#F1F5F9",
+                    color:
+                      summary.intake_verified === true
+                        ? "#166534"
+                        : summary.intake_verified === false
+                        ? "#B91C1C"
+                        : "#475569",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  Verified:{" "}
+                  {summary.intake_verified === true
+                    ? "Yes"
+                    : summary.intake_verified === false
+                    ? "No"
+                    : "Pending"}
+                </span>
+              </div>
+
+              {summary.fallback_history && summary.fallback_history.length > 0 ? (
+                <div style={{ marginTop: "10px" }}>
+                  <p style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 700, margin: "0 0 6px" }}>
+                    Fallback Trail
+                  </p>
+                  {summary.fallback_history.slice(0, 3).map((f, idx) => (
+                    <div
+                      key={`${f.at}-${idx}`}
+                      style={{
+                        fontSize: "11px",
+                        color: "#9A3412",
+                        background: "#FFF7ED",
+                        border: "1px solid #FED7AA",
+                        borderRadius: "8px",
+                        padding: "6px 8px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      {f.from_mode} → {f.to_mode} ({f.reason})
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Nurse verification note..."
+                style={{
+                  marginTop: "12px",
+                  width: "100%",
+                  minHeight: "84px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #E5E7EB",
+                  background: "#F8FAFC",
+                  padding: "10px",
+                  fontSize: "13px",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  resize: "vertical",
                 }}
               />
-            </div>
 
-            {/* Submit */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleSubmit}
-              disabled={submitting || submitted}
-              style={{
-                width: "100%", display: "flex", alignItems: "center",
-                justifyContent: "center", gap: "8px",
-                background: submitted ? "#10B981" : "#4F46E5",
-                color: "white", fontWeight: 700, fontSize: "15px",
-                padding: "14px", borderRadius: "12px", border: "none",
-                cursor: submitting ? "not-allowed" : "pointer",
-                boxShadow: "0 4px 14px rgba(79,70,229,0.3)",
-                fontFamily: "inherit", transition: "all 0.3s",
-              }}
-            >
-              {submitting ? (
-                <div style={{ width: "18px", height: "18px", border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-              ) : submitted ? (
-                <><CheckCircle size={16} /> Submitted — AI Synthesis Queued</>
-              ) : (
-                <><Send size={15} /> Submit to AI Synthesis <ChevronRight size={15} /></>
-              )}
-            </motion.button>
-          </div>
-        </div>
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <button
+                  onClick={() => onVerify(true)}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    borderRadius: "11px",
+                    padding: "11px 12px",
+                    background: "#10B981",
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    cursor: saving ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle size={14} /> Verify Intake
+                  </span>
+                </button>
+                <button
+                  onClick={() => onVerify(false)}
+                  disabled={saving}
+                  style={{
+                    border: "1.5px solid #FECACA",
+                    borderRadius: "11px",
+                    padding: "11px 12px",
+                    background: "#FEF2F2",
+                    color: "#B91C1C",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    cursor: saving ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <AlertTriangle size={14} /> Reject
+                  </span>
+                </button>
+              </div>
+
+              <button
+                onClick={onMarkReady}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  marginTop: "10px",
+                  border: "none",
+                  borderRadius: "11px",
+                  padding: "12px",
+                  background: "#4F46E5",
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "7px" }}>
+                  <Send size={14} /> Mark Ready for Synthesis <ChevronRight size={14} />
+                </span>
+              </button>
+
+              <div
+                style={{
+                  marginTop: "10px",
+                  borderRadius: "9px",
+                  background: "#F0FDF4",
+                  border: "1px solid #BBF7D0",
+                  color: "#166534",
+                  fontSize: "11px",
+                  padding: "8px 10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <Shield size={12} />
+                Nurse verification is mandatory before AI handoff.
+              </div>
+            </>
+          )}
+
+          {statusText ? (
+            <p style={{ marginTop: "10px", fontSize: "12px", color: "#475569" }}>{statusText}</p>
+          ) : null}
+        </motion.div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

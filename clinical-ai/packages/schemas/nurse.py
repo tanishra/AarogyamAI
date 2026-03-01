@@ -5,6 +5,7 @@ from packages.schemas.errors import VitalsOutlierFlag
 class QueuePatient(BaseModel):
     session_id: str
     arrival_order: int
+    status: str
     questionnaire_complete: bool
     vitals_submitted: bool
     waiting_since: str
@@ -21,6 +22,11 @@ class PatientSummaryResponse(BaseModel):
     chief_complaint: str
     emergency_flagged: bool
     vitals_submitted: bool
+    latest_vitals: dict | None = None
+    intake_summary_preview: str | None = None
+    intake_verified: bool | None = None
+    active_mode: str | None = None
+    fallback_history: list[dict] | None = None
 
 
 class OutlierConfirmation(BaseModel):
@@ -55,3 +61,39 @@ class MarkReadyRequest(BaseModel):
 class MarkReadyResponse(BaseModel):
     synthesis_queued: bool
     estimated_ready_seconds: int
+
+
+class VerifyIntakeRequest(BaseModel):
+    session_id: str
+    approved: bool = True
+    nurse_note: str | None = Field(default=None, max_length=500)
+
+
+class VerifyIntakeResponse(BaseModel):
+    session_id: str
+    nurse_verified: bool
+    verified_at: str
+    verified_by: str
+
+
+class RemoveQueueRequest(BaseModel):
+    session_id: str
+    reason: str | None = Field(default=None, max_length=200)
+
+
+class RemoveQueueResponse(BaseModel):
+    session_id: str
+    removed: bool
+    status: str
+
+
+class UpdatePatientStatusRequest(BaseModel):
+    session_id: str
+    status: str = Field(min_length=3, max_length=64)
+    reason: str | None = Field(default=None, max_length=200)
+
+
+class UpdatePatientStatusResponse(BaseModel):
+    session_id: str
+    updated: bool
+    status: str

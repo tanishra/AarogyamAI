@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   CheckCircle, Edit2, RotateCcw, Plus, Moon,
-  Activity, AlertTriangle, Clock, User, Zap, ChevronRight
+  Activity, AlertTriangle, Clock, User, Zap
 } from "lucide-react";
 
 type DiffStatus = "pending" | "accepted" | "modified" | "rejected";
@@ -64,8 +64,6 @@ export default function DoctorDifferential() {
     setCommitting(false);
     router.push("/doctor/smart-note");
   };
-
-  const allResolved = diffs.every(d => d.status !== "pending");
 
   return (
     <div style={{
@@ -189,7 +187,7 @@ export default function DoctorDifferential() {
                 PRIMARY COMPLAINT (SOURCED)
               </p>
               <p style={{ fontSize: "13px", color: "#374151", lineHeight: 1.6, margin: 0 }}>
-                "Episodes of sharp substernal chest pain radiating to the left shoulder, aggravated by physical exertion and relieved by rest."
+                Episodes of sharp substernal chest pain radiating to the left shoulder, aggravated by physical exertion and relieved by rest.
               </p>
             </div>
 

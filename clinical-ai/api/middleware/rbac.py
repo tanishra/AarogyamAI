@@ -48,6 +48,14 @@ _PERMISSIONS: list[RoutePermission] = [
         frozenset([Role.PATIENT]),
     ),
     RoutePermission(
+        "/api/v1/intake", "GET",
+        frozenset([Role.PATIENT]),
+    ),
+    RoutePermission(
+        "/api/v1/intake", "POST",
+        frozenset([Role.PATIENT]),
+    ),
+    RoutePermission(
         "/api/v1/rights", "GET",
         frozenset([Role.PATIENT]),
     ),
@@ -127,6 +135,9 @@ class RBACMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         if request.url.path in _PUBLIC_PATHS:
             return await call_next(request)
 

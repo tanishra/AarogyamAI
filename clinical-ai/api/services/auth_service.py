@@ -1,11 +1,11 @@
 import hashlib
-import logging
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.audit.audit_service import AuditEntryBuilder, AuditService
 from packages.cache.redis_client import get_redis
@@ -33,7 +33,7 @@ logger = structlog.get_logger(__name__)
 class AuthService:
     """
     Handles OTP generation, verification, and staff login.
-    JWT issuance is handled by Cognito — this service orchestrates the flow.
+    Patient OTP login issues a signed JWT for API access.
     """
 
     def __init__(
@@ -48,12 +48,14 @@ class AuthService:
         self, request: SendOTPRequest
     ) -> SendOTPResponse:
         """
-        Hash phone — trigger Cognito OTP.
-        Never store raw phone number.
+        Generate OTP and store hashed challenge in Redis.
+        Never store raw phone number or raw OTP.
         """
+        from api.config import get_settings
+
+        settings = get_settings()
         phone_hash = self._hash_phone(request.phone)
 
-        # Store OTP request in Redis for rate limiting
         redis = get_redis()
         rate_key = f"otp_rate:{phone_hash}"
         current = await redis.incr(rate_key)
@@ -70,8 +72,15 @@ class AuthService:
                 },
             )
 
-        # In production — trigger Cognito InitiateAuth here
-        # For scaffold — return mock response
+        otp_code = f"{secrets.randbelow(1_000_000):06d}"
+        otp_key = f"otp_challenge:{phone_hash}"
+        otp_hash = self._hash_otp(phone_hash, otp_code)
+        await redis.setex(
+            otp_key,
+            300,
+            otp_hash,
+        )
+
         masked = request.phone[:-4].replace(
             request.phone[:-4], "*" * (len(request.phone) - 4)
         ) + request.phone[-4:]
@@ -90,6 +99,7 @@ class AuthService:
             otp_sent=True,
             expires_in_seconds=300,
             masked_phone=masked,
+            dev_otp=otp_code if settings.app_env == "development" else None,
         )
 
     async def verify_patient_otp(
@@ -97,11 +107,31 @@ class AuthService:
         request: VerifyOTPRequest,
     ) -> VerifyOTPResponse:
         """
-        Verify OTP with Cognito.
+        Verify OTP challenge from Redis.
         Register patient if first visit.
-        Return JWT + consent status.
+        Return signed JWT + consent status.
         """
+        from fastapi import HTTPException, status as http_status
+
         phone_hash = self._hash_phone(request.phone)
+        redis = get_redis()
+        otp_key = f"otp_challenge:{phone_hash}"
+        expected_hash = await redis.get(otp_key)
+        provided_hash = self._hash_otp(phone_hash, request.otp)
+
+        if not expected_hash or not secrets.compare_digest(
+            str(expected_hash), provided_hash
+        ):
+            raise HTTPException(
+                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "error": "INVALID_OTP",
+                    "error_id": str(uuid4()),
+                },
+            )
+
+        # One-time OTP: consume after successful validation
+        await redis.delete(otp_key)
 
         # Load or create patient
         stmt = select(Patient).where(Patient.phone_hash == phone_hash)
@@ -123,6 +153,10 @@ class AuthService:
 
         # Load consent status for all tiers
         consent_map = await self._load_consent_map(patient.id)
+        access_token = self._issue_patient_access_token(
+            patient_id=patient.id,
+            clinic_id=patient.clinic_id,
+        )
 
         await self._audit.record(
             self._session,
@@ -135,9 +169,8 @@ class AuthService:
             .build(),
         )
 
-        # In production — return Cognito JWT
         return VerifyOTPResponse(
-            access_token="cognito.jwt.placeholder",
+            access_token=access_token,
             patient_id=patient.id,
             age_gate_passed=patient.age_gate_passed,
             is_new_patient=is_new,
@@ -221,6 +254,37 @@ class AuthService:
 
     @staticmethod
     def _hash_phone(phone: str) -> str:
-        from api.config import get_settings
         salt = "dev-salt"  # replaced by Secrets Manager value in production
         return hashlib.sha256(f"{phone}{salt}".encode()).hexdigest()
+
+    @staticmethod
+    def _hash_otp(phone_hash: str, otp: str) -> str:
+        return hashlib.sha256(f"{phone_hash}:{otp}:otp-salt".encode()).hexdigest()
+
+    def _issue_patient_access_token(
+        self,
+        patient_id: str,
+        clinic_id: str,
+    ) -> str:
+        from jose import jwt as jose_jwt
+        from api.config import get_settings
+
+        settings = get_settings()
+        now = datetime.now(timezone.utc)
+        payload = {
+            "sub": patient_id,
+            "custom:role": "patient",
+            "custom:clinic_id": clinic_id,
+            "partial": False,
+            "iss": settings.jwt_issuer,
+            "iat": int(now.timestamp()),
+            "exp": int(
+                (now + timedelta(seconds=settings.jwt_expiry_seconds)).timestamp()
+            ),
+        }
+        token = jose_jwt.encode(
+            payload,
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        return f"Bearer {token}"

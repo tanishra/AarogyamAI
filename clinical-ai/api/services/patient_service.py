@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.audit.audit_service import AuditEntryBuilder, AuditService
 from packages.cache.redis_client import get_redis
+from api.services.intake_assistant import IntakeAssistant
 from packages.db.models.session import PatientSession
 from packages.domain.enums import (
     ActorRole,
@@ -34,17 +35,6 @@ logger = structlog.get_logger(__name__)
 
 _SESSION_TTL_MINUTES = 20
 
-# Static fallback first question
-_FIRST_QUESTION = QuestionObject(
-    question_id="a" * 64,
-    question_text="What is your main health concern today?",
-    question_type=QuestionType.TEXT,
-    options=None,
-    topic_tag="chief_complaint",
-    is_emergency_check=False,
-)
-
-
 class PatientService:
 
     def __init__(
@@ -54,6 +44,7 @@ class PatientService:
     ) -> None:
         self._session = session
         self._audit = audit
+        self._intake = IntakeAssistant()
 
     async def start_session(
         self,
@@ -97,12 +88,24 @@ class PatientService:
             .clinic(request.clinic_id)
             .build(),
         )
+        first_decision = await self._intake.decide_next(
+            [],
+            current_topic="chief_complaint",
+        )
+        first_question = first_decision.next_question or QuestionObject(
+            question_id="a" * 64,
+            question_text="What is your main health concern today?",
+            question_type=QuestionType.TEXT,
+            options=None,
+            topic_tag="chief_complaint",
+            is_emergency_check=False,
+        )
 
         return StartSessionResponse(
             session_id=session.id,
             expires_at=session.expires_at.isoformat(),
             use_static_form=not tier2_active,
-            first_question=_FIRST_QUESTION,
+            first_question=first_question,
         )
 
     async def submit_answer(
@@ -153,23 +156,20 @@ class PatientService:
             .build(),
         )
 
-        # Stub — adaptive questioning wired in prototype phase
-        done = len(answers) >= 10
-        next_q = None if done else QuestionObject(
-            question_id="b" * 64,
-            question_text="Can you describe the severity on a scale of 1-10?",
-            question_type=QuestionType.SCALE,
-            options=None,
-            topic_tag="severity",
-            is_emergency_check=False,
+        intake_decision = await self._intake.decide_next(
+            answers,
+            current_topic=request.topic_tag,
         )
+        summary_preview = await self._intake.build_summary_for_nurse(answers)
+        await redis.setex(f"intake_summary:{request.session_id}", 7200, summary_preview)
 
         return SubmitAnswerResponse(
             saved=True,
-            questionnaire_done=done,
-            next_question=next_q,
-            emergency_advisory=None,
-            questions_remaining=max(0, 10 - len(answers)),
+            questionnaire_done=intake_decision.questionnaire_done,
+            next_question=intake_decision.next_question,
+            emergency_advisory=intake_decision.emergency_advisory,
+            questions_remaining=intake_decision.questions_remaining,
+            intake_summary_preview=summary_preview,
         )
 
     async def complete_session(
@@ -187,6 +187,9 @@ class PatientService:
             session.status = SessionStatus.QUESTIONNAIRE_COMPLETE.value
             session.questionnaire_complete_at = datetime.now(timezone.utc)
             await self._session.flush()
+        redis = get_redis()
+        summary = await redis.get(f"intake_summary:{request.session_id}")
+        summary_preview = summary if summary else "Intake complete."
 
         await self._audit.record(
             self._session,
@@ -203,6 +206,35 @@ class PatientService:
             questionnaire_complete=True,
             nurse_notified=True,
             message="Your information has been submitted. Please wait for the nurse.",
+            intake_summary_preview=summary_preview,
+        )
+
+    async def get_intake_summary(
+        self,
+        patient_id: str,
+        session_id: str,
+    ):
+        stmt = select(PatientSession).where(PatientSession.id == session_id)
+        result = await self._session.execute(stmt)
+        session = result.scalar_one_or_none()
+        if session is None or session.patient_id != patient_id:
+            from fastapi import HTTPException, status as http_status
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail={"error": "SESSION_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        redis = get_redis()
+        raw = await redis.get(f"answers:{session_id}")
+        answers = json.loads(raw) if raw else []
+        summary = await self._intake.build_summary_for_nurse(answers)
+        await redis.setex(f"intake_summary:{session_id}", 7200, summary)
+
+        from packages.schemas.patient import IntakeSummaryResponse
+        return IntakeSummaryResponse(
+            session_id=session_id,
+            intake_summary=summary,
+            questionnaire_done=bool(session.questionnaire_complete_at),
         )
 
     async def get_my_data(self, patient_id: str) -> MyDataResponse:

@@ -35,6 +35,7 @@ class SubmitAnswerResponse(BaseModel):
     next_question: QuestionObject | None = None
     emergency_advisory: str | None = None
     questions_remaining: int
+    intake_summary_preview: str | None = None
 
 
 class CompleteSessionRequest(BaseModel):
@@ -45,6 +46,13 @@ class CompleteSessionResponse(BaseModel):
     questionnaire_complete: bool
     nurse_notified: bool
     message: str
+    intake_summary_preview: str | None = None
+
+
+class IntakeSummaryResponse(BaseModel):
+    session_id: str
+    intake_summary: str
+    questionnaire_done: bool
 
 
 # ── Rights Portal ─────────────────────────────────────────────────────────────

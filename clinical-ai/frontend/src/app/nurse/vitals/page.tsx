@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Activity, Thermometer, Heart, Wind,
-  CheckCircle, AlertTriangle, ClipboardList, Send,
+  Activity, Thermometer, Heart, Wind,
+  CheckCircle, ClipboardList,
   ChevronRight, User
 } from "lucide-react";
-
-const steps = ["VITALS", "ANALYSIS", "PLANNING", "REVIEW"];
+import { getNursePatientSummary, markNurseReady, submitNurseVitals, verifyNurseIntake } from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 
 type VitalStatus = "normal" | "elevated" | "critical";
 
@@ -38,19 +38,140 @@ const statusColor = (s: VitalStatus) =>
 const statusLabel = (s: VitalStatus) =>
   s === "critical" ? "Febrile Range" : s === "elevated" ? "Slightly Elevated" : "Normal • Resting";
 
+type NurseSummary = {
+  session_id: string;
+  chief_complaint: string;
+  emergency_flagged: boolean;
+  vitals_submitted: boolean;
+  intake_summary_preview?: string;
+};
+
+function parseSummary(summary?: string): Record<string, string> {
+  if (!summary) return {};
+  const parts = summary.split("|").map((p) => p.trim()).filter(Boolean);
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    const idx = part.indexOf(":");
+    if (idx < 0) continue;
+    const key = part.slice(0, idx).trim().toLowerCase();
+    const value = part.slice(idx + 1).trim();
+    map[key] = value;
+  }
+  return map;
+}
+
+function parseApiErrorDetail(err: unknown): Record<string, unknown> | null {
+  const raw = String(err ?? "");
+  const start = raw.indexOf("{");
+  if (start < 0) return null;
+  try {
+    return JSON.parse(raw.slice(start)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export default function PatientVitals() {
   const router = useRouter();
-  const [vitals, setVitals] = useState<Vitals>({ temp: "101.4", hr: "88", spo2: "96", bp: "118/74" });
+  const params = useSearchParams();
+  const sessionId = params.get("session_id") ?? "";
+  const token = useAuthStore((s) => s.token);
+  const [vitals, setVitals] = useState<Vitals>({ temp: "98.6", hr: "88", spo2: "98", bp: "118/74" });
+  const [respRate, setRespRate] = useState("18");
+  const [weightKg, setWeightKg] = useState("65");
+  const [heightCm, setHeightCm] = useState("170");
+  const [summary, setSummary] = useState<NurseSummary | null>(null);
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const run = async () => {
+      if (!token || !sessionId) return;
+      try {
+        const s = await getNursePatientSummary(token, sessionId);
+        setSummary(s as NurseSummary);
+      } catch {
+        setSummary(null);
+      }
+    };
+    void run();
+  }, [token, sessionId]);
+
+  const parsedSummary = useMemo(
+    () => parseSummary(summary?.intake_summary_preview),
+    [summary?.intake_summary_preview]
+  );
+  const patientName = parsedSummary.name || `Patient ${sessionId.slice(0, 8)}`;
+  const patientAge = parsedSummary.age || "--";
+  const chiefComplaint =
+    parsedSummary["main concern"] ||
+    summary?.chief_complaint ||
+    "No chief complaint captured yet.";
+  const additionalNotes = (parsedSummary["additional details"] || "")
+    .split("|")
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   const handleSubmit = async () => {
+    if (!token || !sessionId) {
+      setError("Missing session context. Please open vitals from dashboard queue.");
+      return;
+    }
+    const [sysRaw, diaRaw] = vitals.bp.split("/");
+    const tempF = Number(vitals.temp);
+    const tempC = (tempF - 32) * (5 / 9);
+    const basePayload = {
+      session_id: sessionId,
+      temperature_celsius: Number(tempC.toFixed(2)),
+      bp_systolic_mmhg: Number(sysRaw),
+      bp_diastolic_mmhg: Number(diaRaw),
+      heart_rate_bpm: Number(vitals.hr),
+      respiratory_rate_pm: Number(respRate),
+      spo2_percent: Number(vitals.spo2),
+      weight_kg: Number(weightKg),
+      height_cm: Number(heightCm),
+      nurse_observation: notes || null,
+    };
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-    setSubmitted(true);
-    setTimeout(() => router.push("/nurse/dashboard"), 1500);
+    setError("");
+    try {
+      await submitNurseVitals(token, basePayload);
+      await verifyNurseIntake(token, sessionId, true, "Vitals captured and intake validated.");
+      await markNurseReady(token, sessionId);
+      setSubmitted(true);
+      setTimeout(() => router.push("/nurse/dashboard"), 1000);
+    } catch (e) {
+      const detail = parseApiErrorDetail(e);
+      if (
+        detail?.error === "VITALS_OUTLIER_CONFIRMATION_REQUIRED" &&
+        Array.isArray(detail.outlier_flags)
+      ) {
+        try {
+          const confirmations = detail.outlier_flags
+            .map((flag) => {
+              const f = flag as Record<string, unknown>;
+              return { field: String(f.field ?? ""), confirmed: true };
+            })
+            .filter((x) => x.field);
+          await submitNurseVitals(token, {
+            ...basePayload,
+            outlier_confirmations: confirmations,
+          });
+          await verifyNurseIntake(token, sessionId, true, "Vitals captured with nurse-confirmed outlier flags.");
+          await markNurseReady(token, sessionId);
+          setSubmitted(true);
+          setTimeout(() => router.push("/nurse/dashboard"), 1000);
+        } catch (retryErr) {
+          setError(`Failed to submit vitals: ${String(retryErr)}`);
+        }
+      } else {
+        setError(`Failed to submit vitals: ${String(e)}`);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const vitalFields = [
@@ -89,39 +210,34 @@ export default function PatientVitals() {
             </div>
           </div>
 
-          {/* Steps */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
-            {steps.map((step, i) => {
-              const isActive = i === 0;
-              const isDone = i < 0;
-              return (
-                <div key={step} style={{ display: "flex", alignItems: "center" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                    <div style={{
-                      width: "36px", height: "36px", borderRadius: "50%",
-                      border: isActive ? "2px solid #4F46E5" : isDone ? "2px solid #10B981" : "2px solid #E5E7EB",
-                      background: isActive ? "#4F46E5" : isDone ? "#10B981" : "white",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {isDone
-                        ? <CheckCircle size={16} color="white" />
-                        : <span style={{ fontSize: "12px", fontWeight: 700, color: isActive ? "white" : "#CBD5E1" }}>
-                            {i === 0 ? <Activity size={14} color="white" /> : i + 1}
-                          </span>
-                      }
-                    </div>
-                    <span style={{
-                      fontSize: "10px", fontWeight: 700,
-                      color: isActive ? "#4F46E5" : "#CBD5E1",
-                      letterSpacing: "0.06em",
-                    }}>{step}</span>
-                  </div>
-                  {i < steps.length - 1 && (
-                    <div style={{ width: "48px", height: "1px", background: "#E5E7EB", margin: "0 4px 16px" }} />
-                  )}
-                </div>
-              );
-            })}
+          {/* Center indicator */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  border: "2px solid #4F46E5",
+                  background: "#4F46E5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Activity size={14} color="white" />
+              </div>
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: "#4F46E5",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                VITALS
+              </span>
+            </div>
           </div>
 
           {/* Doctor info */}
@@ -167,8 +283,7 @@ export default function PatientVitals() {
               CHIEF COMPLAINT
             </div>
             <p style={{ fontSize: "14px", color: "#374151", lineHeight: 1.7, margin: 0 }}>
-              Patient reports 3 days of dry cough, mild fever, and progressive fatigue.
-              Symptoms worsen at night. No significant shortness of breath reported.
+              {chiefComplaint}
             </p>
           </div>
 
@@ -185,10 +300,12 @@ export default function PatientVitals() {
               <User size={20} color="#4F46E5" />
             </div>
             <div>
-              <p style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", margin: 0 }}>Sarah Jenkins</p>
-              <p style={{ fontSize: "12px", color: "#94A3B8", margin: "2px 0 6px" }}>42 yrs • Female • ID: 8823-1</p>
+              <p style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", margin: 0 }}>{patientName}</p>
+              <p style={{ fontSize: "12px", color: "#94A3B8", margin: "2px 0 6px" }}>
+                {patientAge} yrs • ID: {sessionId ? sessionId.slice(0, 12) : "--"}
+              </p>
               <div style={{ display: "flex", gap: "6px" }}>
-                {["Non-Smoker", "Asthma History"].map(tag => (
+                {[parsedSummary.location ? `Location: ${parsedSummary.location}` : "Location: --"].map(tag => (
                   <span key={tag} style={{
                     background: "#F1F5F9", color: "#64748B",
                     fontSize: "10px", fontWeight: 600,
@@ -204,10 +321,7 @@ export default function PatientVitals() {
             <div style={{ fontSize: "11px", fontWeight: 700, color: "#94A3B8", letterSpacing: "0.08em", marginBottom: "10px" }}>
               LIVE SESSION NOTES
             </div>
-            {[
-              '"I\'ve been using my rescue inhaler more frequently, about 4 times yesterday."',
-              "Physician checking lung sounds; bilateral wheezing noted in lower lobes.",
-            ].map((note, i) => (
+            {(additionalNotes.length > 0 ? additionalNotes : ["No additional notes captured from intake summary yet."]).map((note, i) => (
               <div key={i} style={{
                 borderLeft: `3px solid ${i === 0 ? "#4F46E5" : "#E5E7EB"}`,
                 paddingLeft: "12px", marginBottom: "10px",
@@ -246,7 +360,6 @@ export default function PatientVitals() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
               {vitalFields.map(field => {
-                const Icon = field.icon;
                 const status = getStatus(field.key, vitals[field.key]);
                 return (
                   <div key={field.key} style={{
@@ -283,6 +396,48 @@ export default function PatientVitals() {
               })}
             </div>
 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "16px" }}>
+              {[
+                {
+                  label: "Respiratory Rate (/min)",
+                  hint: "Used for respiratory distress scoring",
+                  value: respRate,
+                  setter: setRespRate,
+                },
+                {
+                  label: "Weight (kg)",
+                  hint: "Used for dose and fluid calculations",
+                  value: weightKg,
+                  setter: setWeightKg,
+                },
+                {
+                  label: "Height (cm)",
+                  hint: "Used for BMI and risk profiling",
+                  value: heightCm,
+                  setter: setHeightCm,
+                },
+              ].map((field) => (
+                <div key={field.label}>
+                  <p style={{ margin: "0 0 4px", fontSize: "10px", fontWeight: 700, color: "#64748B" }}>
+                    {field.label}
+                  </p>
+                  <input
+                    value={field.value}
+                    onChange={(e) => field.setter(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      border: "1px solid #E5E7EB",
+                      background: "#F8FAFC",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <p style={{ margin: "4px 0 0", fontSize: "10px", color: "#94A3B8" }}>{field.hint}</p>
+                </div>
+              ))}
+            </div>
+
             {/* Begin AI Analysis */}
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -304,9 +459,14 @@ export default function PatientVitals() {
               ) : submitted ? (
                 <><CheckCircle size={16} /><span>Submitted Successfully</span></>
               ) : (
-                <><span>Begin AI Analysis</span><ChevronRight size={16} /></>
+                <><span>Save Vitals & Ready for Doctor</span><ChevronRight size={16} /></>
               )}
             </motion.button>
+            {error ? (
+              <p style={{ marginTop: "10px", fontSize: "12px", color: "#B91C1C", fontWeight: 600 }}>
+                {error}
+              </p>
+            ) : null}
           </div>
 
           {/* Nursing notes */}

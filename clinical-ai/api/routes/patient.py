@@ -12,6 +12,7 @@ from packages.schemas.patient import (
     ErasureResponse,
     GrievanceRequest,
     GrievanceResponse,
+    IntakeSummaryResponse,
     MyDataResponse,
     PortabilityRequest,
     PortabilityResponse,
@@ -65,6 +66,21 @@ async def complete_session(
 ):
     return await _svc(session, audit).complete_session(
         patient_id=token.sub, request=body
+    )
+
+
+@router.get(
+    "/patient/session/{session_id}/intake-summary",
+    response_model=IntakeSummaryResponse,
+)
+async def get_intake_summary(
+    session_id: str,
+    token: CurrentPatient,
+    session: DBSession,
+    audit: AuditDep,
+):
+    return await _svc(session, audit).get_intake_summary(
+        patient_id=token.sub, session_id=session_id
     )
 
 

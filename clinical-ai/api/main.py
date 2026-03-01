@@ -76,9 +76,9 @@ def create_app() -> FastAPI:
     # ── CORS ──────────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.parsed_cors_origins(),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 
@@ -115,13 +115,17 @@ def _register_routes(app: FastAPI) -> None:
     from api.routes.nurse import router as nurse_router
     from api.routes.doctor import router as doctor_router
     from api.routes.admin import router as admin_router
+    from api.routes.intake import rest_router as intake_router
+    from api.routes.intake import ws_router as intake_ws_router
 
     app.include_router(auth_router,    prefix="/api/v1")
     app.include_router(consent_router, prefix="/api/v1")
     app.include_router(patient_router, prefix="/api/v1")
+    app.include_router(intake_router,  prefix="/api/v1")
     app.include_router(nurse_router,   prefix="/api/v1")
     app.include_router(doctor_router,  prefix="/api/v1")
     app.include_router(admin_router,   prefix="/api/v1")
+    app.include_router(intake_ws_router)
 
 
 def _register_exception_handlers(app: FastAPI) -> None:

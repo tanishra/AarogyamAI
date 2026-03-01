@@ -117,14 +117,15 @@ class ConsentService:
             .where(ConsentToken.patient_id == patient_id)
             .where(ConsentToken.tier == request.consent_tier.value)
             .where(ConsentToken.status == ConsentStatus.ACTIVE.value)
+            .order_by(ConsentToken.granted_at.desc(), ConsentToken.created_at.desc())
         )
         existing_result = await self._session.execute(existing_stmt)
-        existing = existing_result.scalar_one_or_none()
+        existing_tokens = list(existing_result.scalars().all())
 
         now = datetime.now(timezone.utc)
         new_id = str(uuid4())
 
-        if existing:
+        for existing in existing_tokens:
             existing.status = ConsentStatus.SUPERSEDED.value
             existing.superseded_by_id = new_id
 
@@ -192,11 +193,12 @@ class ConsentService:
                 .where(ConsentToken.patient_id == patient_id)
                 .where(ConsentToken.tier == tier.value)
                 .where(ConsentToken.status == ConsentStatus.ACTIVE.value)
+                .order_by(ConsentToken.granted_at.desc(), ConsentToken.created_at.desc())
             )
             result = await self._session.execute(stmt)
-            token = result.scalar_one_or_none()
+            tokens = list(result.scalars().all())
 
-            if token:
+            for token in tokens:
                 token.status = ConsentStatus.WITHDRAWN.value
                 token.withdrawn_at = now
                 withdrawn_ids.append(token.id)

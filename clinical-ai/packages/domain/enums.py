@@ -63,6 +63,7 @@ class SessionStatus(str, Enum):
     SYNTHESIS_IN_PROGRESS = "synthesis_in_progress"
     SYNTHESIS_COMPLETE = "synthesis_complete"
     SYNTHESIS_FALLBACK = "synthesis_fallback"
+    QUEUE_REMOVED = "queue_removed"
     RECORD_COMMITTED = "record_committed"
 
 

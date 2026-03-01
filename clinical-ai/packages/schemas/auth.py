@@ -12,6 +12,7 @@ class SendOTPResponse(BaseModel):
     otp_sent: bool
     expires_in_seconds: int
     masked_phone: str
+    dev_otp: str | None = None
 
 
 class VerifyOTPRequest(BaseModel):

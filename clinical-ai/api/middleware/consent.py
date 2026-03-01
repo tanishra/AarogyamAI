@@ -12,6 +12,7 @@ logger = structlog.get_logger(__name__)
 # ── Consent tier requirements per route ───────────────────────────────────────
 
 _TIER_REQUIREMENTS: dict[str, ConsentTier] = {
+    "/api/v1/intake": ConsentTier.TIER_1,
     "/api/v1/patient/session/start": ConsentTier.TIER_1,
     "/api/v1/patient/session/answer": ConsentTier.TIER_1,
     "/api/v1/patient/session/complete": ConsentTier.TIER_1,
@@ -51,6 +52,9 @@ class ConsentMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
 
         if path in _CONSENT_EXEMPT_PATHS:

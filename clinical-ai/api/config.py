@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -45,14 +46,58 @@ class APISettings(BaseSettings):
     # ── Consent ───────────────────────────────────────────────────────────────
     current_consent_version: str = "1.1"
 
+    # ── LLM (optional for conversational intake) ─────────────────────────────
+    llm_provider: str = "openai"   # openai | anthropic
+    llm_model_id: str = "gpt-4o-mini"
+    llm_api_key: str = ""
+    llm_timeout_seconds: int = 20
+    llm_max_retries: int = 2
+    llm_max_tokens: int = 200
+    intake_assistant_persona: str = "calm, empathetic clinical intake nurse"
+    intake_assistant_style: str = "concise, warm, professional"
+
+    # ── Voice provider routing (model/provider agnostic) ─────────────────────
+    voice_stt_provider: str = "deepgram"   # deepgram | openai | disabled
+    voice_tts_provider: str = "deepgram"   # deepgram | openai | disabled
+
+    # Deepgram
+    deepgram_api_key: str = ""
+    deepgram_stt_model: str = "nova-3"
+    deepgram_tts_model: str = "aura-2-thalia-en"
+
+    # OpenAI voice defaults
+    openai_stt_model: str = "gpt-4o-mini-transcribe"
+    openai_tts_model: str = "gpt-4o-mini-tts"
+    openai_tts_voice: str = "alloy"
+
     # ── Security ──────────────────────────────────────────────────────────────
     dev_skip_cognito_verify: bool = False  # NEVER True in staging/production
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_issuer: str = "clinical-ai-local"
+    jwt_algorithm: str = "HS256"
+    jwt_expiry_seconds: int = 4 * 60 * 60  # 4 hours patient token
 
     # ── CORS ──────────────────────────────────────────────────────────────────
-    cors_origins: list[str] = [
-        "https://app.clinicaldomain.in",
-        "https://clinic.clinicaldomain.in",
-    ]
+    # Accepts:
+    # - JSON array string: '["http://localhost:3000"]'
+    # - CSV string: "http://localhost:3000,https://app.example.com"
+    # - Single origin string: "http://localhost:3000"
+    cors_origins: str = (
+        "https://app.clinicaldomain.in,https://clinic.clinicaldomain.in"
+    )
+
+    def parsed_cors_origins(self) -> list[str]:
+        raw = (self.cors_origins or "").strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except Exception:
+                pass
+        return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 @lru_cache(maxsize=1)

@@ -91,11 +91,29 @@ def _decode_unverified(token: str) -> TokenPayload:
 
 async def _verify_cognito_token(token: str, settings) -> TokenPayload:
     """
-    Verify JWT against Cognito JWKS endpoint.
-    Tries patient pool first, then staff pool.
+    Verify JWT from local issuer or Cognito JWKS.
+    Tries local HS256 token first, then patient/staff Cognito pools.
     """
     import httpx
     from jose import jwt as jose_jwt, JWTError
+
+    # Local/API-issued token path (HS256)
+    try:
+        claims = jose_jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            options={"verify_aud": False},
+        )
+        if claims.get("iss") == settings.jwt_issuer:
+            return TokenPayload(
+                sub=claims["sub"],
+                role=Role(claims.get("custom:role", "patient")),
+                clinic_id=claims.get("custom:clinic_id", ""),
+                is_partial=claims.get("partial", False),
+            )
+    except JWTError:
+        pass
 
     for pool_id, client_id in [
         (settings.cognito_patient_pool_id, settings.cognito_patient_client_id),

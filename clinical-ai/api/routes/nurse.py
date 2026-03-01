@@ -7,8 +7,14 @@ from packages.schemas.nurse import (
     MarkReadyResponse,
     NurseQueueResponse,
     PatientSummaryResponse,
+    RemoveQueueRequest,
+    RemoveQueueResponse,
     SubmitVitalsRequest,
     SubmitVitalsResponse,
+    UpdatePatientStatusRequest,
+    UpdatePatientStatusResponse,
+    VerifyIntakeRequest,
+    VerifyIntakeResponse,
 )
 
 router = APIRouter(tags=["nurse"])
@@ -67,4 +73,47 @@ async def mark_ready(
 ):
     return await _svc(session, audit, sqs).mark_ready(
         nurse_id=token.sub, request=body
+    )
+
+
+@router.post("/nurse/intake/verify", response_model=VerifyIntakeResponse)
+async def verify_intake(
+    body: VerifyIntakeRequest,
+    token: CurrentNurse,
+    session: DBSession,
+    audit: AuditDep,
+    sqs: SQSDep,
+):
+    return await _svc(session, audit, sqs).verify_intake(
+        nurse_id=token.sub, request=body
+    )
+
+
+@router.post("/nurse/queue/remove", response_model=RemoveQueueResponse)
+async def remove_from_queue(
+    body: RemoveQueueRequest,
+    token: CurrentNurse,
+    session: DBSession,
+    audit: AuditDep,
+    sqs: SQSDep,
+):
+    return await _svc(session, audit, sqs).remove_from_queue(
+        nurse_id=token.sub,
+        clinic_id=token.clinic_id,
+        request=body,
+    )
+
+
+@router.post("/nurse/session/update-status", response_model=UpdatePatientStatusResponse)
+async def update_patient_status(
+    body: UpdatePatientStatusRequest,
+    token: CurrentNurse,
+    session: DBSession,
+    audit: AuditDep,
+    sqs: SQSDep,
+):
+    return await _svc(session, audit, sqs).update_patient_status(
+        nurse_id=token.sub,
+        clinic_id=token.clinic_id,
+        request=body,
     )
