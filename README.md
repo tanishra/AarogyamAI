@@ -10,6 +10,8 @@ AarogyamAI is an end-to-end clinical workflow platform powered by **Claude on Am
 
 No more paper forms. No more disconnected systems. No more manual SOAP note writing.
 
+Recent updates include **real patient OTP login (JWT session)**, a **text-only conversational intake assistant**, **LLM-based nurse handoff summaries**, and a **live nurse dashboard** with vitals capture and status management.
+
 <br/>
 
 ## The Problem
@@ -93,9 +95,9 @@ flowchart TB
 | **Frontend** | Next.js 14, TypeScript, Framer Motion |
 | **Backend** | FastAPI, Python, SQLAlchemy, Alembic |
 | **AI Model** | Claude Sonnet 4.5 via Amazon Bedrock |
-| **Auth** | Amazon Cognito (staff JWT + patient OTP) |
+| **Auth** | Amazon Cognito (staff JWT) + real patient OTP/JWT flow |
 | **Database** | Amazon RDS PostgreSQL (3-schema design) |
-| **Queue** | Amazon SQS + AWS Lambda workers |
+| **Queue** | Amazon SQS + AWS Lambda workers (doctor synthesis handoff) |
 | **Storage** | Amazon S3 (exports, audit archives) |
 | **Observability** | Amazon CloudWatch, structured JSON logs |
 | **Compliance** | DPDP-compliant consent, hash-chain audit trail |
@@ -105,7 +107,11 @@ flowchart TB
 ## Key Features
 
 - **Role-Based Access** — Separate, secure workspaces for Patients, Nurses, and Doctors
-- **Adaptive Intake** — AI-guided questionnaire that adjusts based on patient responses
+- **Conversational Intake (Text Chat)** — Chat-style patient intake assistant that captures profile + symptoms naturally (no rigid form experience)
+- **Structured LLM Summaries** — Intake is rewritten into concise nurse-friendly handoff summaries
+- **Real Patient Login** — OTP send/verify with signed JWT session tokens (not mock auth)
+- **Live Nurse Operations** — Real queue from backend, patient selection, vitals submission, verification, mark-ready flow, and status updates from dashboard
+- **Queue Controls** — Nurses can remove patients from queue or update patient status directly from dashboard
 - **AI Differential Diagnosis** — Claude synthesizes vitals + history into ranked clinical hypotheses with confidence scores
 - **Doctor Review Interface** — Accept, modify, or reject AI suggestions before committing to record
 - **Hash-Chain Audit Trail** — Every action is tamper-proof and auditable
@@ -146,8 +152,10 @@ AarogyamAI/
 | AgentLoop / AI Core | ✅ Built with PII stripping + fallback |
 | Auth + RBAC + Consent | ✅ Full middleware stack |
 | Unit Tests | ✅ 92+ passing |
-| Frontend — Login | ✅ Built |
-| Frontend — All screens | 🔄 In progress (13 screens designed) |
+| Frontend — Login | ✅ Real patient OTP + role-based entry live |
+| Frontend — Patient Intake | ✅ Conversational text-chat intake live with summary handoff |
+| Frontend — Nurse Dashboard | ✅ Live queue, vitals capture, queue/status actions live |
+| Frontend — Doctor Workspace | 🔄 In progress |
 | AWS Deployment | 🔄 Pending credits |
 
 <br/>
