@@ -81,6 +81,39 @@ export async function verifyPatientOTP(payload: {
   });
 }
 
+export async function sendNurseOTP(payload: {
+  email: string;
+  clinic_id: string;
+}): Promise<{
+  otp_sent: boolean;
+  expires_in_seconds: number;
+  masked_email: string;
+  dev_otp?: string | null;
+}> {
+  return request("/api/v1/auth/nurse/send-otp", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function verifyNurseOTP(payload: {
+  email: string;
+  clinic_id: string;
+  otp: string;
+}): Promise<{
+  access_token: string;
+  user_id: string;
+  role: string;
+  clinic_id: string;
+  display_name: string;
+  expires_in: number;
+}> {
+  return request("/api/v1/auth/nurse/verify-otp", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export type StartSessionResponse = {
   session_id: string;
   expires_at: string;
@@ -331,5 +364,114 @@ export async function updateNursePatientStatus(
       status: payload.status,
       reason: payload.reason ?? null,
     }),
+  });
+}
+
+export async function getDoctorQueue(token: string): Promise<{
+  queue: Array<{
+    session_id: string;
+    arrival_order: number;
+    synthesis_ready: boolean;
+    fallback_active: boolean;
+    urgency_flag: "routine" | "urgent" | "critical";
+    chief_complaint: string;
+    ready_since: string;
+    patient_name?: string | null;
+    patient_age?: number | null;
+    patient_location?: string | null;
+    short_summary?: string | null;
+    nurse_feedback?: string | null;
+    intake_verified?: boolean | null;
+  }>;
+  total_waiting: number;
+}> {
+  return request("/api/v1/doctor/queue", { method: "GET", token });
+}
+
+export async function getDoctorPatientContext(
+  token: string,
+  sessionId: string
+): Promise<{
+  session_id: string;
+  synthesis_ready: boolean;
+  fallback_active: boolean;
+  fallback_reason?: string | null;
+  structured_context?: {
+    chief_complaint: string;
+    history_of_present_illness: string;
+    past_medical_history: string[];
+    current_medications: string[];
+    allergies: string[];
+    social_history?: string | null;
+  } | null;
+  vitals_summary?: {
+    temperature_celsius: number;
+    bp_systolic_mmhg: number;
+    bp_diastolic_mmhg: number;
+    heart_rate_bpm: number;
+    respiratory_rate_pm: number;
+    spo2_percent: number;
+    weight_kg: number;
+    height_cm: number;
+  } | null;
+  outlier_flags: Array<Record<string, unknown>>;
+  emergency_flagged: boolean;
+  intake_summary_preview?: string | null;
+  nurse_feedback?: string | null;
+  patient_name?: string | null;
+  patient_age?: number | null;
+  patient_location?: string | null;
+  differentials: Array<{
+    consideration_id: string;
+    title: string;
+    supporting_features: string[];
+    clinical_reasoning: string;
+    urgency_flag: "routine" | "urgent" | "critical";
+    ai_generated: boolean;
+    doctor_action?: "accepted" | "modified" | "rejected" | "added" | null;
+    doctor_modification?: string | null;
+    sort_order: number;
+  }>;
+  synthesis_timestamp?: string | null;
+}> {
+  return request(`/api/v1/doctor/patient/${sessionId}/context`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function submitDoctorDifferentialAction(
+  token: string,
+  considerationId: string,
+  payload: {
+    session_id: string;
+    action: "accepted" | "modified" | "rejected";
+    modification_text?: string | null;
+  }
+): Promise<{ updated_at: string }> {
+  return request(`/api/v1/doctor/differential/${considerationId}/action`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({
+      session_id: payload.session_id,
+      action: payload.action,
+      modification_text: payload.modification_text ?? null,
+    }),
+  });
+}
+
+export async function addDoctorDifferential(
+  token: string,
+  payload: {
+    session_id: string;
+    title: string;
+    clinical_reasoning: string;
+    urgency_flag: "routine" | "urgent" | "critical";
+  }
+): Promise<{ consideration_id: string; created_at: string }> {
+  return request("/api/v1/doctor/differential/add", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }

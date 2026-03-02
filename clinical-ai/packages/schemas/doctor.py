@@ -11,6 +11,12 @@ class DoctorQueuePatient(BaseModel):
     urgency_flag: UrgencyFlag
     chief_complaint: str
     ready_since: str
+    patient_name: str | None = None
+    patient_age: int | None = None
+    patient_location: str | None = None
+    short_summary: str | None = None
+    nurse_feedback: str | None = None
+    intake_verified: bool | None = None
 
 
 class DoctorQueueResponse(BaseModel):
@@ -71,6 +77,11 @@ class PatientContextResponse(BaseModel):
     emergency_flagged: bool
     differentials: list[DifferentialConsideration]
     synthesis_timestamp: str | None = None
+    intake_summary_preview: str | None = None
+    nurse_feedback: str | None = None
+    patient_name: str | None = None
+    patient_age: int | None = None
+    patient_location: str | None = None
 
 
 class DifferentialActionRequest(BaseModel):

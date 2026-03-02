@@ -11,6 +11,8 @@ _PUBLIC_PATHS = frozenset([
     "/health",
     "/api/v1/auth/patient/send-otp",
     "/api/v1/auth/patient/verify-otp",
+    "/api/v1/auth/nurse/send-otp",
+    "/api/v1/auth/nurse/verify-otp",
     "/api/v1/auth/staff/login",
     "/docs",
     "/openapi.json",

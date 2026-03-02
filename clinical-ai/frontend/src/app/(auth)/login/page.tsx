@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,7 +15,12 @@ import {
   EyeOff,
 } from "lucide-react";
 import { createDevBearerToken } from "@/lib/auth";
-import { sendPatientOTP, verifyPatientOTP } from "@/lib/api";
+import {
+  sendNurseOTP,
+  sendPatientOTP,
+  verifyNurseOTP,
+  verifyPatientOTP,
+} from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 
 type Role = "doctor" | "nurse" | "patient";
@@ -50,6 +56,7 @@ const roles = [
 ];
 
 export default function LoginPage() {
+  const defaultClinicId = "clinic-demo-001";
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
   const [selectedRole, setSelectedRole] = useState<Role>("nurse");
@@ -78,6 +85,22 @@ export default function LoginPage() {
       await handleVerifyOTP();
       return;
     }
+    if (selectedRole === "nurse") {
+      if (!clinicalId) {
+        setError("Enter your nurse email.");
+        return;
+      }
+      if (!otpSent) {
+        await handleSendNurseOTP();
+        return;
+      }
+      if (!passcode || passcode.length !== 6) {
+        setError("Enter the 6-digit OTP.");
+        return;
+      }
+      await handleVerifyNurseOTP();
+      return;
+    }
     if (!clinicalId || !passcode) {
       setError("Please fill in all fields.");
       return;
@@ -92,7 +115,7 @@ export default function LoginPage() {
       role: selectedRole,
       token: createDevBearerToken(selectedRole, userId),
       userId,
-      clinicId: "clinic-demo-001",
+      clinicId: defaultClinicId,
     });
     if (selectedRole === "doctor") router.push("/doctor/differential");
     else if (selectedRole === "nurse") router.push("/nurse/dashboard");
@@ -106,6 +129,12 @@ export default function LoginPage() {
     if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
     if (digits.length === 10) return `+91${digits}`;
     return trimmed;
+  };
+
+  const isValidEmail = (value: string): boolean => {
+    const email = value.trim().toLowerCase();
+    // Basic RFC-safe client validation for login form.
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleSendOTP = async () => {
@@ -136,15 +165,66 @@ export default function LoginPage() {
       const verified = await verifyPatientOTP({
         phone,
         otp: passcode.trim(),
-        clinic_id: "clinic-demo-001",
+        clinic_id: defaultClinicId,
       });
       setSession({
         role: "patient",
         token: verified.access_token,
         userId: verified.patient_id,
-        clinicId: "clinic-demo-001",
+        clinicId: defaultClinicId,
       });
       router.push("/patient/portal");
+    } catch (e) {
+      setError(`OTP verification failed: ${String(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendNurseOTP = async () => {
+    const email = clinicalId.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      setError("Enter a valid work email (example: nurse@clinic.com).");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const sent = await sendNurseOTP({
+        email,
+        clinic_id: defaultClinicId,
+      });
+      setClinicalId(email);
+      setOtpSent(true);
+      setOtpHint(
+        sent.dev_otp
+          ? `OTP sent. Dev OTP: ${sent.dev_otp}`
+          : `OTP sent to ${sent.masked_email}`
+      );
+    } catch (e) {
+      setError(`Failed to send OTP: ${String(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyNurseOTP = async () => {
+    const email = clinicalId.trim().toLowerCase();
+    setLoading(true);
+    setError("");
+    try {
+      const verified = await verifyNurseOTP({
+        email,
+        otp: passcode.trim(),
+        clinic_id: defaultClinicId,
+      });
+      setSession({
+        role: "nurse",
+        token: verified.access_token,
+        userId: verified.user_id,
+        clinicId: verified.clinic_id,
+      });
+      router.push("/nurse/dashboard");
     } catch (e) {
       setError(`OTP verification failed: ${String(e)}`);
     } finally {
@@ -194,6 +274,9 @@ export default function LoginPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
           <a href="#" style={{ fontSize: "14px", color: "#64748B", textDecoration: "none" }}>Documentation</a>
           <a href="#" style={{ fontSize: "14px", color: "#64748B", textDecoration: "none" }}>Support</a>
+          <Link href="/signup" style={{ fontSize: "14px", color: "#2563EB", textDecoration: "none", fontWeight: 700 }}>
+            Sign Up
+          </Link>
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "#374151", background: "white", border: "1px solid #E5E7EB", borderRadius: "99px", padding: "6px 14px" }}>
             <Shield size={13} color="#10B981" />
             Secure Gateway
@@ -281,7 +364,11 @@ export default function LoginPage() {
           {/* Clinical ID */}
           <div>
             <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#374151", marginBottom: "8px" }}>
-              {selectedRole === "patient" ? "Phone Number" : "Clinical ID"}
+              {selectedRole === "patient"
+                ? "Phone Number"
+                : selectedRole === "nurse"
+                ? "Work Email"
+                : "Clinical ID"}
             </label>
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", display: "flex" }}>
@@ -292,6 +379,8 @@ export default function LoginPage() {
                 placeholder={
                   selectedRole === "patient"
                     ? "+919876543210"
+                    : selectedRole === "nurse"
+                    ? "Enter your work email"
                     : "Enter your ID or Email"
                 }
                 value={clinicalId}
@@ -307,9 +396,9 @@ export default function LoginPage() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#374151" }}>
-                {selectedRole === "patient" ? "OTP" : "Passcode"}
+                {selectedRole === "patient" || selectedRole === "nurse" ? "OTP" : "Passcode"}
               </label>
-              {selectedRole !== "patient" && (
+              {selectedRole === "doctor" && (
                 <a href="#" style={{ fontSize: "12px", color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>Reset access</a>
               )}
             </div>
@@ -319,13 +408,13 @@ export default function LoginPage() {
               </div>
               <input
                 type={
-                  selectedRole === "patient"
+                  selectedRole === "patient" || selectedRole === "nurse"
                     ? "text"
                     : showPass
                     ? "text"
                     : "password"
                 }
-                placeholder={selectedRole === "patient" ? "Enter 6-digit OTP" : "••••••••"}
+                placeholder={selectedRole === "patient" || selectedRole === "nurse" ? "Enter 6-digit OTP" : "••••••••"}
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -333,7 +422,7 @@ export default function LoginPage() {
                 onFocus={(e) => { e.target.style.borderColor = "#2563EB"; e.target.style.background = "white"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
                 onBlur={(e) => { e.target.style.borderColor = "#E5E7EB"; e.target.style.background = "#F8FAFC"; e.target.style.boxShadow = "none"; }}
               />
-              {selectedRole !== "patient" && (
+              {selectedRole === "doctor" && (
                 <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", display: "flex", padding: 0 }}>
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -341,7 +430,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {selectedRole === "patient" && otpHint && (
+          {(selectedRole === "patient" || selectedRole === "nurse") && otpHint && (
             <p style={{ fontSize: "12px", color: "#2563EB", fontWeight: 600, margin: "-6px 0" }}>
               {otpHint}
             </p>
@@ -378,7 +467,7 @@ export default function LoginPage() {
             ) : (
               <>
                 <span>
-                  {selectedRole === "patient"
+                  {selectedRole === "patient" || selectedRole === "nurse"
                     ? otpSent
                       ? "Verify OTP"
                       : "Send OTP"
@@ -400,6 +489,12 @@ export default function LoginPage() {
         </div>
         <p style={{ marginTop: "4px", fontSize: "11px", color: "#9CA3AF" }}>
           © 2024 AarogyamAI Healthcare Systems. Enterprise Clinical Workflow Management.
+        </p>
+        <p style={{ marginTop: "8px", fontSize: "12px", color: "#64748B" }}>
+          New user?{" "}
+          <Link href="/signup" style={{ color: "#2563EB", textDecoration: "none", fontWeight: 700 }}>
+            Create your account request
+          </Link>
         </p>
       </motion.div>
 

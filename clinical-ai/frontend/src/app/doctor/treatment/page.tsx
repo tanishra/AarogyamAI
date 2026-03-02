@@ -1,226 +1,221 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  CheckCircle, Plus, Trash2, ChevronRight, Save,
-  Pill, Activity, Calendar, User, Zap, Clock, AlertTriangle
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle, Clock, Save, Trash2 } from "lucide-react";
+import { getDoctorPatientContext, getDoctorQueue } from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 
-type Priority = "High" | "Medium" | "Routine";
-
-interface TreatmentItem {
-  id: number;
-  category: string;
+type PlanItem = {
+  id: string;
   action: string;
-  priority: Priority;
-  timeline: string;
   done: boolean;
-}
+  priority: "High" | "Medium" | "Routine";
+};
 
-const priorityColor = (p: Priority) =>
-  p === "High" ? { bg: "#FEE2E2", text: "#DC2626" } :
-  p === "Medium" ? { bg: "#FEF3C7", text: "#D97706" } :
-  { bg: "#F1F5F9", text: "#64748B" };
-
-const initialItems: TreatmentItem[] = [
-  { id: 1, category: "Investigations", action: "Serial Troponin assay q6h × 3", priority: "High", timeline: "Immediate", done: false },
-  { id: 2, category: "Investigations", action: "12-lead ECG monitoring — continuous", priority: "High", timeline: "Immediate", done: false },
-  { id: 3, category: "Medications", action: "Sublingual Nitroglycerin 0.4mg PRN for acute episodes", priority: "High", timeline: "Immediate", done: true },
-  { id: 4, category: "Medications", action: "Restart Atorvastatin 40mg PO daily", priority: "Medium", timeline: "Today", done: false },
-  { id: 5, category: "Medications", action: "Dual antiplatelet therapy — pending troponin results", priority: "Medium", timeline: "Conditional", done: false },
-  { id: 6, category: "Referrals", action: "Cardiology consult — stress test or cath evaluation", priority: "High", timeline: "Within 24h", done: false },
-  { id: 7, category: "Referrals", action: "Dietitian referral for cardiac diet counselling", priority: "Routine", timeline: "This week", done: false },
-  { id: 8, category: "Education", action: "Patient education: activity restrictions + warning signs", priority: "Medium", timeline: "Before discharge", done: false },
-];
-
-const categories = ["Investigations", "Medications", "Referrals", "Education"];
-
-export default function TreatmentPlan() {
+export default function TreatmentPage() {
   const router = useRouter();
-  const [items, setItems] = useState<TreatmentItem[]>(initialItems);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const params = useSearchParams();
+  const token = useAuthStore((s) => s.token);
+  const role = useAuthStore((s) => s.role);
 
-  const toggle = (id: number) => setItems(prev => prev.map(i => i.id === id ? { ...i, done: !i.done } : i));
-  const remove = (id: number) => setItems(prev => prev.filter(i => i.id !== id));
+  const [sessionId, setSessionId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [items, setItems] = useState<PlanItem[]>([]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setSaving(false); setSaved(true);
-    setTimeout(() => router.push("/doctor/history"), 1200);
-  };
+  useEffect(() => {
+    if (!token || role !== "doctor") {
+      router.replace("/login");
+      return;
+    }
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const queue = await getDoctorQueue(token);
+        const requested = params.get("session_id") ?? "";
+        const resolved =
+          queue.queue.find((q) => q.session_id === requested)?.session_id ??
+          queue.queue[0]?.session_id ??
+          "";
+        if (!resolved) {
+          if (active) {
+            setSessionId("");
+            setItems([]);
+          }
+          return;
+        }
+        const context = await getDoctorPatientContext(token, resolved);
+        if (!active) return;
+        setSessionId(resolved);
 
-  const completed = items.filter(i => i.done).length;
+        const generated: PlanItem[] = [];
+        context.differentials.slice(0, 5).forEach((d, index) => {
+          generated.push({
+            id: `diff-${d.consideration_id}`,
+            action: `Review and manage: ${d.title}`,
+            done: d.doctor_action === "accepted",
+            priority: index === 0 ? "High" : index < 3 ? "Medium" : "Routine",
+          });
+        });
+        if (context.vitals_summary) {
+          generated.push({
+            id: "vitals-recheck",
+            action: "Re-check vitals trend and outlier flags before final decision.",
+            done: false,
+            priority: "Medium",
+          });
+        }
+        if (generated.length === 0) {
+          generated.push({
+            id: "default-plan",
+            action: "Collect full context and document treatment plan.",
+            done: false,
+            priority: "Routine",
+          });
+        }
+        setItems(generated);
+      } catch (e) {
+        if (!active) return;
+        setError(`Failed to load live treatment context: ${String(e)}`);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [token, role, router, params]);
+
+  const completed = useMemo(() => items.filter((i) => i.done).length, [items]);
+
+  const toggle = (id: string) =>
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i))
+    );
+  const remove = (id: string) =>
+    setItems((prev) => prev.filter((i) => i.id !== id));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-
-      {/* Header */}
-      <div style={{ background: "white", borderBottom: "1px solid #E5E7EB", padding: "0 32px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "60px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "12px", fontWeight: 800, color: "white" }}>CZ</span>
-            </div>
-            <div style={{ fontSize: "13px", color: "#64748B" }}>
-              Doctor <span style={{ color: "#CBD5E1" }}>/</span> <span style={{ color: "#0F172A", fontWeight: 600 }}>Treatment Planning</span>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "9px 16px", borderRadius: "10px",
-              border: "1.5px solid #E5E7EB", background: "white",
-              fontSize: "13px", fontWeight: 600, color: "#374151",
-              cursor: "pointer", fontFamily: "inherit",
-            }}>
-              <Zap size={13} color="#2563EB" /> AI Suggestions
-            </button>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleSave}
-              style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "9px 20px", borderRadius: "10px",
-                border: "none", background: saved ? "#10B981" : "#2563EB",
-                fontSize: "13px", fontWeight: 700, color: "white",
-                cursor: "pointer", fontFamily: "inherit",
-                boxShadow: "0 4px 12px rgba(37,99,235,0.25)",
-                transition: "background 0.3s",
-              }}
-            >
-              {saving
-                ? <div style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                : saved ? <><CheckCircle size={14} /> Saved</> : <><Save size={14} /> Commit Plan</>
-              }
-            </motion.button>
-          </div>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "28px 24px" }}>
-
-        {/* Page header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "20px", marginBottom: "24px" }}>
+    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "24px" }}>
+      <div style={{ maxWidth: "980px", margin: "0 auto" }}>
+        <div style={{ background: "white", border: "1px solid #E5E7EB", borderRadius: "16px", padding: "16px 18px", marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#2563EB", letterSpacing: "0.1em" }}>TREATMENT PLAN</span>
-            </div>
-            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", margin: "0 0 4px" }}>Marcus Thorne</h1>
-            <p style={{ fontSize: "13px", color: "#64748B", margin: 0 }}>Primary Dx: Unstable Angina Pectoris • Session PS-902</p>
+            <p style={{ fontSize: "11px", color: "#2563EB", fontWeight: 700, letterSpacing: "0.08em", margin: 0 }}>LIVE TREATMENT</p>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", margin: "4px 0 2px" }}>Treatment Planning</h1>
+            <p style={{ fontSize: "13px", color: "#64748B", margin: 0 }}>
+              {sessionId ? `Session ${sessionId}` : "No active session selected"}
+            </p>
           </div>
-
-          {/* Progress */}
-          <div style={{ background: "white", borderRadius: "16px", border: "1px solid #E5E7EB", padding: "16px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: "32px", fontWeight: 800, color: "#2563EB" }}>{completed}/{items.length}</div>
-            <div style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 600 }}>ACTIONS COMPLETE</div>
-            <div style={{ height: "4px", background: "#F1F5F9", borderRadius: "99px", marginTop: "8px", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(completed / items.length) * 100}%`, background: "#2563EB", borderRadius: "99px", transition: "width 0.4s" }} />
-            </div>
-          </div>
+          <button
+            onClick={() =>
+              sessionId && router.push(`/doctor/history?session_id=${sessionId}`)
+            }
+            disabled={!sessionId}
+            style={{
+              border: "none",
+              borderRadius: "10px",
+              background: "#2563EB",
+              color: "white",
+              fontWeight: 700,
+              fontSize: "13px",
+              padding: "10px 14px",
+              cursor: sessionId ? "pointer" : "not-allowed",
+              opacity: sessionId ? 1 : 0.6,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <Save size={14} />
+            Save & View History
+          </button>
         </div>
 
-        {/* Categories */}
-        {categories.map(cat => {
-          const catItems = items.filter(i => i.category === cat);
-          if (catItems.length === 0) return null;
-          const Icon = cat === "Medications" ? Pill : cat === "Investigations" ? Activity : cat === "Referrals" ? User : Calendar;
-
-          return (
-            <div key={cat} style={{ marginBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                <Icon size={15} color="#64748B" />
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B", letterSpacing: "0.08em" }}>
-                  {cat.toUpperCase()}
-                </span>
-                <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {catItems.map(item => {
-                  const pc = priorityColor(item.priority);
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      style={{
-                        background: "white", borderRadius: "12px",
-                        border: "1px solid #E5E7EB", padding: "14px 16px",
-                        display: "flex", alignItems: "center", gap: "12px",
-                        opacity: item.done ? 0.6 : 1, transition: "opacity 0.2s",
-                      }}
-                    >
-                      <button
-                        onClick={() => toggle(item.id)}
-                        style={{
-                          width: "22px", height: "22px", borderRadius: "50%",
-                          border: item.done ? "none" : "2px solid #CBD5E1",
-                          background: item.done ? "#10B981" : "transparent",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          cursor: "pointer", flexShrink: 0, padding: 0,
-                        }}
-                      >
-                        {item.done && <CheckCircle size={14} color="white" />}
-                      </button>
-
-                      <div style={{ flex: 1 }}>
-                        <p style={{
-                          fontSize: "14px", fontWeight: 600, color: "#0F172A", margin: "0 0 4px",
-                          textDecoration: item.done ? "line-through" : "none",
-                        }}>{item.action}</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{
-                            fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px",
-                            background: pc.bg, color: pc.text,
-                          }}>{item.priority}</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#94A3B8" }}>
-                            <Clock size={11} /> {item.timeline}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => remove(item.id)}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", padding: "4px" }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Add item */}
-        <button style={{
-          width: "100%", padding: "14px", borderRadius: "12px",
-          border: "1.5px dashed #CBD5E1", background: "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-          fontSize: "13px", fontWeight: 600, color: "#94A3B8",
-          cursor: "pointer", fontFamily: "inherit", marginTop: "4px",
-        }}>
-          <Plus size={15} /> Add Treatment Action
-        </button>
-
-        {/* Alert */}
-        <div style={{
-          marginTop: "20px", background: "#FFFBEB", borderRadius: "12px",
-          border: "1.5px solid #FDE68A", padding: "14px 16px",
-          display: "flex", alignItems: "flex-start", gap: "10px",
-        }}>
-          <AlertTriangle size={15} color="#D97706" style={{ marginTop: "2px", flexShrink: 0 }} />
-          <p style={{ fontSize: "13px", color: "#92400E", lineHeight: 1.6, margin: 0 }}>
-            <strong>Allergy Alert:</strong> Patient has documented Penicillin allergy (Severe). Avoid all beta-lactam antibiotics if antibiotic therapy becomes necessary.
+        <div style={{ background: "white", border: "1px solid #E5E7EB", borderRadius: "14px", padding: "14px", marginBottom: "12px" }}>
+          <p style={{ margin: 0, fontSize: "13px", color: "#64748B" }}>
+            Progress: <strong style={{ color: "#0F172A" }}>{completed}/{items.length}</strong> actions completed
           </p>
         </div>
+
+        {loading && <Panel text="Loading live patient treatment actions..." />}
+        {!loading && error && <Panel text={error} danger />}
+
+        {!loading && !error && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {items.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  background: "white",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  opacity: item.done ? 0.65 : 1,
+                }}
+              >
+                <button
+                  onClick={() => toggle(item.id)}
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    borderRadius: "50%",
+                    border: item.done ? "none" : "2px solid #CBD5E1",
+                    background: item.done ? "#10B981" : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {item.done && <CheckCircle size={14} color="white" />}
+                </button>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: "0 0 4px", fontSize: "14px", color: "#0F172A", fontWeight: 600 }}>
+                    {item.action}
+                  </p>
+                  <p style={{ margin: 0, fontSize: "11px", color: "#64748B", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <Clock size={12} />
+                    Priority: {item.priority}
+                  </p>
+                </div>
+                <button
+                  onClick={() => remove(item.id)}
+                  style={{ border: "none", background: "none", color: "#94A3B8", cursor: "pointer" }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
+
+function Panel({ text, danger = false }: { text: string; danger?: boolean }) {
+  return (
+    <div
+      style={{
+        background: danger ? "#FEF2F2" : "white",
+        border: `1px solid ${danger ? "#FECACA" : "#E5E7EB"}`,
+        borderRadius: "12px",
+        padding: "14px",
+        color: danger ? "#B91C1C" : "#64748B",
+        fontSize: "13px",
+        fontWeight: danger ? 600 : 500,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+

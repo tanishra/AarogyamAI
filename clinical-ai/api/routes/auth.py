@@ -6,6 +6,10 @@ from api.services.auth_service import AuthService
 from packages.schemas.auth import (
     MFAVerifyRequest,
     MFAVerifyResponse,
+    NurseSendOTPRequest,
+    NurseSendOTPResponse,
+    NurseVerifyOTPRequest,
+    NurseVerifyOTPResponse,
     SendOTPRequest,
     SendOTPResponse,
     StaffLoginRequest,
@@ -35,6 +39,26 @@ async def verify_otp(
 ):
     svc = AuthService(session=session, audit=audit)
     return await svc.verify_patient_otp(body)
+
+
+@router.post("/auth/nurse/send-otp", response_model=NurseSendOTPResponse)
+async def send_nurse_otp(
+    body: NurseSendOTPRequest,
+    session: DBSession,
+    audit: AuditDep,
+):
+    svc = AuthService(session=session, audit=audit)
+    return await svc.send_nurse_otp(body)
+
+
+@router.post("/auth/nurse/verify-otp", response_model=NurseVerifyOTPResponse)
+async def verify_nurse_otp(
+    body: NurseVerifyOTPRequest,
+    session: DBSession,
+    audit: AuditDep,
+):
+    svc = AuthService(session=session, audit=audit)
+    return await svc.verify_nurse_otp(body)
 
 
 @router.post("/auth/staff/login", response_model=StaffLoginResponse)

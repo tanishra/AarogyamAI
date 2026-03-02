@@ -61,3 +61,30 @@ class MFAVerifyResponse(BaseModel):
     clinic_id: str
     display_name: str
     expires_in: int
+
+
+class NurseSendOTPRequest(BaseModel):
+    email: str = Field(max_length=254)
+    clinic_id: str
+
+
+class NurseSendOTPResponse(BaseModel):
+    otp_sent: bool
+    expires_in_seconds: int
+    masked_email: str
+    dev_otp: str | None = None
+
+
+class NurseVerifyOTPRequest(BaseModel):
+    email: str = Field(max_length=254)
+    clinic_id: str
+    otp: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class NurseVerifyOTPResponse(BaseModel):
+    access_token: str
+    user_id: str
+    role: str
+    clinic_id: str
+    display_name: str
+    expires_in: int

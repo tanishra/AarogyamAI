@@ -1,4 +1,5 @@
 import hashlib
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -10,14 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.audit.audit_service import AuditEntryBuilder, AuditService
 from packages.cache.redis_client import get_redis
 from packages.db.models.patient import Patient
+from packages.db.models.clinic_user import ClinicUser
 from packages.domain.enums import (
     ActorRole,
     AuditEventType,
     OutcomeStatus,
+    Role,
 )
 from packages.schemas.auth import (
     MFAVerifyRequest,
     MFAVerifyResponse,
+    NurseSendOTPRequest,
+    NurseSendOTPResponse,
+    NurseVerifyOTPRequest,
+    NurseVerifyOTPResponse,
     SendOTPRequest,
     SendOTPResponse,
     StaffLoginRequest,
@@ -201,6 +208,138 @@ class AuthService:
             totp_setup_required=False,
         )
 
+    async def send_nurse_otp(
+        self,
+        request: NurseSendOTPRequest,
+    ) -> NurseSendOTPResponse:
+        from fastapi import HTTPException, status
+        from api.config import get_settings
+
+        settings = get_settings()
+        email = request.email.strip().lower()
+        if not self._is_valid_email(email):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "INVALID_EMAIL", "error_id": str(uuid4())},
+            )
+
+        stmt = (
+            select(ClinicUser)
+            .where(ClinicUser.email == email)
+            .where(ClinicUser.clinic_id == request.clinic_id)
+            .where(ClinicUser.role == Role.NURSE.value)
+            .where(ClinicUser.is_active.is_(True))
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        nurse = result.scalar_one_or_none()
+        if nurse is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "NURSE_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        email_hash = self._hash_staff_identity(email, request.clinic_id, Role.NURSE.value)
+        redis = get_redis()
+
+        rate_key = f"staff_otp_rate:{email_hash}"
+        current = await redis.incr(rate_key)
+        if current == 1:
+            await redis.expire(rate_key, 300)
+        if current > 5:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "error": "RATE_LIMIT_EXCEEDED",
+                    "error_id": str(uuid4()),
+                    "retry_after": 300,
+                },
+            )
+
+        otp_code = f"{secrets.randbelow(1_000_000):06d}"
+        otp_hash = self._hash_otp(email_hash, otp_code)
+        await redis.setex(f"staff_otp:{email_hash}", 300, otp_hash)
+
+        await self._audit.record(
+            self._session,
+            AuditEntryBuilder()
+            .event(AuditEventType.AUTH_OTP_SENT)
+            .outcome(OutcomeStatus.SUCCESS)
+            .actor(role=ActorRole.NURSE, actor_id=nurse.id)
+            .clinic(request.clinic_id)
+            .metadata({"email_hash": email_hash})
+            .build(),
+        )
+
+        return NurseSendOTPResponse(
+            otp_sent=True,
+            expires_in_seconds=300,
+            masked_email=self._mask_email(email),
+            dev_otp=otp_code if settings.app_env == "development" else None,
+        )
+
+    async def verify_nurse_otp(
+        self,
+        request: NurseVerifyOTPRequest,
+    ) -> NurseVerifyOTPResponse:
+        from fastapi import HTTPException, status
+
+        email = request.email.strip().lower()
+        email_hash = self._hash_staff_identity(email, request.clinic_id, Role.NURSE.value)
+        redis = get_redis()
+        expected_hash = await redis.get(f"staff_otp:{email_hash}")
+        provided_hash = self._hash_otp(email_hash, request.otp)
+        if not expected_hash or not secrets.compare_digest(str(expected_hash), provided_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "INVALID_OTP", "error_id": str(uuid4())},
+            )
+        await redis.delete(f"staff_otp:{email_hash}")
+
+        stmt = (
+            select(ClinicUser)
+            .where(ClinicUser.email == email)
+            .where(ClinicUser.clinic_id == request.clinic_id)
+            .where(ClinicUser.role == Role.NURSE.value)
+            .where(ClinicUser.is_active.is_(True))
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        nurse = result.scalar_one_or_none()
+        if nurse is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "NURSE_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        nurse.last_login_at = datetime.now(timezone.utc)
+        await self._session.flush()
+
+        access_token = self._issue_staff_access_token(
+            user_id=nurse.id,
+            clinic_id=nurse.clinic_id,
+            role=Role.NURSE.value,
+        )
+
+        await self._audit.record(
+            self._session,
+            AuditEntryBuilder()
+            .event(AuditEventType.AUTH_OTP_VERIFIED)
+            .outcome(OutcomeStatus.SUCCESS)
+            .actor(role=ActorRole.NURSE, actor_id=nurse.id)
+            .clinic(nurse.clinic_id)
+            .build(),
+        )
+
+        return NurseVerifyOTPResponse(
+            access_token=access_token,
+            user_id=nurse.id,
+            role=Role.NURSE.value,
+            clinic_id=nurse.clinic_id,
+            display_name=nurse.display_name,
+            expires_in=900,
+        )
+
     async def verify_mfa(
         self, request: MFAVerifyRequest, actor_id: str
     ) -> MFAVerifyResponse:
@@ -288,3 +427,50 @@ class AuthService:
             algorithm=settings.jwt_algorithm,
         )
         return f"Bearer {token}"
+
+    def _issue_staff_access_token(
+        self,
+        user_id: str,
+        clinic_id: str,
+        role: str,
+    ) -> str:
+        from jose import jwt as jose_jwt
+        from api.config import get_settings
+
+        settings = get_settings()
+        now = datetime.now(timezone.utc)
+        payload = {
+            "sub": user_id,
+            "custom:role": role,
+            "custom:clinic_id": clinic_id,
+            "partial": False,
+            "iss": settings.jwt_issuer,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(seconds=settings.jwt_expiry_seconds)).timestamp()),
+        }
+        token = jose_jwt.encode(
+            payload,
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        return f"Bearer {token}"
+
+    @staticmethod
+    def _hash_staff_identity(email: str, clinic_id: str, role: str) -> str:
+        return hashlib.sha256(f"{email}:{clinic_id}:{role}:staff-salt".encode()).hexdigest()
+
+    @staticmethod
+    def _mask_email(email: str) -> str:
+        if "@" not in email:
+            return "****"
+        local, domain = email.split("@", 1)
+        if len(local) <= 2:
+            masked_local = local[0] + "*"
+        else:
+            masked_local = local[0] + ("*" * (len(local) - 2)) + local[-1]
+        return f"{masked_local}@{domain}"
+
+    @staticmethod
+    def _is_valid_email(email: str) -> bool:
+        # Keep this intentionally strict enough for auth input validation.
+        return bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email))

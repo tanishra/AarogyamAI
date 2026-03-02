@@ -1,327 +1,555 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Zap, CheckCircle, Edit2, RefreshCw, Save,
-  ChevronRight, Clock, User, FileText, Copy, Send
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Save,
+  Sparkles,
+  Stethoscope,
+  User,
 } from "lucide-react";
+import { getDoctorPatientContext, getDoctorQueue } from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 
-const sections = [
-  {
-    key: "S",
-    label: "Subjective",
-    color: "#2563EB",
-    bg: "#EFF6FF",
-    content: "Patient Marcus Thorne, 42-year-old male, presents with episodic chest tightness and shortness of breath occurring primarily during moderate physical exertion. Patient reports the chest tightness radiates to the left shoulder and occasionally the jaw. Symptoms have been present for approximately 3 weeks, with increasing frequency over the past 5 days. Patient rates current pain intensity at 4/10 (down from 7/10 last week). Patient reports partial relief with prescribed sublingual nitroglycerin.",
-  },
-  {
-    key: "O",
-    label: "Objective",
-    color: "#7C3AED",
-    bg: "#F5F3FF",
-    content: "Vitals: BP 142/88 mmHg (elevated), HR 94 bpm (upper normal range), Temp 98.6°F (normal), SpO2 97% (adequate). General: Patient appears mildly anxious but in no acute distress. Cardiovascular: Regular rate and rhythm, no murmurs or gallops noted. S1 and S2 within normal limits. Lungs: Clear to auscultation bilaterally. No wheezing or crackles. ECG: Non-specific ST-segment changes in leads V4–V6. Troponin: Pending.",
-  },
-  {
-    key: "A",
-    label: "Assessment",
-    color: "#D97706",
-    bg: "#FFFBEB",
-    content: "Primary Consideration: Unstable Angina Pectoris — Given the clinical presentation, history of CAD risk factors (family history, hypertension, recent statin non-compliance), and the characteristic exertional chest pain with radiation pattern, unstable angina remains the primary diagnosis. Secondary Consideration: GERD — Cannot be fully excluded given patient's dietary history. AI Confidence Score: 88%.",
-  },
-  {
-    key: "P",
-    label: "Plan",
-    color: "#059669",
-    bg: "#ECFDF5",
-    content: "1. Admit for continuous cardiac monitoring and serial troponin testing (q6h x3). 2. Continue sublingual nitroglycerin PRN for acute episodes. 3. Initiate dual antiplatelet therapy pending troponin results. 4. Restart atorvastatin 40mg daily — address compliance barriers with patient. 5. Cardiology consult for possible stress testing or catheterization evaluation. 6. Patient education on activity restrictions and warning signs requiring immediate ER visit.",
-  },
-];
+type QueueItem = Awaited<ReturnType<typeof getDoctorQueue>>["queue"][number];
+type DoctorContext = Awaited<ReturnType<typeof getDoctorPatientContext>>;
+type SoapKey = "S" | "O" | "A" | "P";
 
-export default function SmartNoteEditor() {
+export default function SmartNotePage() {
   const router = useRouter();
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [contents, setContents] = useState<Record<string, string>>(
-    Object.fromEntries(sections.map(s => [s.key, s.content]))
-  );
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const params = useSearchParams();
+  const token = useAuthStore((s) => s.token);
+  const role = useAuthStore((s) => s.role);
 
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => router.push("/doctor/treatment"), 1200);
+  const [sessionId, setSessionId] = useState("");
+  const [queueItem, setQueueItem] = useState<QueueItem | null>(null);
+  const [context, setContext] = useState<DoctorContext | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editingKey, setEditingKey] = useState<SoapKey | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [sections, setSections] = useState<Record<SoapKey, string>>({
+    S: "",
+    O: "",
+    A: "",
+    P: "",
+  });
+
+  useEffect(() => {
+    if (!token || role !== "doctor") {
+      router.replace("/login");
+      return;
+    }
+    let active = true;
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const queue = await getDoctorQueue(token);
+        const requested = params.get("session_id") ?? "";
+        const resolved =
+          queue.queue.find((q) => q.session_id === requested)?.session_id ??
+          queue.queue[0]?.session_id ??
+          "";
+        if (!resolved) {
+          if (active) {
+            setSessionId("");
+            setQueueItem(null);
+            setContext(null);
+            setSections({
+              S: "No patient ready for doctor.",
+              O: "No vitals available.",
+              A: "No differential analysis available.",
+              P: "No plan available.",
+            });
+          }
+          return;
+        }
+        const selectedQueue =
+          queue.queue.find((q) => q.session_id === resolved) ?? null;
+        const ctx = await getDoctorPatientContext(token, resolved);
+        if (!active) return;
+        setSessionId(resolved);
+        setQueueItem(selectedQueue);
+        setContext(ctx);
+
+        const parsed = parseIntakeSummary(ctx.intake_summary_preview ?? null);
+        setSections(buildSoapSections(ctx, selectedQueue, parsed));
+      } catch (e) {
+        if (!active) return;
+        setError(`Failed to load smart note context: ${String(e)}`);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [token, role, router, params]);
+
+  const parsedSummary = useMemo(
+    () => parseIntakeSummary(context?.intake_summary_preview ?? null),
+    [context?.intake_summary_preview]
+  );
+
+  const profile = {
+    name:
+      context?.patient_name ||
+      queueItem?.patient_name ||
+      parsedSummary.name ||
+      "Patient",
+    age: context?.patient_age || queueItem?.patient_age || parsedSummary.age || null,
+    location:
+      context?.patient_location ||
+      queueItem?.patient_location ||
+      parsedSummary.location ||
+      null,
   };
 
+  const sectionMeta: Array<{
+    key: SoapKey;
+    label: string;
+    dot: string;
+  }> = [
+    { key: "S", label: "SUBJECTIVE", dot: "#3B82F6" },
+    { key: "O", label: "OBJECTIVE", dot: "#8B5CF6" },
+    { key: "A", label: "ASSESSMENT", dot: "#D97706" },
+    { key: "P", label: "PLAN", dot: "#059669" },
+  ];
+
+  const highlights = useMemo(() => {
+    const list: string[] = [];
+    if (queueItem?.chief_complaint) list.push(queueItem.chief_complaint);
+    if (context?.nurse_feedback) list.push(`Nurse: ${context.nurse_feedback}`);
+    if (parsedSummary.details.length > 0) list.push(...parsedSummary.details.slice(0, 2));
+    return list.slice(0, 3);
+  }, [queueItem?.chief_complaint, context?.nurse_feedback, parsedSummary.details]);
+
   return (
-    <div style={{
-      minHeight: "100vh", background: "#F8FAFC",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-    }}>
-
-      {/* Header */}
-      <div style={{
-        background: "white", borderBottom: "1px solid #E5E7EB",
-        padding: "0 32px", position: "sticky", top: 0, zIndex: 50,
-      }}>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          height: "60px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{
-              width: "30px", height: "30px", borderRadius: "8px",
-              background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontSize: "12px", fontWeight: 800, color: "white" }}>CZ</span>
+    <div style={{ minHeight: "100vh", background: "#F2F4F8", fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "28px 24px 36px" }}>
+      <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <div style={{ background: "#F8FAFC", border: "1px solid #E9EEF5", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}>
+          <header style={{ minHeight: "72px", borderBottom: "1px solid #E9EEF5", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "#FFFFFF" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#E0E7FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Stethoscope size={15} color="#3B82F6" />
+              </div>
+              <span style={{ fontSize: "24px", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>Clinical Zen</span>
             </div>
-            <div style={{ display: "flex", gap: "4px", alignItems: "center", fontSize: "13px" }}>
-              <span style={{ color: "#64748B" }}>Doctor</span>
-              <span style={{ color: "#CBD5E1" }}>/</span>
-              <span style={{ color: "#0F172A", fontWeight: 600 }}>Smart Note Editor</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>Dr. Sarah Smith</div>
+                <div style={{ fontSize: "10px", color: "#94A3B8", fontWeight: 700 }}>ATTENDING PHYSICIAN</div>
+              </div>
+              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "#DBEAFE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <User size={15} color="#1D4ED8" />
+              </div>
             </div>
-          </div>
+          </header>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#94A3B8" }}>
-              <Clock size={13} />
-              Auto-saved 2m ago
+          <main style={{ padding: "22px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+              <div>
+                <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.08em" }}>
+                  CLINICAL WORKFLOW › DOCUMENTATION › STAGE 5: SMART NOTE
+                </p>
+                <h1 style={{ margin: 0, fontSize: "52px", lineHeight: 1.04, fontWeight: 800, color: "#111827" }}>
+                  Final Documentation Review
+                </h1>
+              </div>
             </div>
-            <button style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "9px 16px", borderRadius: "10px",
-              border: "1.5px solid #E5E7EB", background: "white",
-              fontSize: "13px", fontWeight: 600, color: "#374151",
-              cursor: "pointer", fontFamily: "inherit",
-            }}>
-              <Copy size={13} /> Copy SOAP
-            </button>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleSave}
-              style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "9px 20px", borderRadius: "10px",
-                border: "none", background: saved ? "#10B981" : "#2563EB",
-                fontSize: "13px", fontWeight: 700, color: "white",
-                cursor: "pointer", fontFamily: "inherit",
-                boxShadow: "0 4px 12px rgba(37,99,235,0.25)",
-                transition: "background 0.3s",
-              }}
-            >
-              {saving ? (
-                <div style={{ width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-              ) : saved ? (
-                <><CheckCircle size={14} /> Committed</>
-              ) : (
-                <><Save size={14} /> Commit to Record</>
-              )}
-            </motion.button>
-          </div>
-        </div>
-      </div>
 
-      {/* Body */}
-      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 24px" }}>
+            {error && (
+              <div style={{ marginBottom: "10px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: "10px", padding: "10px 12px", fontSize: "12px", fontWeight: 600 }}>
+                {error}
+              </div>
+            )}
 
-        {/* Page title */}
-        <div style={{ marginBottom: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <Zap size={14} color="#2563EB" />
-            <span style={{ fontSize: "11px", fontWeight: 700, color: "#2563EB", letterSpacing: "0.1em" }}>
-              AI-GENERATED SOAP NOTE
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <div>
-              <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#0F172A", margin: "0 0 4px" }}>
-                Clinical Documentation — Marcus Thorne
-              </h1>
-              <p style={{ fontSize: "13px", color: "#64748B", margin: 0 }}>
-                Session PS-902 • Generated from live session transcript + AI synthesis
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                padding: "9px 14px", borderRadius: "10px",
-                border: "1.5px solid #E5E7EB", background: "white",
-                fontSize: "12px", fontWeight: 600, color: "#374151",
-                cursor: "pointer", fontFamily: "inherit",
-              }}>
-                <RefreshCw size={13} /> Regenerate
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "20px" }}>
-
-          {/* SOAP Sections */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {sections.map((section) => {
-              const isEditing = editingKey === section.key;
-              return (
-                <motion.div
-                  key={section.key}
-                  layout
-                  style={{
-                    background: "white", borderRadius: "14px",
-                    border: "1px solid #E5E7EB",
-                    borderLeft: `4px solid ${section.color}`,
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Section header */}
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "14px 18px",
-                    background: section.bg, borderBottom: "1px solid #E5E7EB",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{
-                        width: "28px", height: "28px", borderRadius: "8px",
-                        background: section.color, display: "flex", alignItems: "center",
-                        justifyContent: "center", fontSize: "13px", fontWeight: 800, color: "white",
-                      }}>{section.key}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A" }}>
-                        {section.label}
-                      </span>
-                      <span style={{
-                        fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px",
-                        background: "rgba(37,99,235,0.1)", color: "#2563EB", letterSpacing: "0.06em",
-                      }}>AI DRAFTED</span>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 330px", gap: "18px", alignItems: "start" }}>
+              <section style={{ background: "white", border: "1px solid #ECF0F5", borderRadius: "16px", padding: "22px 22px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+                  <div>
+                    <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
+                      <span style={badge("#DCFCE7", "#15803D")}>AI STRUCTURED</span>
+                      <span style={badge("#DBEAFE", "#1D4ED8")}>SOAP FORMAT</span>
                     </div>
-                    <button
-                      onClick={() => setEditingKey(isEditing ? null : section.key)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "5px",
-                        fontSize: "12px", fontWeight: 600,
-                        color: isEditing ? "#10B981" : "#2563EB",
-                        background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
-                      }}
-                    >
-                      {isEditing ? <><CheckCircle size={13} /> Done</> : <><Edit2 size={13} /> Edit</>}
-                    </button>
+                    <h2 style={{ margin: "0 0 8px", fontSize: "50px", lineHeight: 1.04, fontWeight: 800, color: "#111827" }}>
+                      Patient Encounter Note
+                    </h2>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", fontSize: "12px", color: "#64748B", flexWrap: "wrap" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <User size={12} />
+                        {profile.name}
+                        {profile.age ? ` (${profile.age}Y)` : ""}
+                        {profile.location ? ` • ${profile.location}` : ""}
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Calendar size={12} />
+                        {new Date().toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Content */}
-                  <div style={{ padding: "16px 18px" }}>
-                    {isEditing ? (
-                      <textarea
-                        value={contents[section.key]}
-                        onChange={e => setContents(prev => ({ ...prev, [section.key]: e.target.value }))}
-                        style={{
-                          width: "100%", minHeight: "120px", padding: "12px",
-                          borderRadius: "10px", border: "1.5px solid #2563EB",
-                          background: "#F8FAFC", fontSize: "13px", color: "#374151",
-                          outline: "none", fontFamily: "inherit", resize: "vertical",
-                          lineHeight: 1.7,
-                        }}
-                      />
-                    ) : (
-                      <p style={{ fontSize: "14px", color: "#374151", lineHeight: 1.8, margin: 0 }}>
-                        {contents[section.key]}
-                      </p>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Right Panel */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-
-            {/* Patient context */}
-            <div style={{
-              background: "white", borderRadius: "14px",
-              border: "1px solid #E5E7EB", padding: "18px",
-            }}>
-              <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", margin: "0 0 12px" }}>
-                Patient Context
-              </h3>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-                <div style={{
-                  width: "38px", height: "38px", borderRadius: "50%",
-                  background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <User size={18} color="#64748B" />
-                </div>
-                <div>
-                  <p style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", margin: 0 }}>Marcus Thorne</p>
-                  <p style={{ fontSize: "11px", color: "#94A3B8", margin: "1px 0 0" }}>42 yrs • Male • ID: PT-8821</p>
-                </div>
-              </div>
-              {[
-                { label: "Primary Dx", value: "Unstable Angina" },
-                { label: "Session", value: "PS-902" },
-                { label: "Physician", value: "Dr. S. Jenkins" },
-                { label: "AI Score", value: "88% Confidence" },
-              ].map(item => (
-                <div key={item.label} style={{
-                  display: "flex", justifyContent: "space-between",
-                  padding: "8px 0", borderBottom: "1px solid #F1F5F9",
-                }}>
-                  <span style={{ fontSize: "12px", color: "#94A3B8" }}>{item.label}</span>
-                  <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>{item.value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* AI Suggestions */}
-            <div style={{
-              background: "white", borderRadius: "14px",
-              border: "1px solid #E5E7EB", padding: "18px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
-                <Zap size={13} color="#2563EB" />
-                <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
-                  AI Suggestions
-                </h3>
-              </div>
-              {[
-                "Consider adding HbA1c to the plan — patient has borderline glucose levels.",
-                "Plan section could reference ACC/AHA guidelines for NSTEMI management.",
-                "Recommend documenting informed consent for antiplatelet therapy initiation.",
-              ].map((s, i) => (
-                <div key={i} style={{
-                  padding: "10px 12px", borderRadius: "10px",
-                  background: "#F8FAFC", border: "1px solid #F1F5F9",
-                  marginBottom: i < 2 ? "8px" : 0,
-                }}>
-                  <p style={{ fontSize: "12px", color: "#374151", lineHeight: 1.6, margin: "0 0 6px" }}>{s}</p>
-                  <button style={{
-                    fontSize: "11px", color: "#2563EB", fontWeight: 600,
-                    background: "none", border: "none", cursor: "pointer",
-                    fontFamily: "inherit", padding: 0,
-                    display: "flex", alignItems: "center", gap: "4px",
-                  }}>
-                    Apply suggestion <ChevronRight size={11} />
+                  <button
+                    onClick={() => {
+                      setSaved(true);
+                      if (sessionId) router.push(`/doctor/treatment?session_id=${sessionId}`);
+                    }}
+                    disabled={!sessionId}
+                    style={{
+                      border: "none",
+                      borderRadius: "10px",
+                      background: saved ? "#16A34A" : "#2563EB",
+                      color: "white",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      cursor: sessionId ? "pointer" : "not-allowed",
+                      opacity: sessionId ? 1 : 0.6,
+                    }}
+                  >
+                    {saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                    Save & Continue
                   </button>
                 </div>
-              ))}
-            </div>
 
-            {/* Next step */}
-            <button
-              onClick={() => router.push("/doctor/treatment")}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                padding: "12px", borderRadius: "12px",
-                border: "none", background: "#F0F4F8",
-                fontSize: "13px", fontWeight: 700, color: "#374151",
-                cursor: "pointer", fontFamily: "inherit",
-              }}>
-              <Send size={14} /> Proceed to Treatment Plan <ChevronRight size={14} />
-            </button>
-          </div>
+                {loading ? (
+                  <p style={{ margin: "10px 0 0", fontSize: "13px", color: "#64748B" }}>
+                    Loading live patient context...
+                  </p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "38px", marginTop: "20px" }}>
+                    {sectionMeta.map((s) => {
+                      const isEditing = editingKey === s.key;
+                      return (
+                        <div key={s.key} style={{ background: "transparent", paddingBottom: "2px" }}>
+                          <div style={{ padding: "0 0 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: s.dot }} />
+                              <span style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.08em", color: "#64748B" }}>{s.label}</span>
+                            </div>
+                            <button
+                              onClick={() => setEditingKey(isEditing ? null : s.key)}
+                              style={{ border: "none", background: "none", color: "#2563EB", fontSize: "11px", fontWeight: 700, cursor: "pointer", padding: 0 }}
+                            >
+                              {isEditing ? "Done" : "Edit"}
+                            </button>
+                          </div>
+                          <div style={{ padding: isEditing ? "0" : "2px 0 0 18px", borderLeft: isEditing ? "none" : "2px solid #EEF2F7" }}>
+                            {isEditing ? (
+                              <textarea
+                                value={sections[s.key]}
+                                onChange={(e) =>
+                                  setSections((prev) => ({ ...prev, [s.key]: e.target.value }))
+                                }
+                                style={{
+                                  width: "100%",
+                                  minHeight: "126px",
+                                  border: "1px solid #D5DEEA",
+                                  borderRadius: "10px",
+                                  padding: "12px",
+                                  fontFamily: "inherit",
+                                  fontSize: "14px",
+                                  lineHeight: 1.6,
+                                  outline: "none",
+                                  resize: "vertical",
+                                  background: "#FFFFFF",
+                                }}
+                              />
+                            ) : s.key === "O" && context?.vitals_summary ? (
+                              <>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px", marginBottom: "18px", paddingRight: "6px" }}>
+                                  <VitalsBox label="BLOOD PRESSURE" value={`${context.vitals_summary.bp_systolic_mmhg}/${context.vitals_summary.bp_diastolic_mmhg}`} unit="mmHg" />
+                                  <VitalsBox label="HEART RATE" value={`${context.vitals_summary.heart_rate_bpm}`} unit="bpm" />
+                                  <VitalsBox label="SpO2" value={`${context.vitals_summary.spo2_percent}`} unit="%" />
+                                  <VitalsBox label="TEMP" value={`${context.vitals_summary.temperature_celsius.toFixed(1)}`} unit="C" />
+                                </div>
+                                <p style={sectionText()}>{sections[s.key]}</p>
+                              </>
+                            ) : (
+                              <p style={sectionText()}>{sections[s.key]}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <aside style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <section style={{ background: "white", border: "1px solid #ECF0F5", borderRadius: "14px", padding: "22px 18px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "18px" }}>
+                    <h3 style={{ margin: 0, fontSize: "30px", lineHeight: 1.08, fontWeight: 800, color: "#111827" }}>Session Highlights</h3>
+                    <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: 700 }}>REFERENCE ONLY</span>
+                  </div>
+                  <div style={{ display: "grid", gap: "14px" }}>
+                    {highlights.length > 0 ? (
+                      highlights.map((h, i) => (
+                        <div key={`${h}-${i}`} style={{ border: "1px solid #EEF2F7", background: "#F8FAFC", borderRadius: "14px", padding: "15px 14px" }}>
+                          <p style={{ margin: 0, fontSize: "12px", color: "#334155", lineHeight: 1.65 }}>{truncate(h, 190)}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>No highlights captured.</p>
+                    )}
+                  </div>
+                </section>
+
+                <section style={{ background: "white", border: "1px solid #ECF0F5", borderRadius: "14px", padding: "14px" }}>
+                  <p style={{ margin: "0 0 11px", fontSize: "11px", fontWeight: 800, color: "#94A3B8", letterSpacing: "0.07em" }}>
+                    LINKED EVIDENCE
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <EvidencePill icon={<FileText size={13} />} text="Intake Summary" />
+                    <EvidencePill icon={<ClipboardList size={13} />} text="Nurse Vitals" />
+                  </div>
+                </section>
+
+                <section style={{ background: "linear-gradient(160deg,#0F172A,#1E293B)", borderRadius: "14px", padding: "16px", color: "white" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", border: "1px solid rgba(148,163,184,0.35)", borderRadius: "999px", padding: "4px 8px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", marginBottom: "10px" }}>
+                    <Sparkles size={11} />
+                    GUIDELINE ALERT
+                  </div>
+                  <h4 style={{ margin: "0 0 8px", fontSize: "30px", lineHeight: 1.06, fontWeight: 800 }}>
+                    Review Differential Alignment
+                  </h4>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#CBD5E1", lineHeight: 1.6 }}>
+                    Ensure selected differentials are reflected in assessment and final treatment recommendations.
+                  </p>
+                  <button
+                    onClick={() =>
+                      sessionId && router.push(`/doctor/treatment?session_id=${sessionId}`)
+                    }
+                    style={{ marginTop: "12px", width: "100%", border: "none", borderRadius: "999px", background: "white", color: "#0F172A", fontSize: "12px", fontWeight: 800, padding: "9px", cursor: "pointer" }}
+                  >
+                    Proceed to Treatment Plan
+                  </button>
+                </section>
+              </aside>
+            </div>
+          </main>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
+}
+
+function badge(bg: string, color: string): React.CSSProperties {
+  return {
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    background: bg,
+    color,
+    borderRadius: "999px",
+    padding: "3px 8px",
+  };
+}
+
+function sectionText(): React.CSSProperties {
+  return {
+    margin: 0,
+    fontSize: "15px",
+    color: "#334155",
+    lineHeight: 1.82,
+    whiteSpace: "pre-wrap",
+  };
+}
+
+function VitalsBox({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+}) {
+  return (
+    <div style={{ border: "1px solid #EEF2F7", background: "#F8FAFC", borderRadius: "14px", padding: "10px 11px" }}>
+      <p style={{ margin: "0 0 3px", fontSize: "9px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.05em" }}>
+        {label}
+      </p>
+      <p style={{ margin: 0, fontSize: "20px", lineHeight: 1.1, color: "#0F172A", fontWeight: 800 }}>
+        {value} <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 700 }}>{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function EvidencePill({
+  icon,
+  text,
+}: {
+  icon: React.ReactNode;
+  text: string;
+}) {
+  return (
+    <div style={{ border: "1px solid #EEF2F7", borderRadius: "12px", background: "#F8FAFC", padding: "11px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12px", color: "#334155", fontWeight: 700 }}>
+      {icon}
+      {text}
+    </div>
+  );
+}
+
+function parseIntakeSummary(summary: string | null): {
+  name: string | null;
+  age: number | null;
+  location: string | null;
+  mainConcern: string | null;
+  details: string[];
+} {
+  const result = {
+    name: null as string | null,
+    age: null as number | null,
+    location: null as string | null,
+    mainConcern: null as string | null,
+    details: [] as string[],
+  };
+  if (!summary) return result;
+
+  const parts = summary
+    .replace(/\r/g, "\n")
+    .split(/\n|•|\|/g)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  for (const part of parts) {
+    if (!part.includes(":")) continue;
+    const [rawKey, ...rest] = part.split(":");
+    const key = rawKey.trim().toLowerCase();
+    const value = rest.join(":").trim();
+    if (!value) continue;
+    if (key === "name") result.name = value;
+    else if (key === "age") {
+      const m = value.match(/\d{1,3}/);
+      if (m) result.age = Number(m[0]);
+    } else if (key === "location" || key === "city") result.location = value;
+    else if (key === "main concern") result.mainConcern = value;
+    else if (key.startsWith("detail") || key === "additional details")
+      result.details.push(value);
+  }
+  return result;
+}
+
+function truncate(value: string, max: number): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max - 1).trim()}…`;
+}
+
+function buildSoapSections(
+  ctx: DoctorContext,
+  queueItem: QueueItem | null,
+  parsed: {
+    name: string | null;
+    age: number | null;
+    location: string | null;
+    mainConcern: string | null;
+    details: string[];
+  }
+): Record<SoapKey, string> {
+  const chief =
+    cleanSentence(
+      ctx.structured_context?.chief_complaint ||
+        queueItem?.chief_complaint ||
+        parsed.mainConcern ||
+        "Patient reports current health concern."
+    ) || "Patient reports current health concern.";
+
+  const hpiSource =
+    cleanSentence(
+      ctx.structured_context?.history_of_present_illness ||
+        parsed.details.slice(0, 2).join(". ")
+    ) || "History details are limited in the current intake.";
+
+  const profileBits = [
+    parsed.name || ctx.patient_name || "Patient",
+    (parsed.age || ctx.patient_age) ? `${parsed.age || ctx.patient_age} years old` : null,
+    parsed.location || ctx.patient_location || null,
+  ].filter(Boolean);
+
+  const subjective = [
+    `${profileBits.join(", ")} presented with ${chief.toLowerCase()}.`,
+    hpiSource,
+    parsed.details.length > 0
+      ? `Additional reported details: ${parsed.details
+          .slice(0, 3)
+          .map((d) => d.replace(/\.$/, ""))
+          .join("; ")}.`
+      : "Additional symptom progression details were not explicitly documented in the intake.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const vitals = ctx.vitals_summary;
+  const objectiveLines: string[] = [];
+  if (vitals) {
+    objectiveLines.push(
+      `Vitals on review: BP ${vitals.bp_systolic_mmhg}/${vitals.bp_diastolic_mmhg} mmHg, HR ${vitals.heart_rate_bpm} bpm, Temp ${vitals.temperature_celsius.toFixed(
+        1
+      )} C, RR ${vitals.respiratory_rate_pm}/min, SpO2 ${vitals.spo2_percent}%, Weight ${vitals.weight_kg} kg, Height ${vitals.height_cm} cm.`
+    );
+    const flags: string[] = [];
+    if (vitals.temperature_celsius >= 37.6) flags.push("mild fever pattern");
+    if (vitals.heart_rate_bpm >= 100) flags.push("tachycardic trend");
+    if (vitals.spo2_percent < 95) flags.push("reduced oxygen saturation");
+    if (vitals.bp_systolic_mmhg >= 140 || vitals.bp_diastolic_mmhg >= 90)
+      flags.push("elevated blood pressure");
+    if (flags.length > 0) {
+      objectiveLines.push(`Clinical observation from vitals: ${flags.join(", ")}.`);
+    }
+  } else {
+    objectiveLines.push("Nurse vitals were not available at the time of this note.");
+  }
+  if (ctx.nurse_feedback) {
+    objectiveLines.push(`Nurse observation: ${cleanSentence(ctx.nurse_feedback)}.`);
+  }
+
+  const accepted = ctx.differentials.filter((d) =>
+    ["accepted", "modified", "added"].includes(d.doctor_action ?? "")
+  );
+  const differentialBase = accepted.length > 0 ? accepted : ctx.differentials;
+  const topDiffs = differentialBase.slice(0, 3);
+
+  const assessment = topDiffs.length
+    ? topDiffs
+        .map((d, i) => {
+          const reasoning =
+            cleanSentence(
+              d.doctor_action === "modified" && d.doctor_modification
+                ? d.doctor_modification
+                : d.clinical_reasoning
+            ) || "Requires further clinical correlation.";
+          return `${i + 1}. ${d.title}: ${truncate(reasoning, 220)}`;
+        })
+        .join("\n")
+    : "1. Differential analysis pending completion due to limited synthesized context.";
+
+  const topTitle = topDiffs[0]?.title || "primary diagnosis";
+  const plan = [
+    `1. Correlate current findings with the leading differential (${topTitle}) and complete focused physical examination.`,
+    "2. Continue supportive and symptomatic management while monitoring vitals trend and red-flag progression.",
+    "3. Reassess within a short interval or earlier if symptoms worsen, new concerning signs appear, or emergency criteria are met.",
+    "4. Communicate final assessment, safety instructions, and follow-up timeline clearly in the committed medical record.",
+  ].join("\n");
+
+  return {
+    S: subjective,
+    O: objectiveLines.join(" "),
+    A: assessment,
+    P: plan,
+  };
+}
+
+function cleanSentence(text: string | null | undefined): string {
+  if (!text) return "";
+  return text.replace(/\s+/g, " ").trim();
 }

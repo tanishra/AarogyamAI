@@ -207,16 +207,17 @@ class AuditService:
 
         Raises RuntimeError if insert fails — caller must NOT silently swallow this.
         """
+        # Serialize audit writes inside DB transaction to avoid concurrent
+        # sequence_number collisions across requests/workers.
+        await session.execute(text("SELECT pg_advisory_xact_lock(42042)"))
+
         occurred_at = datetime.now(timezone.utc)
         occurred_at_str = occurred_at.isoformat()
 
-        # Step 1 — get previous entry under advisory lock
-        # FOR UPDATE SKIP LOCKED ensures concurrent writers don't race
         stmt = (
             select(AuditLogEntry)
             .order_by(AuditLogEntry.sequence_number.desc())
             .limit(1)
-            .with_for_update()
         )
         result = await session.execute(stmt)
         last_entry = result.scalar_one_or_none()
@@ -228,7 +229,6 @@ class AuditService:
             prev_hash = last_entry.entry_hash
             sequence_number = last_entry.sequence_number + 1
 
-        # Step 2 — compute hash
         entry_hash = _compute_entry_hash(
             sequence_number=sequence_number,
             prev_hash=prev_hash,
@@ -241,7 +241,6 @@ class AuditService:
             occurred_at=occurred_at_str,
         )
 
-        # Step 3 — insert
         log_entry = AuditLogEntry(
             id=str(uuid4()),
             entry_hash=entry_hash,
@@ -260,7 +259,7 @@ class AuditService:
         )
 
         session.add(log_entry)
-        await session.flush()   # write to DB — not committed yet
+        await session.flush()
 
         logger.info(
             "Audit entry recorded",
