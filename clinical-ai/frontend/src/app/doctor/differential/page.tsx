@@ -181,17 +181,14 @@ export default function DoctorDifferentialPage() {
         return {
           ...prev,
           differentials: prev.differentials.map((d) =>
-            d.consideration_id === considerationId
-              ? {
-                  ...d,
-                  doctor_action: action,
-                  doctor_modification:
-                    action === "modified"
-                      ? modificationText
-                      : d.doctor_modification ?? null,
-                }
-              : d
-          ),
+                d.consideration_id === considerationId
+                  ? {
+                      ...d,
+                      doctor_action: action,
+                      doctor_modification: null,
+                    }
+                  : d
+              ),
         };
       });
     } catch (e) {
@@ -356,21 +353,21 @@ export default function DoctorDifferentialPage() {
                 <button
                   onClick={() =>
                     selectedSessionId &&
-                    router.push(`/doctor/history?session_id=${selectedSessionId}`)
+                    router.push(`/doctor/command?session_id=${selectedSessionId}`)
                   }
                   style={ghostBtn()}
                 >
                   <Clock3 size={14} />
-                  View Previous Sessions
+                  Open Clinical Command
                 </button>
                 <button
                   onClick={() =>
                     selectedSessionId &&
-                    router.push(`/doctor/smart-note?session_id=${selectedSessionId}`)
+                    router.push(`/doctor/treatment?session_id=${selectedSessionId}`)
                   }
                   style={primaryBtn()}
                 >
-                  Commit to Record
+                  Continue to Treatment
                 </button>
               </div>
             </div>

@@ -11,11 +11,10 @@ export default function DoctorSessionPage() {
     const sessionId = params.get("session_id");
     router.replace(
       sessionId
-        ? `/doctor/treatment?session_id=${sessionId}`
-        : "/doctor/treatment"
+        ? `/doctor/dashboard?session_id=${sessionId}`
+        : "/doctor/dashboard"
     );
   }, [router, params]);
 
   return null;
 }
-

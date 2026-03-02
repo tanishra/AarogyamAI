@@ -12,6 +12,8 @@ from packages.schemas.doctor import (
     DoctorQueueResponse,
     FeedbackRequest,
     FeedbackResponse,
+    LiveSupportRequest,
+    LiveSupportResponse,
     PatientContextResponse,
     SaveReasoningDraftRequest,
     SaveReasoningDraftResponse,
@@ -29,8 +31,12 @@ async def get_queue(
     token: CurrentDoctor,
     session: DBSession,
     audit: AuditDep,
+    include_completed: bool = False,
 ):
-    return await _svc(session, audit).get_queue(clinic_id=token.clinic_id)
+    return await _svc(session, audit).get_queue(
+        clinic_id=token.clinic_id,
+        include_completed=include_completed,
+    )
 
 
 @router.get(
@@ -117,4 +123,17 @@ async def submit_feedback(
 ):
     return await _svc(session, audit).submit_feedback(
         doctor_id=token.sub, request=body
+    )
+
+
+@router.post("/doctor/session/live-support", response_model=LiveSupportResponse)
+async def live_support(
+    body: LiveSupportRequest,
+    token: CurrentDoctor,
+    session: DBSession,
+    audit: AuditDep,
+):
+    return await _svc(session, audit).get_live_support(
+        doctor_id=token.sub,
+        request=body,
     )

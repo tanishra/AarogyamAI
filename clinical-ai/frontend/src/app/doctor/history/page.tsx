@@ -100,8 +100,8 @@ export default function DoctorHistoryPage() {
             onClick={() =>
               router.push(
                 sessionId
-                  ? `/doctor/differential?session_id=${sessionId}`
-                  : "/doctor/differential"
+                  ? `/doctor/dashboard?session_id=${sessionId}`
+                  : "/doctor/dashboard"
               )
             }
             style={{
@@ -119,7 +119,7 @@ export default function DoctorHistoryPage() {
             }}
           >
             <ChevronLeft size={14} />
-            Back to Differential
+            Back to Dashboard
           </button>
         </div>
 
@@ -177,4 +177,3 @@ function Panel({ text, danger = false }: { text: string; danger?: boolean }) {
     </div>
   );
 }
-

@@ -33,6 +33,9 @@ from packages.schemas.doctor import (
     DoctorQueueResponse,
     FeedbackRequest,
     FeedbackResponse,
+    LiveSupportRequest,
+    LiveSupportResponse,
+    LiveSupportSuggestion,
     PatientContextResponse,
     SaveReasoningDraftRequest,
     SaveReasoningDraftResponse,
@@ -51,16 +54,24 @@ class DoctorService:
         self._session = session
         self._audit = audit
 
-    async def get_queue(self, clinic_id: str) -> DoctorQueueResponse:
+    async def get_queue(
+        self,
+        clinic_id: str,
+        include_completed: bool = False,
+    ) -> DoctorQueueResponse:
+        statuses = [
+            SessionStatus.SYNTHESIS_IN_PROGRESS.value,
+            SessionStatus.SYNTHESIS_COMPLETE.value,
+            SessionStatus.SYNTHESIS_FALLBACK.value,
+            SessionStatus.NURSE_MARKED_READY.value,
+        ]
+        if include_completed:
+            statuses.append(SessionStatus.RECORD_COMMITTED.value)
+
         stmt = (
             select(PatientSession)
             .where(PatientSession.clinic_id == clinic_id)
-            .where(PatientSession.status.in_([
-                SessionStatus.SYNTHESIS_IN_PROGRESS.value,
-                SessionStatus.SYNTHESIS_COMPLETE.value,
-                SessionStatus.SYNTHESIS_FALLBACK.value,
-                SessionStatus.NURSE_MARKED_READY.value,
-            ]))
+            .where(PatientSession.status.in_(statuses))
             .order_by(PatientSession.arrival_order.asc())
         )
         result = await self._session.execute(stmt)
@@ -80,6 +91,7 @@ class DoctorService:
                 DoctorQueuePatient(
                     session_id=s.id,
                     arrival_order=s.arrival_order,
+                    session_status=s.status,
                     synthesis_ready=(s.status == SessionStatus.SYNTHESIS_COMPLETE.value),
                     fallback_active=(
                         s.status == SessionStatus.SYNTHESIS_FALLBACK.value
@@ -473,6 +485,56 @@ class DoctorService:
         )
         return FeedbackResponse(received=True)
 
+    async def get_live_support(
+        self,
+        doctor_id: str,
+        request: LiveSupportRequest,
+    ) -> LiveSupportResponse:
+        stmt = select(PatientSession).where(
+            PatientSession.id == request.session_id
+        )
+        result = await self._session.execute(stmt)
+        session = result.scalar_one_or_none()
+        if session is None:
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "SESSION_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        vitals_stmt = (
+            select(Vitals)
+            .where(Vitals.session_id == request.session_id)
+            .order_by(Vitals.created_at.desc())
+            .limit(1)
+        )
+        vitals_result = await self._session.execute(vitals_stmt)
+        latest_vitals = vitals_result.scalar_one_or_none()
+
+        suggestions: list[LiveSupportSuggestion] = self._build_live_suggestions(
+            transcript_text=request.transcript_text,
+            session=session,
+            vitals=latest_vitals,
+        )
+
+        await self._audit.record(
+            self._session,
+            AuditEntryBuilder()
+            .event(AuditEventType.PATIENT_CONTEXT_VIEWED)
+            .outcome(OutcomeStatus.SUCCESS)
+            .actor(role=ActorRole.DOCTOR, actor_id=doctor_id)
+            .session(request.session_id)
+            .metadata({"live_support_suggestions": len(suggestions)})
+            .build(),
+        )
+
+        return LiveSupportResponse(
+            session_id=request.session_id,
+            transcript_excerpt=request.transcript_text.strip()[:600],
+            suggestions=suggestions,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        )
+
     async def _generate_live_synthesis_if_missing(
         self,
         session: PatientSession,
@@ -728,3 +790,107 @@ class DoctorService:
             ),
             review_of_systems=None,
         )
+
+    @staticmethod
+    def _build_live_suggestions(
+        transcript_text: str,
+        session: PatientSession,
+        vitals: Vitals | None,
+    ) -> list[LiveSupportSuggestion]:
+        text = transcript_text.lower()
+        suggestions: list[LiveSupportSuggestion] = []
+
+        def push(
+            title: str,
+            rationale: str,
+            urgency: UrgencyFlag,
+            suggestion_type: str,
+        ) -> None:
+            suggestions.append(
+                LiveSupportSuggestion(
+                    suggestion_id=str(uuid4()),
+                    title=title,
+                    rationale=rationale,
+                    urgency_flag=urgency,
+                    suggestion_type=suggestion_type,
+                )
+            )
+
+        if "chest pain" in text or "chest tightness" in text:
+            push(
+                title="Order ECG and cardiac enzymes",
+                rationale=(
+                    "Live encounter text includes chest pain/tightness. "
+                    "Early objective cardiac evaluation helps reduce delay."
+                ),
+                urgency=UrgencyFlag.URGENT,
+                suggestion_type="lab_order",
+            )
+
+        if "shortness of breath" in text or "breathless" in text:
+            push(
+                title="Assess oxygenation and respiratory status trend",
+                rationale=(
+                    "Dyspnea terms detected in encounter. Correlate with SpO2 and "
+                    "respiratory exam to rule out acute decompensation."
+                ),
+                urgency=UrgencyFlag.URGENT,
+                suggestion_type="monitoring",
+            )
+
+        if "fever" in text or "chills" in text:
+            push(
+                title="Consider CBC/CRP and infection-focused exam",
+                rationale=(
+                    "Fever/chills language detected. Infection-focused objective workup "
+                    "can narrow next-step differential quickly."
+                ),
+                urgency=UrgencyFlag.ROUTINE,
+                suggestion_type="lab_order",
+            )
+
+        if vitals is not None:
+            if vitals.bp_systolic_mmhg >= 160 or vitals.bp_diastolic_mmhg >= 100:
+                push(
+                    title="Repeat BP and evaluate hypertensive risk",
+                    rationale=(
+                        "Recorded blood pressure is elevated. Confirm repeat reading and "
+                        "assess for acute symptoms before finalizing plan."
+                    ),
+                    urgency=UrgencyFlag.URGENT,
+                    suggestion_type="safety_check",
+                )
+            if vitals.spo2_percent < 95:
+                push(
+                    title="Escalate respiratory safety checks",
+                    rationale=(
+                        "SpO2 below normal range in latest vitals. Correlate with "
+                        "respiratory findings and consider immediate stabilization needs."
+                    ),
+                    urgency=UrgencyFlag.CRITICAL,
+                    suggestion_type="safety_check",
+                )
+
+        if session.emergency_flagged:
+            push(
+                title="Prioritize urgent stabilization pathway",
+                rationale=(
+                    "Session is emergency-flagged by upstream intake/vitals workflow. "
+                    "Keep escalation readiness active while documenting plan."
+                ),
+                urgency=UrgencyFlag.CRITICAL,
+                suggestion_type="escalation",
+            )
+
+        if not suggestions:
+            push(
+                title="Continue focused history and exam correlation",
+                rationale=(
+                    "No high-risk trigger phrase detected in this excerpt. "
+                    "Proceed with structured differential confirmation."
+                ),
+                urgency=UrgencyFlag.ROUTINE,
+                suggestion_type="guidance",
+            )
+
+        return suggestions[:6]

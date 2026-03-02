@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import structlog
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -188,22 +189,83 @@ class AuthService:
         self, request: StaffLoginRequest
     ) -> StaffLoginResponse:
         """
-        Validate staff credentials via Cognito.
+        Validate staff credentials.
         Return partial token — full token only after MFA.
         """
+        from api.config import get_settings
+
+        settings = get_settings()
+        email = request.email.strip().lower()
+        if not self._is_valid_email(email):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "INVALID_EMAIL", "error_id": str(uuid4())},
+            )
+
+        stmt = (
+            select(ClinicUser)
+            .where(ClinicUser.email == email)
+            .where(ClinicUser.clinic_id == request.clinic_id)
+            .where(ClinicUser.is_active.is_(True))
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        staff = result.scalar_one_or_none()
+        if staff is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "STAFF_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        if staff.role not in {
+            Role.NURSE.value,
+            Role.DOCTOR.value,
+            Role.ADMIN.value,
+            Role.DPO.value,
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "FORBIDDEN", "error_id": str(uuid4())},
+            )
+
+        # Temporary placeholder credential check until Cognito is wired.
+        # In development we allow any non-empty password accepted by schema.
+        if settings.app_env != "development" and request.password != "ChangeMe123!":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "INVALID_CREDENTIALS", "error_id": str(uuid4())},
+            )
+
+        redis = get_redis()
+        mfa_code = "123456" if settings.app_env == "development" else f"{secrets.randbelow(1_000_000):06d}"
+        mfa_key = f"staff_mfa_challenge:{staff.id}"
+        await redis.setex(
+            mfa_key,
+            300,
+            self._hash_otp(staff.id, mfa_code),
+        )
+
+        partial_token = self._issue_staff_partial_token(
+            user_id=staff.id,
+            clinic_id=staff.clinic_id,
+            role=staff.role,
+        )
+
         await self._audit.record(
             self._session,
             AuditEntryBuilder()
             .event(AuditEventType.AUTH_STAFF_LOGIN)
             .outcome(OutcomeStatus.SUCCESS)
-            .actor(role=ActorRole.SYSTEM)
-            .metadata({"clinic_id": request.clinic_id})
+            .actor(
+                role=self._actor_role_from_user_role(staff.role),
+                actor_id=staff.id,
+            )
+            .clinic(request.clinic_id)
             .build(),
         )
 
-        # In production — call Cognito InitiateAuth
         return StaffLoginResponse(
-            partial_token="partial.jwt.placeholder",
+            partial_token=partial_token,
             mfa_required=True,
             totp_setup_required=False,
         )
@@ -346,23 +408,64 @@ class AuthService:
         """
         Verify TOTP code. Return full JWT on success.
         """
+        from api.config import get_settings
+
+        settings = get_settings()
+        stmt = (
+            select(ClinicUser)
+            .where(ClinicUser.id == actor_id)
+            .where(ClinicUser.is_active.is_(True))
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        staff = result.scalar_one_or_none()
+        if staff is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "STAFF_NOT_FOUND", "error_id": str(uuid4())},
+            )
+
+        redis = get_redis()
+        mfa_key = f"staff_mfa_challenge:{staff.id}"
+        expected = await redis.get(mfa_key)
+        provided = self._hash_otp(staff.id, request.totp_code)
+        dev_bypass = settings.app_env == "development" and request.totp_code == "123456"
+        if not dev_bypass:
+            if not expected or not secrets.compare_digest(str(expected), provided):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={"error": "INVALID_OTP", "error_id": str(uuid4())},
+                )
+        await redis.delete(mfa_key)
+
+        staff.last_login_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        access_token = self._issue_staff_access_token(
+            user_id=staff.id,
+            clinic_id=staff.clinic_id,
+            role=staff.role,
+        )
+
         await self._audit.record(
             self._session,
             AuditEntryBuilder()
             .event(AuditEventType.AUTH_MFA_VERIFIED)
             .outcome(OutcomeStatus.SUCCESS)
-            .actor(role=ActorRole.SYSTEM, actor_id=actor_id)
+            .actor(
+                role=self._actor_role_from_user_role(staff.role),
+                actor_id=staff.id,
+            )
+            .clinic(staff.clinic_id)
             .build(),
         )
 
-        # In production — call Cognito RespondToAuthChallenge
         return MFAVerifyResponse(
-            access_token="full.jwt.placeholder",
-            user_id=actor_id,
-            role="doctor",
-            clinic_id="clinic-001",
-            display_name="Dr. Placeholder",
-            expires_in=900,
+            access_token=access_token,
+            user_id=staff.id,
+            role=staff.role,
+            clinic_id=staff.clinic_id,
+            display_name=staff.display_name,
+            expires_in=get_settings().jwt_expiry_seconds,
         )
 
     async def _load_consent_map(self, patient_id: str) -> ConsentStatusMap:
@@ -455,6 +558,33 @@ class AuthService:
         )
         return f"Bearer {token}"
 
+    def _issue_staff_partial_token(
+        self,
+        user_id: str,
+        clinic_id: str,
+        role: str,
+    ) -> str:
+        from jose import jwt as jose_jwt
+        from api.config import get_settings
+
+        settings = get_settings()
+        now = datetime.now(timezone.utc)
+        payload = {
+            "sub": user_id,
+            "custom:role": role,
+            "custom:clinic_id": clinic_id,
+            "partial": True,
+            "iss": settings.jwt_issuer,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=5)).timestamp()),
+        }
+        token = jose_jwt.encode(
+            payload,
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        return f"Bearer {token}"
+
     @staticmethod
     def _hash_staff_identity(email: str, clinic_id: str, role: str) -> str:
         return hashlib.sha256(f"{email}:{clinic_id}:{role}:staff-salt".encode()).hexdigest()
@@ -474,3 +604,13 @@ class AuthService:
     def _is_valid_email(email: str) -> bool:
         # Keep this intentionally strict enough for auth input validation.
         return bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email))
+
+    @staticmethod
+    def _actor_role_from_user_role(role: str) -> ActorRole:
+        mapping = {
+            Role.NURSE.value: ActorRole.NURSE,
+            Role.DOCTOR.value: ActorRole.DOCTOR,
+            Role.ADMIN.value: ActorRole.ADMIN,
+            Role.DPO.value: ActorRole.DPO,
+        }
+        return mapping.get(role, ActorRole.SYSTEM)

@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle, Clock, Save, Trash2 } from "lucide-react";
-import { getDoctorPatientContext, getDoctorQueue } from "@/lib/api";
+import {
+  getDoctorPatientContext,
+  getDoctorQueue,
+  saveDoctorReasoningDraft,
+} from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 
 type PlanItem = {
@@ -21,8 +25,10 @@ export default function TreatmentPage() {
 
   const [sessionId, setSessionId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [items, setItems] = useState<PlanItem[]>([]);
+  const [treatmentNote, setTreatmentNote] = useState("");
 
   useEffect(() => {
     if (!token || role !== "doctor") {
@@ -77,6 +83,11 @@ export default function TreatmentPage() {
           });
         }
         setItems(generated);
+        setTreatmentNote(
+          generated
+            .map((g, idx) => `${idx + 1}. ${g.action}`)
+            .join("\n")
+        );
       } catch (e) {
         if (!active) return;
         setError(`Failed to load live treatment context: ${String(e)}`);
@@ -99,6 +110,25 @@ export default function TreatmentPage() {
   const remove = (id: string) =>
     setItems((prev) => prev.filter((i) => i.id !== id));
 
+  const saveAndContinue = async () => {
+    if (!token || !sessionId || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const completedItems = items.filter((i) => i.done);
+      await saveDoctorReasoningDraft(token, {
+        session_id: sessionId,
+        plan: treatmentNote.trim(),
+        rationale: `Treatment checklist completion: ${completedItems.length}/${items.length}`,
+      });
+      router.push(`/doctor/smart-note?session_id=${sessionId}`);
+    } catch (e) {
+      setError(`Failed to save treatment draft: ${String(e)}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "24px" }}>
       <div style={{ maxWidth: "980px", margin: "0 auto" }}>
@@ -111,10 +141,8 @@ export default function TreatmentPage() {
             </p>
           </div>
           <button
-            onClick={() =>
-              sessionId && router.push(`/doctor/history?session_id=${sessionId}`)
-            }
-            disabled={!sessionId}
+            onClick={() => void saveAndContinue()}
+            disabled={!sessionId || saving}
             style={{
               border: "none",
               borderRadius: "10px",
@@ -123,7 +151,7 @@ export default function TreatmentPage() {
               fontWeight: 700,
               fontSize: "13px",
               padding: "10px 14px",
-              cursor: sessionId ? "pointer" : "not-allowed",
+              cursor: sessionId && !saving ? "pointer" : "not-allowed",
               opacity: sessionId ? 1 : 0.6,
               display: "flex",
               alignItems: "center",
@@ -131,7 +159,7 @@ export default function TreatmentPage() {
             }}
           >
             <Save size={14} />
-            Save & View History
+            {saving ? "Saving..." : "Save & Open Smart Note"}
           </button>
         </div>
 
@@ -194,6 +222,28 @@ export default function TreatmentPage() {
                 </button>
               </div>
             ))}
+            <div style={{ background: "white", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "12px" }}>
+              <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#64748B", fontWeight: 700 }}>
+                Treatment Plan Draft
+              </p>
+              <textarea
+                value={treatmentNote}
+                onChange={(e) => setTreatmentNote(e.target.value)}
+                style={{
+                  width: "100%",
+                  minHeight: "140px",
+                  borderRadius: "10px",
+                  border: "1px solid #CBD5E1",
+                  padding: "10px",
+                  fontFamily: "inherit",
+                  fontSize: "13px",
+                  color: "#334155",
+                  lineHeight: 1.5,
+                  resize: "vertical",
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -218,4 +268,3 @@ function Panel({ text, danger = false }: { text: string; danger?: boolean }) {
     </div>
   );
 }
-

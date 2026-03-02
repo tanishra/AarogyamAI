@@ -114,6 +114,39 @@ export async function verifyNurseOTP(payload: {
   });
 }
 
+export async function staffLogin(payload: {
+  email: string;
+  password: string;
+  clinic_id: string;
+}): Promise<{
+  partial_token: string;
+  mfa_required: boolean;
+  totp_setup_required: boolean;
+}> {
+  return request("/api/v1/auth/staff/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function verifyStaffMFA(
+  partialToken: string,
+  totpCode: string
+): Promise<{
+  access_token: string;
+  user_id: string;
+  role: string;
+  clinic_id: string;
+  display_name: string;
+  expires_in: number;
+}> {
+  return request("/api/v1/auth/staff/mfa-verify", {
+    method: "POST",
+    token: partialToken,
+    body: JSON.stringify({ totp_code: totpCode }),
+  });
+}
+
 export type StartSessionResponse = {
   session_id: string;
   expires_at: string;
@@ -367,10 +400,14 @@ export async function updateNursePatientStatus(
   });
 }
 
-export async function getDoctorQueue(token: string): Promise<{
+export async function getDoctorQueue(
+  token: string,
+  options?: { includeCompleted?: boolean }
+): Promise<{
   queue: Array<{
     session_id: string;
     arrival_order: number;
+    session_status: string;
     synthesis_ready: boolean;
     fallback_active: boolean;
     urgency_flag: "routine" | "urgent" | "critical";
@@ -385,7 +422,11 @@ export async function getDoctorQueue(token: string): Promise<{
   }>;
   total_waiting: number;
 }> {
-  return request("/api/v1/doctor/queue", { method: "GET", token });
+  const includeCompleted = options?.includeCompleted ?? false;
+  return request(`/api/v1/doctor/queue?include_completed=${includeCompleted}`, {
+    method: "GET",
+    token,
+  });
 }
 
 export async function getDoctorPatientContext(
@@ -470,6 +511,88 @@ export async function addDoctorDifferential(
   }
 ): Promise<{ consideration_id: string; created_at: string }> {
   return request("/api/v1/doctor/differential/add", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveDoctorReasoningDraft(
+  token: string,
+  payload: {
+    session_id: string;
+    assessment?: string | null;
+    plan?: string | null;
+    rationale?: string | null;
+    free_text?: string | null;
+  }
+): Promise<{ saved_at: string }> {
+  return request("/api/v1/doctor/reasoning/draft", {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({
+      session_id: payload.session_id,
+      assessment: payload.assessment ?? null,
+      plan: payload.plan ?? null,
+      rationale: payload.rationale ?? null,
+      free_text: payload.free_text ?? null,
+    }),
+  });
+}
+
+export async function commitDoctorRecord(
+  token: string,
+  payload: {
+    session_id: string;
+    tier3_consent_confirmed: boolean;
+    final_assessment: string;
+    final_plan: string;
+    final_rationale: string;
+    doctor_free_text?: string | null;
+    accepted_consideration_ids?: string[];
+    modified_consideration_ids?: string[];
+    rejected_consideration_ids?: string[];
+    added_consideration_ids?: string[];
+  }
+): Promise<{
+  record_id: string;
+  committed_at: string;
+  receipt_sent: boolean;
+}> {
+  return request("/api/v1/doctor/record/commit", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      session_id: payload.session_id,
+      tier3_consent_confirmed: payload.tier3_consent_confirmed,
+      final_assessment: payload.final_assessment,
+      final_plan: payload.final_plan,
+      final_rationale: payload.final_rationale,
+      doctor_free_text: payload.doctor_free_text ?? null,
+      accepted_consideration_ids: payload.accepted_consideration_ids ?? [],
+      modified_consideration_ids: payload.modified_consideration_ids ?? [],
+      rejected_consideration_ids: payload.rejected_consideration_ids ?? [],
+      added_consideration_ids: payload.added_consideration_ids ?? [],
+    }),
+  });
+}
+
+export async function getDoctorLiveSupport(
+  token: string,
+  payload: { session_id: string; transcript_text: string }
+): Promise<{
+  session_id: string;
+  transcript_excerpt: string;
+  generated_at: string;
+  suggestions: Array<{
+    suggestion_id: string;
+    title: string;
+    rationale: string;
+    urgency_flag: "routine" | "urgent" | "critical";
+    suggestion_type: string;
+  }>;
+}> {
+  return request("/api/v1/doctor/session/live-support", {
     method: "POST",
     token,
     body: JSON.stringify(payload),

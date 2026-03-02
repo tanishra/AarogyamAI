@@ -6,6 +6,7 @@ from packages.schemas.errors import VitalsOutlierFlag
 class DoctorQueuePatient(BaseModel):
     session_id: str
     arrival_order: int
+    session_status: str
     synthesis_ready: bool
     fallback_active: bool
     urgency_flag: UrgencyFlag
@@ -146,3 +147,23 @@ class FeedbackRequest(BaseModel):
 
 class FeedbackResponse(BaseModel):
     received: bool
+
+
+class LiveSupportRequest(BaseModel):
+    session_id: str
+    transcript_text: str = Field(min_length=1, max_length=5000)
+
+
+class LiveSupportSuggestion(BaseModel):
+    suggestion_id: str
+    title: str
+    rationale: str
+    urgency_flag: UrgencyFlag
+    suggestion_type: str
+
+
+class LiveSupportResponse(BaseModel):
+    session_id: str
+    transcript_excerpt: str
+    suggestions: list[LiveSupportSuggestion]
+    generated_at: str

@@ -12,7 +12,12 @@ import {
   Stethoscope,
   User,
 } from "lucide-react";
-import { getDoctorPatientContext, getDoctorQueue } from "@/lib/api";
+import {
+  commitDoctorRecord,
+  getDoctorPatientContext,
+  getDoctorQueue,
+  saveDoctorReasoningDraft,
+} from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 
 type QueueItem = Awaited<ReturnType<typeof getDoctorQueue>>["queue"][number];
@@ -30,6 +35,8 @@ export default function SmartNotePage() {
   const [context, setContext] = useState<DoctorContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [committing, setCommitting] = useState(false);
   const [editingKey, setEditingKey] = useState<SoapKey | null>(null);
   const [saved, setSaved] = useState(false);
   const [sections, setSections] = useState<Record<SoapKey, string>>({
@@ -130,6 +137,74 @@ export default function SmartNotePage() {
     return list.slice(0, 3);
   }, [queueItem?.chief_complaint, context?.nurse_feedback, parsedSummary.details]);
 
+  const saveDraft = async () => {
+    if (!token || !sessionId) return;
+    setSavingDraft(true);
+    setError("");
+    try {
+      await saveDoctorReasoningDraft(token, {
+        session_id: sessionId,
+        assessment: sections.A,
+        plan: sections.P,
+        rationale: `${sections.S}\n\n${sections.O}`.trim(),
+      });
+      setSaved(true);
+    } catch (e) {
+      setError(`Failed to save reasoning draft: ${String(e)}`);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const commitRecord = async () => {
+    if (!token || !sessionId || !context) return;
+    const yes = window.confirm(
+      "Confirm Tier-3 consent and commit this final medical record?"
+    );
+    if (!yes) return;
+
+    const accepted = context.differentials
+      .filter((d) => d.doctor_action === "accepted")
+      .map((d) => d.consideration_id);
+    const modified = context.differentials
+      .filter((d) => d.doctor_action === "modified")
+      .map((d) => d.consideration_id);
+    const rejected = context.differentials
+      .filter((d) => d.doctor_action === "rejected")
+      .map((d) => d.consideration_id);
+    const added = context.differentials
+      .filter((d) => d.doctor_action === "added")
+      .map((d) => d.consideration_id);
+
+    setCommitting(true);
+    setError("");
+    try {
+      const committed = await commitDoctorRecord(token, {
+        session_id: sessionId,
+        tier3_consent_confirmed: true,
+        final_assessment: sections.A.trim(),
+        final_plan: sections.P.trim(),
+        final_rationale: `${sections.S}\n\n${sections.O}`.trim(),
+        doctor_free_text: "Committed from Smart Note editor.",
+        accepted_consideration_ids: accepted,
+        modified_consideration_ids: modified,
+        rejected_consideration_ids: rejected,
+        added_consideration_ids: added,
+      });
+      const next = new URLSearchParams({
+        session_id: sessionId,
+        record_id: committed.record_id,
+        committed_at: committed.committed_at,
+        receipt_sent: String(committed.receipt_sent),
+      });
+      router.push(`/doctor/record-success?${next.toString()}`);
+    } catch (e) {
+      setError(`Failed to commit record: ${String(e)}`);
+    } finally {
+      setCommitting(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#F2F4F8", fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "28px 24px 36px" }}>
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
@@ -195,11 +270,8 @@ export default function SmartNotePage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setSaved(true);
-                      if (sessionId) router.push(`/doctor/treatment?session_id=${sessionId}`);
-                    }}
-                    disabled={!sessionId}
+                    onClick={() => void saveDraft()}
+                    disabled={!sessionId || savingDraft}
                     style={{
                       border: "none",
                       borderRadius: "10px",
@@ -211,12 +283,12 @@ export default function SmartNotePage() {
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      cursor: sessionId ? "pointer" : "not-allowed",
+                      cursor: sessionId && !savingDraft ? "pointer" : "not-allowed",
                       opacity: sessionId ? 1 : 0.6,
                     }}
                   >
                     {saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                    Save & Continue
+                    {savingDraft ? "Saving..." : "Save Draft"}
                   </button>
                 </div>
 
@@ -325,12 +397,11 @@ export default function SmartNotePage() {
                     Ensure selected differentials are reflected in assessment and final treatment recommendations.
                   </p>
                   <button
-                    onClick={() =>
-                      sessionId && router.push(`/doctor/treatment?session_id=${sessionId}`)
-                    }
+                    onClick={() => void commitRecord()}
+                    disabled={!sessionId || committing}
                     style={{ marginTop: "12px", width: "100%", border: "none", borderRadius: "999px", background: "white", color: "#0F172A", fontSize: "12px", fontWeight: 800, padding: "9px", cursor: "pointer" }}
                   >
-                    Proceed to Treatment Plan
+                    {committing ? "Committing..." : "Sign & Commit Record"}
                   </button>
                 </section>
               </aside>

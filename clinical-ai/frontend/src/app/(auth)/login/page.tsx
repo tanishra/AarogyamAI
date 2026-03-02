@@ -14,10 +14,11 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { createDevBearerToken } from "@/lib/auth";
 import {
   sendNurseOTP,
   sendPatientOTP,
+  staffLogin,
+  verifyStaffMFA,
   verifyNurseOTP,
   verifyPatientOTP,
 } from "@/lib/api";
@@ -67,6 +68,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpHint, setOtpHint] = useState("");
+  const [doctorMfaPending, setDoctorMfaPending] = useState(false);
+  const [doctorPartialToken, setDoctorPartialToken] = useState("");
 
   const handleLogin = async () => {
     if (selectedRole === "patient") {
@@ -105,21 +108,11 @@ export default function LoginPage() {
       setError("Please fill in all fields.");
       return;
     }
-    setError("");
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    const userId =
-      selectedRole === "patient" ? "patient-demo-001" : "staff-001";
-    setSession({
-      role: selectedRole,
-      token: createDevBearerToken(selectedRole, userId),
-      userId,
-      clinicId: defaultClinicId,
-    });
-    if (selectedRole === "doctor") router.push("/doctor/differential");
-    else if (selectedRole === "nurse") router.push("/nurse/dashboard");
-    else router.push("/patient/portal");
+    if (!doctorMfaPending) {
+      await handleDoctorStaffLogin();
+    } else {
+      await handleDoctorMfaVerify();
+    }
   };
 
   const normalizePhone = (input: string): string => {
@@ -232,6 +225,61 @@ export default function LoginPage() {
     }
   };
 
+  const handleDoctorStaffLogin = async () => {
+    const email = clinicalId.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      setError("Enter a valid doctor work email.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const login = await staffLogin({
+        email,
+        password: passcode,
+        clinic_id: defaultClinicId,
+      });
+      setDoctorPartialToken(login.partial_token);
+      setDoctorMfaPending(true);
+      setPasscode("");
+      setOtpHint("Enter MFA code. In development, use 123456.");
+    } catch (e) {
+      setError(`Staff login failed: ${String(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDoctorMfaVerify = async () => {
+    if (!doctorPartialToken) {
+      setError("Missing MFA session. Please login again.");
+      setDoctorMfaPending(false);
+      return;
+    }
+    if (!/^\d{6}$/.test(passcode.trim())) {
+      setError("Enter a valid 6-digit MFA code.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const verified = await verifyStaffMFA(doctorPartialToken, passcode.trim());
+      setSession({
+        role: "doctor",
+        token: verified.access_token,
+        userId: verified.user_id,
+        clinicId: verified.clinic_id,
+      });
+      router.push("/doctor/dashboard");
+    } catch (e) {
+      setError(`MFA verification failed: ${String(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const inputStyle = {
     width: "100%",
     padding: "13px 16px 13px 42px",
@@ -327,6 +375,8 @@ export default function LoginPage() {
                   setOtpSent(false);
                   setPasscode("");
                   setOtpHint("");
+                  setDoctorMfaPending(false);
+                  setDoctorPartialToken("");
                 }}
                 style={{
                   position: "relative",
@@ -396,9 +446,13 @@ export default function LoginPage() {
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <label style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#374151" }}>
-                {selectedRole === "patient" || selectedRole === "nurse" ? "OTP" : "Passcode"}
+                {selectedRole === "patient" || selectedRole === "nurse"
+                  ? "OTP"
+                  : doctorMfaPending
+                  ? "MFA Code"
+                  : "Passcode"}
               </label>
-              {selectedRole === "doctor" && (
+              {selectedRole === "doctor" && !doctorMfaPending && (
                 <a href="#" style={{ fontSize: "12px", color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>Reset access</a>
               )}
             </div>
@@ -410,11 +464,19 @@ export default function LoginPage() {
                 type={
                   selectedRole === "patient" || selectedRole === "nurse"
                     ? "text"
+                    : doctorMfaPending
+                    ? "text"
                     : showPass
                     ? "text"
                     : "password"
                 }
-                placeholder={selectedRole === "patient" || selectedRole === "nurse" ? "Enter 6-digit OTP" : "••••••••"}
+                placeholder={
+                  selectedRole === "patient" || selectedRole === "nurse"
+                    ? "Enter 6-digit OTP"
+                    : doctorMfaPending
+                    ? "Enter 6-digit MFA code"
+                    : "••••••••"
+                }
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -422,7 +484,7 @@ export default function LoginPage() {
                 onFocus={(e) => { e.target.style.borderColor = "#2563EB"; e.target.style.background = "white"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)"; }}
                 onBlur={(e) => { e.target.style.borderColor = "#E5E7EB"; e.target.style.background = "#F8FAFC"; e.target.style.boxShadow = "none"; }}
               />
-              {selectedRole === "doctor" && (
+              {selectedRole === "doctor" && !doctorMfaPending && (
                 <button onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", display: "flex", padding: 0 }}>
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -431,6 +493,11 @@ export default function LoginPage() {
           </div>
 
           {(selectedRole === "patient" || selectedRole === "nurse") && otpHint && (
+            <p style={{ fontSize: "12px", color: "#2563EB", fontWeight: 600, margin: "-6px 0" }}>
+              {otpHint}
+            </p>
+          )}
+          {selectedRole === "doctor" && otpHint && (
             <p style={{ fontSize: "12px", color: "#2563EB", fontWeight: 600, margin: "-6px 0" }}>
               {otpHint}
             </p>
@@ -471,6 +538,8 @@ export default function LoginPage() {
                     ? otpSent
                       ? "Verify OTP"
                       : "Send OTP"
+                    : doctorMfaPending
+                    ? "Verify MFA"
                     : "Initialize Session"}
                 </span>
                 <ArrowRight size={16} />
