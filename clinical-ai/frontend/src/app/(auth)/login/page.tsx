@@ -22,6 +22,7 @@ import {
   verifyNurseOTP,
   verifyPatientOTP,
 } from "@/lib/api";
+import { buildCognitoAuthorizeUrl } from "@/lib/auth";
 import { useAuthStore } from "@/store/auth.store";
 
 type Role = "doctor" | "nurse" | "patient";
@@ -277,6 +278,16 @@ export default function LoginPage() {
       setError(`MFA verification failed: ${String(e)}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCognitoLogin = () => {
+    setError("");
+    try {
+      const url = buildCognitoAuthorizeUrl(selectedRole);
+      window.location.href = url;
+    } catch (e) {
+      setError(`Cognito login not configured: ${String(e)}`);
     }
   };
 
@@ -546,6 +557,23 @@ export default function LoginPage() {
               </>
             )}
           </motion.button>
+
+          <button
+            onClick={handleCognitoLogin}
+            style={{
+              width: "100%",
+              border: "1px solid #D1D5DB",
+              background: "white",
+              color: "#334155",
+              fontWeight: 700,
+              fontSize: "13px",
+              padding: "12px",
+              borderRadius: "12px",
+              cursor: "pointer",
+            }}
+          >
+            Login with Cognito (Test)
+          </button>
         </div>
       </motion.div>
 
