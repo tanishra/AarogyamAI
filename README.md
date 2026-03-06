@@ -1,6 +1,29 @@
-# 🏥 AarogyamAI — Clinical AI Workflow Platform
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,100:2563eb&height=220&section=header&text=AarogyamAI&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=38" width="100%" alt="AarogyamAI Banner" />
 
-> **Replacing fragmented clinic paperwork with an intelligent, role-based clinical workflow — from patient intake to AI-assisted diagnosis to signed medical records.**
+  <br/>
+
+  ### **The Next Generation of Clinical Workflow Intelligence**
+  *Bridging the gap between fragmented patient data and AI-assisted clinical excellence.*
+
+  <br/>
+
+  [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Amazon Bedrock](https://img.shields.io/badge/Amazon_Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+  <br/>
+
+  ---
+
+  **Replacing fragmented clinic paperwork with an intelligent, role-based clinical workflow.**
+  *Digital consent, adaptive intake, nurse vitals capture, AI differential diagnosis synthesis, and doctor sign-off — all in one secure system.*
+
+  <br/>
+
+</div>
 
 <br/>
 
