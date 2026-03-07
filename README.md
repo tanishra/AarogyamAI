@@ -166,23 +166,6 @@ AarogyamAI/
 
 <br/>
 
-## Current Status
-
-| Area | Status |
-|---|---|
-| Backend API | ✅ 22+ endpoints live |
-| Database Schema | ✅ 3-schema PostgreSQL, migrations ready |
-| AgentLoop / AI Core | ✅ Built with PII stripping + fallback |
-| Auth + RBAC + Consent | ✅ Full middleware stack |
-| Unit Tests | ✅ 92+ passing |
-| Frontend — Login | ✅ Real patient OTP + role-based entry live |
-| Frontend — Patient Intake | ✅ Conversational text-chat intake live with summary handoff |
-| Frontend — Nurse Dashboard | ✅ Live queue, vitals capture, queue/status actions live |
-| Frontend — Doctor Workspace | 🔄 In progress |
-| AWS Deployment | 🔄 Pending credits |
-
-<br/>
-
 ## Live Demo
 
 > Coming soon 
