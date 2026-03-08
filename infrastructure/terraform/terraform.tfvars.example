@@ -1,0 +1,21 @@
+# Environment Configuration
+environment = "dev"
+aws_region  = "us-east-1"
+
+# VPC Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# Database Configuration
+db_instance_class = "db.t3.medium"
+db_name           = "admin_panel"
+db_username       = "admin"
+db_password       = "CHANGE_ME_SECURE_PASSWORD"
+
+# Redis Configuration
+redis_node_type = "cache.t3.medium"
+
+# ECS Configuration
+ecs_task_cpu       = 512
+ecs_task_memory    = 1024
+ecs_desired_count  = 2
