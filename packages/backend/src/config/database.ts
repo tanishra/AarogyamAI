@@ -19,6 +19,9 @@ export function createDatabasePool(): Pool {
     max: config.database.poolMax,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    ssl: {
+      rejectUnauthorized: false
+    }
   };
 
   console.log('Connecting to database:', config.database.url);
