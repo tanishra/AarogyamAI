@@ -1,0 +1,70 @@
+[project]
+name = "clinical-ai"
+version = "0.1.0"
+description = "AI-Assisted Clinical Reasoning System"
+requires-python = ">=3.12"
+dependencies = [
+    # Web
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    # Validation
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    # Cache
+    "redis[asyncio]>=5.0.0",
+    # AWS
+    "boto3>=1.34.0",
+    "botocore>=1.34.0",
+    # LLM providers (model-agnostic — all optional at runtime, chosen by config)
+    "anthropic>=0.28.0",
+    "openai>=1.30.0",
+    # Security / Crypto
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "cryptography>=42.0.0",
+    # Observability
+    "structlog>=24.1.0",
+]
+
+[tool.uv.workspace]
+members = ["api", "agent_worker"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "respx>=0.21.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "alembic>=1.18.4",
+    "psycopg2-binary>=2.9.11",
+    "anyio>=4.12.1",
+    "pytest-env>=1.5.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+env = [
+    "DATABASE_URL=postgresql+asyncpg://clinical_user:clinical_pass@localhost:5432/clinical_ai_test",
+    "SQS_AI_TASK_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/123/test",
+    "DEV_SKIP_COGNITO_VERIFY=true",
+]

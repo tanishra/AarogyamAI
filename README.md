@@ -1,0 +1,188 @@
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,100:2563eb&height=220&section=header&text=AarogyamAI&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=38" width="100%" alt="AarogyamAI Banner" />
+
+  <br/>
+
+  ### **The Next Generation of Clinical Workflow Intelligence**
+  *Bridging the gap between fragmented patient data and AI-assisted clinical excellence.*
+
+  <br/>
+
+  [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Amazon Bedrock](https://img.shields.io/badge/Amazon_Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+  <br/>
+
+  ---
+
+  **Replacing fragmented clinic paperwork with an intelligent, role-based clinical workflow.**
+  *Digital consent, adaptive intake, nurse vitals capture, AI differential diagnosis synthesis, and doctor sign-off — all in one secure system.*
+
+  <br/>
+
+</div>
+
+<br/>
+
+## What We're Building
+
+AarogyamAI is an end-to-end clinical workflow platform powered by **Claude on Amazon Bedrock**. It unifies the entire patient journey — digital consent, adaptive intake questionnaire, nurse vitals capture, AI differential diagnosis synthesis, and doctor sign-off — into one secure, auditable system.
+
+No more paper forms. No more disconnected systems. No more manual SOAP note writing.
+
+Recent updates include **real patient OTP login (JWT session)**, a **text-only conversational intake assistant**, **LLM-based nurse handoff summaries**, and a **live nurse dashboard** with vitals capture and status management.
+
+<br/>
+
+## The Problem
+
+A typical clinic visit involves 4–6 disconnected steps across different tools — paper consent forms, verbal intake, manual vitals entry, handwritten notes, and separate EHR systems. This creates delays, errors, and no audit trail. Doctors spend 30–40% of their time on documentation instead of patients.
+
+<br/>
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A["🧑 Patient<br/>Consent + Intake<br/>Questionnaire"] -->|"Encrypted<br/>Session"| B["👩‍⚕️ Nurse<br/>Vitals Capture<br/>+ Observation"]
+    B -->|"SQS<br/>Job Fire"| C["⚡ AgentLoop<br/>AI Orchestrator"]
+    C -->|"Claude on<br/>Bedrock"| D["🤖 AI Synthesis<br/>Differential<br/>Diagnosis"]
+    D -->|"Review<br/>Interface"| E["👨‍⚕️ Doctor<br/>Accept / Modify<br/>+ Commit"]
+    E -->|"Audit<br/>Chain"| F["📋 Signed<br/>Medical Record<br/>+ S3 Export"]
+
+    style A fill:#EFF6FF,stroke:#2563EB,color:#1e40af
+    style B fill:#EEF2FF,stroke:#4F46E5,color:#3730a3
+    style C fill:#0F172A,stroke:#334155,color:#94a3b8
+    style D fill:#0F172A,stroke:#334155,color:#94a3b8
+    style E fill:#EFF6FF,stroke:#2563EB,color:#1e40af
+    style F fill:#F0FDF4,stroke:#10B981,color:#065f46
+```
+
+<br/>
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client["Frontend — Next.js"]
+        P["Patient Portal"]
+        N["Nurse Dashboard"]
+        D["Doctor Workspace"]
+    end
+
+    subgraph API["Backend — FastAPI on AWS Lambda"]
+        GW["API Gateway"]
+        Auth["Cognito Auth<br/>+ RBAC Middleware"]
+        Routes["22+ REST Endpoints<br/>6 Route Modules"]
+        Agent["AgentLoop<br/>Orchestrator"]
+    end
+
+    subgraph Data["Data Layer"]
+        RDS["Amazon RDS<br/>PostgreSQL<br/>3 Schemas"]
+        DDB["DynamoDB<br/>Session State"]
+        SQS["Amazon SQS<br/>AI Task Queue"]
+        S3["Amazon S3<br/>Exports + Audits"]
+    end
+
+    subgraph AI["AI Layer"]
+        Bedrock["Amazon Bedrock<br/>Claude Sonnet 4.5"]
+        PII["PII Stripper"]
+        Filter["Output Filter"]
+    end
+
+    Client --> GW
+    GW --> Auth --> Routes
+    Routes --> Agent
+    Agent --> SQS --> Bedrock
+    Agent --> PII --> Bedrock
+    Bedrock --> Filter
+    Routes --> RDS
+    Routes --> DDB
+    Agent --> S3
+
+    linkStyle default stroke:#0f172a,stroke-width:2px
+
+    style Client fill:#EFF6FF,stroke:#2563EB,color:#0f172a,stroke-width:2px
+    style API fill:#F8FAFC,stroke:#94A3B8,color:#0f172a,stroke-width:2px
+    style Data fill:#F0FDF4,stroke:#10B981,color:#0f172a,stroke-width:2px
+    style AI fill:#F5F3FF,stroke:#8B5CF6,color:#0f172a,stroke-width:2px
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 14, TypeScript, Framer Motion |
+| **Backend** | FastAPI, Python, SQLAlchemy, Alembic |
+| **AI Model** | Claude Sonnet 4.5 via Amazon Bedrock |
+| **Auth** | Amazon Cognito (staff JWT) + real patient OTP/JWT flow |
+| **Database** | Amazon RDS PostgreSQL (3-schema design) |
+| **Queue** | Amazon SQS + AWS Lambda workers (doctor synthesis handoff) |
+| **Storage** | Amazon S3 (exports, audit archives) |
+| **Observability** | Amazon CloudWatch, structured JSON logs |
+| **Compliance** | DPDP-compliant consent, hash-chain audit trail |
+
+<br/>
+
+## Key Features
+
+- **Role-Based Access** — Separate, secure workspaces for Patients, Nurses, and Doctors
+- **Conversational Intake (Text Chat)** — Chat-style patient intake assistant that captures profile + symptoms naturally (no rigid form experience)
+- **Structured LLM Summaries** — Intake is rewritten into concise nurse-friendly handoff summaries
+- **Real Patient Login** — OTP send/verify with signed JWT session tokens (not mock auth)
+- **Live Nurse Operations** — Real queue from backend, patient selection, vitals submission, verification, mark-ready flow, and status updates from dashboard
+- **Queue Controls** — Nurses can remove patients from queue or update patient status directly from dashboard
+- **AI Differential Diagnosis** — Claude synthesizes vitals + history into ranked clinical hypotheses with confidence scores
+- **Doctor Review Interface** — Accept, modify, or reject AI suggestions before committing to record
+- **Hash-Chain Audit Trail** — Every action is tamper-proof and auditable
+- **DPDP Consent Engine** — Tiered consent (Tier 1: general care, Tier 2: AI synthesis) with full withdrawal support
+- **Fallback Safety** — If AI fails, structured manual form activates automatically
+
+<br/>
+
+## Project Structure
+
+```
+AarogyamAI/
+├── clinical-ai/
+│   ├── api/
+│   │   ├── routes/          # 6 route modules (patient, nurse, doctor, admin, consent, rights)
+│   │   ├── services/        # Business logic layer
+│   │   ├── models/          # SQLAlchemy DB models
+│   │   ├── schemas/         # Pydantic request/response schemas
+│   │   └── middleware/      # Auth, RBAC, consent, audit, input validation
+│   ├── agent/
+│   │   ├── agent_loop.py    # Central AI orchestrator
+│   │   ├── tools/           # Atomic AI tools (PII strip, output filter, context builder)
+│   │   └── skills/          # Composed clinical workflows
+│   ├── tests/               # 92+ unit + integration tests
+│   ├── scripts/             # Seed, prototype flow, observability check
+│   └── frontend/            # Next.js — 13 screens across 3 roles
+└── README.md
+```
+
+<br/>
+
+## Current Status
+
+| Area | Status |
+|---|---|
+| Backend API | ✅ 22+ endpoints live |
+| Database Schema | ✅ 3-schema PostgreSQL, migrations ready |
+| AgentLoop / AI Core | ✅ Built with PII stripping + fallback |
+| Auth + RBAC + Consent | ✅ Full middleware stack |
+| Unit Tests | ✅ 92+ passing |
+| Frontend — Login | ✅ Real patient OTP + role-based entry live |
+| Frontend — Patient Intake | ✅ Conversational text-chat intake live with summary handoff |
+| Frontend — Nurse Dashboard | ✅ Live queue, vitals capture, queue/status actions live |
+| Frontend — Doctor Workspace | 🔄 In progress |
+| AWS Deployment | 🔄 Pending credits |
+
+<br/>
+
+## Live Demo
+
+> Coming soon 
