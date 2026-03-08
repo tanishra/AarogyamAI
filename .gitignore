@@ -81,3 +81,4 @@ lambda_*.zip
 # Misc
 .turbo
 .vercel
+.kiro
