@@ -118,10 +118,12 @@ flowchart TB
 | **Frontend** | Next.js 14, TypeScript, Framer Motion |
 | **Backend** | FastAPI, Python, SQLAlchemy, Alembic |
 | **AI Model** | Claude Sonnet 4.5 via Amazon Bedrock |
+| **AI Providers** | AWS Bedrock (primary) + OpenAI (fallback) |
 | **Auth** | Amazon Cognito (staff JWT) + real patient OTP/JWT flow |
 | **Database** | Amazon RDS PostgreSQL (3-schema design) |
 | **Queue** | Amazon SQS + AWS Lambda workers (doctor synthesis handoff) |
-| **Storage** | Amazon S3 (exports, audit archives) |
+| **Storage** | Amazon S3 (exports, audit archives) + local fallback |
+| **Audit** | DynamoDB + PostgreSQL dual-write with fallback |
 | **Observability** | Amazon CloudWatch, structured JSON logs |
 | **Compliance** | DPDP-compliant consent, hash-chain audit trail |
 
@@ -129,57 +131,26 @@ flowchart TB
 
 ## Key Features
 
-- **Role-Based Access** — Separate, secure workspaces for Patients, Nurses, and Doctors
-- **Conversational Intake (Text Chat)** — Chat-style patient intake assistant that captures profile + symptoms naturally (no rigid form experience)
-- **Structured LLM Summaries** — Intake is rewritten into concise nurse-friendly handoff summaries
-- **Real Patient Login** — OTP send/verify with signed JWT session tokens (not mock auth)
-- **Live Nurse Operations** — Real queue from backend, patient selection, vitals submission, verification, mark-ready flow, and status updates from dashboard
-- **Queue Controls** — Nurses can remove patients from queue or update patient status directly from dashboard
-- **AI Differential Diagnosis** — Claude synthesizes vitals + history into ranked clinical hypotheses with confidence scores
-- **Doctor Review Interface** — Accept, modify, or reject AI suggestions before committing to record
-- **Hash-Chain Audit Trail** — Every action is tamper-proof and auditable
-- **DPDP Consent Engine** — Tiered consent (Tier 1: general care, Tier 2: AI synthesis) with full withdrawal support
-- **Fallback Safety** — If AI fails, structured manual form activates automatically
+**Patient Portal**
+- Conversational AI intake assistant with natural chat interface
+- Real OTP-based authentication with JWT sessions
+- Complete medical history with doctor diagnosis and treatment plans
 
-<br/>
+**Nurse Dashboard**
+- Live patient queue with priority management
+- Vitals capture with previous history display
+- Mark patients ready for doctor review
 
-## Project Structure
+**Doctor Workspace**
+- AI-powered differential diagnosis suggestions
+- Clinical reasoning documentation with treatment plans
+- Patient history review with complete encounter details
 
-```
-AarogyamAI/
-├── clinical-ai/
-│   ├── api/
-│   │   ├── routes/          # 6 route modules (patient, nurse, doctor, admin, consent, rights)
-│   │   ├── services/        # Business logic layer
-│   │   ├── models/          # SQLAlchemy DB models
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   └── middleware/      # Auth, RBAC, consent, audit, input validation
-│   ├── agent/
-│   │   ├── agent_loop.py    # Central AI orchestrator
-│   │   ├── tools/           # Atomic AI tools (PII strip, output filter, context builder)
-│   │   └── skills/          # Composed clinical workflows
-│   ├── tests/               # 92+ unit + integration tests
-│   ├── scripts/             # Seed, prototype flow, observability check
-│   └── frontend/            # Next.js — 13 screens across 3 roles
-└── README.md
-```
-
-<br/>
-
-## Current Status
-
-| Area | Status |
-|---|---|
-| Backend API | ✅ 22+ endpoints live |
-| Database Schema | ✅ 3-schema PostgreSQL, migrations ready |
-| AgentLoop / AI Core | ✅ Built with PII stripping + fallback |
-| Auth + RBAC + Consent | ✅ Full middleware stack |
-| Unit Tests | ✅ 92+ passing |
-| Frontend — Login | ✅ Real patient OTP + role-based entry live |
-| Frontend — Patient Intake | ✅ Conversational text-chat intake live with summary handoff |
-| Frontend — Nurse Dashboard | ✅ Live queue, vitals capture, queue/status actions live |
-| Frontend — Doctor Workspace | 🔄 In progress |
-| AWS Deployment | 🔄 Pending credits |
+**System Capabilities**
+- Hybrid AI (AWS Bedrock + OpenAI fallback)
+- Dual storage (S3 + local fallback)
+- Dual audit logging (DynamoDB + PostgreSQL)
+- Role-based access control with DPDP-compliant consent
 
 <br/>
 
