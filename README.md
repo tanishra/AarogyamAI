@@ -45,7 +45,7 @@ A typical clinic visit involves 4–6 disconnected steps across different tools 
 
 ## Live Demo
 
-🚀 **Link:** [https://aarogyam-ai-frontend.vercel.app](https://aarogyam-ai-frontend.vercel.app)
+🚀 **Click here :** [Link](https://aarogyam-ai-frontend.vercel.app)
 
 All features working including AI nurse intake, differential diagnosis, and real-time chat.
 
