@@ -19,10 +19,14 @@ export function createDatabasePool(): Pool {
     max: config.database.poolMax,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    ssl: {
-      rejectUnauthorized: false
-    }
   };
+
+  // Enable SSL for RDS/production databases
+  if (config.database.url.includes('rds.amazonaws.com') || process.env.DB_SSL === 'true') {
+    poolConfig.ssl = {
+      rejectUnauthorized: false
+    };
+  }
 
   console.log('Connecting to database:', config.database.url);
   const newPool = new Pool(poolConfig);
