@@ -138,6 +138,9 @@ function DoctorDashboardContent() {
         finalNotes: '',
       });
     }
+
+    // Refetch history to get latest vitals count
+    await queryClient.invalidateQueries({ queryKey: ['doctor-patient-history', patient.patient_id] });
   };
 
   const generateConsiderationsMutation = useMutation({
