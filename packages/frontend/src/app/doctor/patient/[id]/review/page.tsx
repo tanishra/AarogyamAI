@@ -218,11 +218,16 @@ function DoctorPatientReviewContent() {
             <div className="mt-4 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nurse Vitals</p>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700 sm:grid-cols-3 lg:grid-cols-6">
-                <p>BP: <span className="font-semibold">{vitals?.bloodPressureSystolic || '-'} / {vitals?.bloodPressureDiastolic || '-'}</span></p>
-                <p>HR: <span className="font-semibold">{vitals?.heartRate || '-'}</span></p>
-                <p>Temp: <span className="font-semibold">{vitals?.temperatureFahrenheit || '-'}</span></p>
-                <p>SpO2: <span className="font-semibold">{vitals?.oxygenSaturation || '-'}</span></p>
-                <p>RR: <span className="font-semibold">{vitals?.respiratoryRate || '-'}</span></p>
+                <p>BP: <span className="font-semibold">{vitals?.bloodPressureSystolic || '-'}/{vitals?.bloodPressureDiastolic || '-'}</span></p>
+                <p>HR: <span className="font-semibold">{vitals?.heartRate || '-'}</span> bpm</p>
+                <p>Temp: <span className="font-semibold">{vitals?.temperatureFahrenheit || '-'}</span> °F</p>
+                <p>SpO2: <span className="font-semibold">{vitals?.oxygenSaturation || '-'}</span>%</p>
+                <p>RR: <span className="font-semibold">{vitals?.respiratoryRate || '-'}</span> /min</p>
+                <p>BMI: <span className="font-semibold">{vitals?.bmi || '-'}</span></p>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700 sm:grid-cols-3">
+                <p>Height: <span className="font-semibold">{vitals?.heightCm || '-'}</span> cm</p>
+                <p>Weight: <span className="font-semibold">{vitals?.weightKg || '-'}</span> kg</p>
               </div>
             </div>
           </section>
