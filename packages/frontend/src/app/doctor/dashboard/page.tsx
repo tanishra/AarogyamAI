@@ -455,23 +455,27 @@ function DoctorDashboardContent() {
                   </div>
                 </div>
 
-                {vitals ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nurse Vitals</p>
-                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3 lg:grid-cols-6">
-                      <p>BP: <span className="font-semibold">{vitals.bloodPressureSystolic || '-'}/{vitals.bloodPressureDiastolic || '-'}</span></p>
-                      <p>HR: <span className="font-semibold">{vitals.heartRate || '-'}</span> bpm</p>
-                      <p>Temp: <span className="font-semibold">{vitals.temperatureFahrenheit || '-'}</span> °F</p>
-                      <p>SpO2: <span className="font-semibold">{vitals.oxygenSaturation || '-'}</span>%</p>
-                      <p>RR: <span className="font-semibold">{vitals.respiratoryRate || '-'}</span> /min</p>
-                      <p>BMI: <span className="font-semibold">{vitals.bmi || '-'}</span></p>
-                    </div>
-                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3">
-                      <p>Height: <span className="font-semibold">{vitals.heightCm || '-'}</span> cm</p>
-                      <p>Weight: <span className="font-semibold">{vitals.weightKg || '-'}</span> kg</p>
-                    </div>
-                  </div>
-                ) : null}
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nurse Vitals</p>
+                  {vitals ? (
+                    <>
+                      <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3 lg:grid-cols-6">
+                        <p>BP: <span className="font-semibold">{vitals.bloodPressureSystolic || '-'}/{vitals.bloodPressureDiastolic || '-'}</span></p>
+                        <p>HR: <span className="font-semibold">{vitals.heartRate || '-'}</span> bpm</p>
+                        <p>Temp: <span className="font-semibold">{vitals.temperatureFahrenheit || '-'}</span> °F</p>
+                        <p>SpO2: <span className="font-semibold">{vitals.oxygenSaturation || '-'}</span>%</p>
+                        <p>RR: <span className="font-semibold">{vitals.respiratoryRate || '-'}</span> /min</p>
+                        <p>BMI: <span className="font-semibold">{vitals.bmi || '-'}</span></p>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3">
+                        <p>Height: <span className="font-semibold">{vitals.heightCm || '-'}</span> cm</p>
+                        <p>Weight: <span className="font-semibold">{vitals.weightKg || '-'}</span> kg</p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">No vitals recorded yet</p>
+                  )}
+                </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3">
