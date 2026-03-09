@@ -81,6 +81,7 @@ export class VitalsRepository {
    * Get vitals by session
    */
   async getBySession(sessionId: string): Promise<Vitals | null> {
+    console.log('[VitalsRepository] getBySession called with sessionId:', sessionId);
     const result = await query<any>(
       `SELECT 
         id,
@@ -103,6 +104,11 @@ export class VitalsRepository {
        LIMIT 1`,
       [sessionId]
     );
+    
+    console.log('[VitalsRepository] Query result count:', result.length);
+    if (result.length > 0) {
+      console.log('[VitalsRepository] Found vitals:', result[0]);
+    }
     
     if (result.length === 0) return null;
     
