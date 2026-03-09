@@ -43,6 +43,25 @@ A typical clinic visit involves 4–6 disconnected steps across different tools 
 
 <br/>
 
+## Live Demo
+
+🚀 **Link:** [https://aarogyam-ai-frontend.vercel.app](https://aarogyam-ai-frontend.vercel.app)
+
+All features working including AI nurse intake, differential diagnosis, and real-time chat.
+
+### Test Credentials
+
+| Role | Email | Password |
+|---|---|---|
+| **Patient** | `patient@test.com` | `admin123` |
+| **Nurse** | `nurse@test.com` | `admin123` |
+| **Doctor** | `doctor@test.com` | `admin123` |
+| **Admin** | `admin@hospital.com` | `admin123` |
+
+> **Note:** This is a hackathon demo instance. For production use, credentials will be securely managed through AWS Cognito
+
+<br/>
+
 ## How It Works
 
 ```mermaid
@@ -153,18 +172,3 @@ flowchart TB
 - Role-based access control with DPDP-compliant consent
 
 <br/>
-
-## Live Demo
-
-🚀 **Demo Instance:** [http://13.126.210.97:3000](http://13.126.210.97:3000)
-
-### Test Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| **Patient** | `patient@test.com` | `admin123` |
-| **Nurse** | `nurse@test.com` | `admin123` |
-| **Doctor** | `doctor@test.com` | `admin123` |
-| **Admin** | `admin@hospital.com` | `admin123` |
-
-> **Note:** This is a hackathon demo instance. For production use, credentials will be securely managed through AWS Cognito 
