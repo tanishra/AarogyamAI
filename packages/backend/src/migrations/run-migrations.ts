@@ -26,6 +26,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'admin_panel',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
+  ssl: process.env.DB_SSL === 'true' || process.env.DB_HOST?.includes('rds.amazonaws.com') ? {
+    rejectUnauthorized: false
+  } : undefined
 });
 
 const MIGRATIONS = [
