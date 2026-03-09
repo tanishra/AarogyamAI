@@ -164,7 +164,9 @@ router.get('/patient/:patientId/context', authenticate({}), async (req: Request,
     const summary = await chatRepository.getSummary(sessionId as string);
 
     // Get vitals
+    console.log('[Doctor Context] Fetching vitals for sessionId:', sessionId);
     const vitals = await vitalsRepository.getBySession(sessionId as string);
+    console.log('[Doctor Context] Vitals result:', vitals);
 
     // Get existing considerations
     const considerations = await clinicalRepository.getConsiderationsBySession(sessionId as string);
