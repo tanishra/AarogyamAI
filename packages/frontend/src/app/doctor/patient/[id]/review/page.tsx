@@ -25,6 +25,9 @@ interface ContextPayload {
     temperatureFahrenheit?: number;
     oxygenSaturation?: number;
     respiratoryRate?: number;
+    weightKg?: number;
+    heightCm?: number;
+    bmi?: number;
   };
   considerations?: any[];
   reasoning?: {
