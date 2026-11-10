@@ -26,12 +26,7 @@ describe('Privacy Notices Tables Migration', () => {
   });
 
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '006_create_privacy_notices_tables_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     await pool.end();
   });
 
@@ -244,6 +239,7 @@ describe('Privacy Notices Tables Migration', () => {
       const userResult = await pool.query(`
         INSERT INTO users (email, password_hash, role, name)
         VALUES ('privacy@example.com', 'hashed_password', 'Patient', 'Privacy User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
         RETURNING id;
       `);
       const userId = userResult.rows[0].id;
@@ -290,6 +286,7 @@ describe('Privacy Notices Tables Migration', () => {
       const userResult = await pool.query(`
         INSERT INTO users (email, password_hash, role, name)
         VALUES ('timestamp@example.com', 'hashed_password', 'Patient', 'Timestamp User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
         RETURNING id;
       `);
       const userId = userResult.rows[0].id;
@@ -302,7 +299,7 @@ describe('Privacy Notices Tables Migration', () => {
       `);
       const noticeId = noticeResult.rows[0].id;
 
-      const beforeTime = new Date();
+      const beforeTime = (await pool.query('SELECT NOW() AS now')).rows[0].now;
 
       // Insert acknowledgment without specifying acknowledged_at
       const ackResult = await pool.query(`
@@ -315,7 +312,7 @@ describe('Privacy Notices Tables Migration', () => {
         RETURNING acknowledged_at;
       `, [userId, noticeId, '5.0']);
 
-      const afterTime = new Date();
+      const afterTime = (await pool.query('SELECT NOW() AS now')).rows[0].now;
       const acknowledgedAt = new Date(ackResult.rows[0].acknowledged_at);
 
       expect(acknowledgedAt.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
@@ -332,6 +329,7 @@ describe('Privacy Notices Tables Migration', () => {
       const userResult = await pool.query(`
         INSERT INTO users (email, password_hash, role, name)
         VALUES ('multiple@example.com', 'hashed_password', 'Patient', 'Multiple User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
         RETURNING id;
       `);
       const userId = userResult.rows[0].id;
@@ -382,6 +380,7 @@ describe('Privacy Notices Tables Migration', () => {
       const userResult = await pool.query(`
         INSERT INTO users (email, password_hash, role, name)
         VALUES ('cascade@example.com', 'hashed_password', 'Patient', 'Cascade User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
         RETURNING id;
       `);
       const userId = userResult.rows[0].id;

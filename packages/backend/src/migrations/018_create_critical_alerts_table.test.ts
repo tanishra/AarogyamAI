@@ -22,15 +22,17 @@ describe('Critical Alerts Table Migration', () => {
 
     // Create test users for foreign key references
     const patientResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-alerts-patient@example.com', 'hashed_password', 'Patient']);
     testPatientId = patientResult.rows[0].id;
 
     const nurseResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-alerts-nurse@example.com', 'hashed_password', 'Nurse']);
     testNurseId = nurseResult.rows[0].id;
@@ -55,13 +57,8 @@ describe('Critical Alerts Table Migration', () => {
   });
 
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '018_create_critical_alerts_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
-    
+    // Tables persist for subsequent migration tests (shared test DB)
+
     // Clean up test data
     await pool.query('DELETE FROM vital_signs WHERE id = $1', [testVitalSignId]);
     await pool.query('DELETE FROM users WHERE id IN ($1, $2)', [testPatientId, testNurseId]);
@@ -159,4 +156,63 @@ describe('Critical Alerts Table Migration', () => {
   });
 
   it('should create critical alert for high systolic blood pressure', async () => {
+    const result = await pool.query(`
+      INSERT INTO critical_alerts (
+        vital_sign_id, patient_id, encounter_id, vital_name, vital_value,
+        severity, normal_range, recommended_action
+      )
+      VALUES (
+        $1, $2,
+        '550e8400-e29b-41d4-a716-446655440000',
+        'Systolic Blood Pressure',
+        '185 mmHg',
+        'critical',
+        '90-180 mmHg',
+        'Recheck blood pressure immediately and notify physician'
+      )
+      RETURNING *;
+    `, [testVitalSignId, testPatientId]);
+
+    const alert = result.rows[0];
+    expect(alert.vital_sign_id).toBe(testVitalSignId);
+    expect(alert.patient_id).toBe(testPatientId);
+    expect(alert.severity).toBe('critical');
+    expect(alert.acknowledged).toBe(false);
+    expect(alert.acknowledged_by).toBeNull();
+    expect(alert.acknowledged_at).toBeNull();
+    expect(alert.created_at).toBeInstanceOf(Date);
+  });
+
+  it('should update acknowledged fields when alert is acknowledged', async () => {
+    const insertResult = await pool.query(`
+      INSERT INTO critical_alerts (
+        vital_sign_id, patient_id, encounter_id, vital_name, vital_value,
+        severity, normal_range, recommended_action
+      )
+      VALUES (
+        $1, $2,
+        '550e8400-e29b-41d4-a716-446655440000',
+        'Heart Rate',
+        '45 bpm',
+        'high',
+        '50-120 bpm',
+        'Assess patient and recheck heart rate'
+      )
+      RETURNING id;
+    `, [testVitalSignId, testPatientId]);
+
+    const updateResult = await pool.query(`
+      UPDATE critical_alerts
+      SET acknowledged = TRUE, acknowledged_by = $1, acknowledged_at = NOW()
+      WHERE id = $2
+      RETURNING *;
+    `, [testNurseId, insertResult.rows[0].id]);
+
+    const alert = updateResult.rows[0];
+    expect(alert.acknowledged).toBe(true);
+    expect(alert.acknowledged_by).toBe(testNurseId);
+    expect(alert.acknowledged_at).toBeInstanceOf(Date);
+    expect(alert.updated_at.getTime()).toBeGreaterThanOrEqual(alert.created_at.getTime());
+  });
+});
   

@@ -37,8 +37,6 @@ interface PreviousVitals {
 }
 
 export function VitalsEntryForm({ 
-  patientId, 
-  sessionId, 
   onSubmit, 
   isSubmitting = false,
   previousVitals 

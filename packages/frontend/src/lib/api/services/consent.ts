@@ -4,8 +4,6 @@ import type {
   ConsentWithdrawalRequest,
   Grievance,
   DataAccessRequest,
-  UpdateGrievanceRequest,
-  FulfillDataAccessRequest,
 } from '../types';
 
 export class ConsentAPI {

@@ -225,7 +225,7 @@ export function MedicalHistory() {
               <div className="ui-surface ui-surface-hover p-5 border-2 border-green-200 bg-green-50/30">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-2xl">👨‍⚕️</span>
-                  <h3 className="text-base font-semibold text-slate-900">Doctor's Diagnosis & Treatment Plan</h3>
+                  <h3 className="text-base font-semibold text-slate-900">Doctor&rsquo;s Diagnosis & Treatment Plan</h3>
                 </div>
 
                 {sessionDetails.clinicalReasoning.differentialDiagnosis && 
@@ -261,7 +261,7 @@ export function MedicalHistory() {
                 {sessionDetails.clinicalReasoning.finalNotes && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-green-700 mb-2">
-                      Doctor's Notes
+                      Doctor&rsquo;s Notes
                     </p>
                     <div className="rounded-lg border border-green-200 bg-white p-3">
                       <p className="text-sm text-slate-800 whitespace-pre-wrap">

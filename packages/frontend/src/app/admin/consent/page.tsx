@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigation } from '@/components/Navigation';
-import { AppShell, PageHeader, PanelTabs, AnimatedButton, EmptyState } from '@/components/common';
+import { AppShell, PanelTabs, AnimatedButton, EmptyState } from '@/components/common';
 
 type Tab = 'consent' | 'grievances';
 

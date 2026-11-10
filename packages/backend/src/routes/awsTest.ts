@@ -29,7 +29,7 @@ router.post('/dynamodb', authenticate({}), async (req: Request, res: Response) =
     // Create a test audit log entry
     const testEntry = await auditRepo.create({
       userId: req.user!.userId,
-      userName: req.user!.name || 'Test User',
+      userName: req.user!.email || 'Test User',
       userRole: req.user!.role,
       actionType: 'aws_dynamodb_test',
       resource: 'test',
@@ -98,7 +98,7 @@ router.post('/s3', authenticate({}), async (req: Request, res: Response) => {
       { userId: req.user!.userId },
       'csv',
       req.user!.userId,
-      req.user!.name || 'Test User',
+      req.user!.email || 'Test User',
       req.ip || '127.0.0.1',
       req.headers['user-agent'] || 'unknown',
       'test-' + Date.now()

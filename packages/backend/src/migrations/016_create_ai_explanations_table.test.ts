@@ -3,7 +3,7 @@
  * Requirements: 11.3, 11.4, 11.5
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -22,15 +22,17 @@ describe('AI Explanations Table Migration', () => {
 
     // Create test users for foreign key references
     const patientResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-explanation-patient@example.com', 'hashed_password', 'Patient']);
     testPatientId = patientResult.rows[0].id;
 
     const physicianResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-explanation-physician@example.com', 'hashed_password', 'Doctor']);
     testPhysicianId = physicianResult.rows[0].id;
@@ -61,13 +63,12 @@ describe('AI Explanations Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM ai_explanations');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '016_create_ai_explanations_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test data
     await pool.query('DELETE FROM differentials WHERE id = $1', [testDifferentialId]);

@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
 import { requireAdministrator } from '../auth/authorizationMiddleware';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 
 const router = Router();
 

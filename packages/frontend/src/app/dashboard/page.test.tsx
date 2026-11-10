@@ -9,6 +9,12 @@ vi.mock('@/lib/auth', () => ({
   AuthGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Mock Next.js navigation (used by Navigation / SessionManager children)
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })),
+  usePathname: vi.fn(() => '/dashboard'),
+}));
+
 // Mock Next.js Link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: any) => (
@@ -18,72 +24,67 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+const adminAuth = {
+  user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
+  role: 'Administrator',
+  isAuthenticated: true,
+  sessionExpiresAt: null,
+};
+
+const dpoAuth = {
+  user: { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'DPO' },
+  role: 'DPO',
+  isAuthenticated: true,
+  sessionExpiresAt: null,
+};
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should display welcome message with user name', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
+    (useAuth as any).mockReturnValue(adminAuth);
 
     render(<DashboardPage />);
 
-    expect(screen.getByText(/Welcome back, John Doe/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome, John Doe/i)).toBeInTheDocument();
   });
 
-  it('should display user role', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
+  it('should display user role badge', () => {
+    (useAuth as any).mockReturnValue(adminAuth);
 
     render(<DashboardPage />);
 
-    expect(screen.getByText('Administrator')).toBeInTheDocument();
+    expect(screen.getAllByText('Administrator').length).toBeGreaterThan(0);
   });
 
   it('should display Administrator quick action cards', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
+    (useAuth as any).mockReturnValue(adminAuth);
 
     render(<DashboardPage />);
 
     expect(screen.getByText('User Management')).toBeInTheDocument();
     expect(screen.getByText('Metrics Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Audit Logs')).toBeInTheDocument();
-    expect(screen.queryByText('Consent Management')).not.toBeInTheDocument();
+    expect(screen.getByText('Audit Console')).toBeInTheDocument();
+    expect(screen.getByText('Consent Ops')).toBeInTheDocument();
+    expect(screen.queryByText('DPO Hub')).not.toBeInTheDocument();
   });
 
   it('should display DPO quick action cards', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'Jane Smith', email: 'jane@example.com', role: 'DPO' },
-      role: 'DPO',
-      isAuthenticated: true,
-    });
+    (useAuth as any).mockReturnValue(dpoAuth);
 
     render(<DashboardPage />);
 
-    expect(screen.getByText('Consent Management')).toBeInTheDocument();
-    expect(screen.getByText('Grievances')).toBeInTheDocument();
-    expect(screen.getByText('Audit Logs')).toBeInTheDocument();
-    expect(screen.getByText('Compliance Reports')).toBeInTheDocument();
-    expect(screen.queryByText('User Management')).not.toBeInTheDocument();
+    const dpoHubLinks = screen.getAllByText('DPO Hub');
+    expect(dpoHubLinks.length).toBeGreaterThan(0);
+    expect(dpoHubLinks.map((el) => el.closest('a')).some((a) => a?.getAttribute('href') === '/dpo')).toBe(true);
+    expect(screen.getByText('Audit Console')).toBeInTheDocument();
+    expect(screen.getByText('Consent Ops')).toBeInTheDocument();
   });
 
   it('should link to user management page for Administrator', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
+    (useAuth as any).mockReturnValue(adminAuth);
 
     render(<DashboardPage />);
 
@@ -91,31 +92,11 @@ describe('DashboardPage', () => {
     expect(userManagementLink).toHaveAttribute('href', '/admin/users');
   });
 
-  it('should show "Coming Soon" for disabled features', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
+  it('should display the operational snapshot section', () => {
+    (useAuth as any).mockReturnValue(adminAuth);
 
     render(<DashboardPage />);
 
-    const comingSoonLabels = screen.getAllByText('(Coming Soon)');
-    expect(comingSoonLabels.length).toBeGreaterThan(0);
-  });
-
-  it('should display MVP info section', () => {
-    (useAuth as any).mockReturnValue({
-      user: { id: '1', name: 'John Doe', email: 'john@example.com', role: 'Administrator' },
-      role: 'Administrator',
-      isAuthenticated: true,
-    });
-
-    render(<DashboardPage />);
-
-    expect(screen.getByText('Admin Panel MVP')).toBeInTheDocument();
-    expect(
-      screen.getByText(/This is the initial MVP version of the admin panel/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText('Operational Snapshot')).toBeInTheDocument();
   });
 });

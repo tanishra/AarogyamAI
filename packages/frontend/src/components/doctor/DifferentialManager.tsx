@@ -52,7 +52,7 @@ export function DifferentialManager({
   }) => {
     setIsLoading(true);
     try {
-      const response = await apiClient.post(
+      await apiClient.post(
         `/api/doctor/encounters/${encounterId}/differentials`,
         {
           icdCode: data.diagnosis.code,

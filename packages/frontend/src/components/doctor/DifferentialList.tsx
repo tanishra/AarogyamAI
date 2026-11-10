@@ -30,7 +30,6 @@ interface DifferentialListProps {
 }
 
 export function DifferentialList({
-  encounterId,
   differentials,
   onAdd,
   onRemove,

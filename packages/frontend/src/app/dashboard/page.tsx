@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { AuthGuard } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { SessionManager } from '@/components/SessionManager';
-import { AppShell, PageHeader } from '@/components/common';
+import { AppShell } from '@/components/common';
 
 function DashboardContent() {
   const { user, role } = useAuth();

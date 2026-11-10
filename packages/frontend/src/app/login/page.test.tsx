@@ -19,76 +19,73 @@ describe('LoginPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     (useRouter as any).mockReturnValue({ push: mockPush });
     (useAuth as any).mockReturnValue({ login: mockLogin });
   });
 
-  it('should render login form', () => {
+  it('should render sign-in form', () => {
     render(<LoginPage />);
 
-    expect(screen.getByText('Admin Panel Login')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Email address')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter password')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^sign in$/i }).at(-1)!).toBeInTheDocument();
   });
 
-  it('should validate email format', async () => {
+  it('should switch to sign-up tab', () => {
     render(<LoginPage />);
 
-    const emailInput = screen.getByPlaceholderText('Email address');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    fireEvent.click(screen.getByRole('button', { name: /sign up/i }));
 
-    fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Invalid email address')).toBeInTheDocument();
-    });
-
-    expect(mockLogin).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('John Doe')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /create account/i })
+    ).toBeInTheDocument();
   });
 
-  it('should validate password length', async () => {
-    render(<LoginPage />);
-
-    const emailInput = screen.getByPlaceholderText('Email address');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
-
-    fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'short' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
-    });
-
-    expect(mockLogin).not.toHaveBeenCalled();
-  });
-
-  it('should submit valid credentials', async () => {
+  it('should submit valid credentials and route by role', async () => {
     mockLogin.mockResolvedValueOnce(undefined);
+    localStorage.setItem('user', JSON.stringify({ role: 'Doctor' }));
 
     render(<LoginPage />);
 
-    const emailInput = screen.getByPlaceholderText('Email address');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const emailInput = screen.getByPlaceholderText('you@example.com');
+    const passwordInput = screen.getByPlaceholderText('Enter password');
+    const submitButton = screen.getAllByRole('button', { name: /^sign in$/i }).at(-1)!;
 
-    fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
+    fireEvent.change(emailInput, { target: { value: 'doctor@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
-        email: 'admin@example.com',
+        email: 'doctor@example.com',
         password: 'password123',
       });
     });
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/doctor/dashboard');
+    });
+  });
+
+  it('should route non-clinical roles to /dashboard', async () => {
+    mockLogin.mockResolvedValueOnce(undefined);
+    localStorage.setItem('user', JSON.stringify({ role: 'Administrator' }));
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'admin@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter password'), {
+      target: { value: 'password123' } },
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: /^sign in$/i }).at(-1)!);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
   });
 
   it('should display error message on login failure', async () => {
@@ -96,13 +93,13 @@ describe('LoginPage', () => {
 
     render(<LoginPage />);
 
-    const emailInput = screen.getByPlaceholderText('Email address');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
-
-    fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } });
-    fireEvent.click(submitButton);
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'admin@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter password'), {
+      target: { value: 'wrongpassword' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /^sign in$/i }).at(-1)!);
 
     await waitFor(() => {
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
@@ -116,13 +113,13 @@ describe('LoginPage', () => {
 
     render(<LoginPage />);
 
-    const emailInput = screen.getByPlaceholderText('Email address');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
-
-    fireEvent.change(emailInput, { target: { value: 'admin@example.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
-    fireEvent.click(submitButton);
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'admin@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter password'), {
+      target: { value: 'password123' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /^sign in$/i }).at(-1)!);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();

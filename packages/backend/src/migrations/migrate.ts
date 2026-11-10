@@ -6,7 +6,7 @@
  */
 
 import { Pool } from 'pg';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 export interface MigrationResult {
@@ -48,15 +48,9 @@ export async function runMigration(
  * Run all migrations in order
  */
 export async function runAllMigrations(pool: Pool): Promise<MigrationResult[]> {
-  const migrations = [
-    '001_create_user_management_tables.sql',
-    '002_create_consent_grievance_tables.sql',
-    '003_create_ai_chat_tables.sql',
-    '004_create_mfa_configurations_table.sql',
-    '005_create_sessions_table.sql',
-    '006_create_privacy_notices_tables.sql',
-    // Add more migrations here as they are created
-  ];
+  const migrations = readdirSync(__dirname)
+    .filter((file) => file.endsWith('.sql') && !file.endsWith('_rollback.sql'))
+    .sort();
   
   const results: MigrationResult[] = [];
   

@@ -292,7 +292,7 @@ function PatientHistoryContent() {
                         {encounter.clinicalReasoning.finalNotes && (
                           <div className="mt-3">
                             <p className="text-xs font-semibold text-slate-700">
-                              Doctor's Notes
+                              Doctor&rsquo;s Notes
                             </p>
                             <p className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">
                               {encounter.clinicalReasoning.finalNotes}
@@ -342,7 +342,7 @@ function PatientHistoryContent() {
                               )}
                               {consideration.doctorNotes && (
                                 <div className="mt-2 rounded bg-blue-50 p-2">
-                                  <p className="text-xs font-semibold text-blue-700">Doctor's Notes:</p>
+                                  <p className="text-xs font-semibold text-blue-700">Doctor&rsquo;s Notes:</p>
                                   <p className="mt-1 text-xs text-slate-700">{consideration.doctorNotes}</p>
                                 </div>
                               )}

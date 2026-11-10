@@ -20,8 +20,9 @@ describe('Clinical Reasoning Versions Table Migration', () => {
 
     // Create test user for foreign key references
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-version-user@example.com', 'hashed_password', 'Doctor']);
     testUserId = userResult.rows[0].id;
@@ -35,12 +36,7 @@ describe('Clinical Reasoning Versions Table Migration', () => {
   });
 
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '014_create_clinical_reasoning_versions_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test user
     await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);

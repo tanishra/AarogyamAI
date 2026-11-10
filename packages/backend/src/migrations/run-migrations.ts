@@ -9,6 +9,7 @@
  *   npm run migrate status          - Show migration status
  */
 
+import fs from 'fs';
 import { Pool } from 'pg';
 import {
   createMigrationsTable,
@@ -31,13 +32,10 @@ const pool = new Pool({
   } : undefined
 });
 
-const MIGRATIONS = [
-  '001_create_user_management_tables.sql',
-  '002_create_consent_grievance_tables.sql',
-  '003_create_ai_chat_tables.sql',
-  '004_create_mfa_configurations_table.sql',
-  // Add more migrations here as they are created
-];
+const MIGRATIONS: string[] = fs
+  .readdirSync(__dirname)
+  .filter((file) => file.endsWith('.sql') && !file.endsWith('_rollback.sql'))
+  .sort();
 
 async function runUp() {
   console.log('Running migrations...\n');

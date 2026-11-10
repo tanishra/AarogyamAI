@@ -11,10 +11,11 @@ import { randomBytes } from 'crypto';
 
 const router = Router();
 const userRepo = new UserRepository();
+const auditRepo = new AuditLogRepository();
 
-// Mock audit logging for MVP (DynamoDB not configured)
+// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
-  console.log('[AUDIT LOG - DISABLED FOR MVP]:', data.actionType, data.userId);
+  await auditRepo.create(data);
 };
 
 // Validation schemas

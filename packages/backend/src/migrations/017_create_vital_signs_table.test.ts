@@ -3,7 +3,7 @@
  * Requirements: 28.1, 28.4, 28.5
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -21,15 +21,17 @@ describe('Vital Signs Table Migration', () => {
 
     // Create test users for foreign key references
     const patientResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-vitals-patient@example.com', 'hashed_password', 'Patient']);
     testPatientId = patientResult.rows[0].id;
 
     const nurseResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-vitals-nurse@example.com', 'hashed_password', 'Nurse']);
     testNurseId = nurseResult.rows[0].id;
@@ -42,13 +44,12 @@ describe('Vital Signs Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM vital_signs');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '017_create_vital_signs_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test data
     await pool.query('DELETE FROM users WHERE id IN ($1, $2)', [testPatientId, testNurseId]);
@@ -256,8 +257,9 @@ describe('Vital Signs Table Migration', () => {
   it('should cascade delete vitals when patient is deleted', async () => {
     // Create a temporary patient
     const tempPatientResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['temp-vitals-patient@example.com', 'hashed_password', 'Patient']);
     const tempPatientId = tempPatientResult.rows[0].id;

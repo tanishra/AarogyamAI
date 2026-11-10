@@ -55,7 +55,7 @@ COMMENT ON COLUMN review_of_systems.created_at IS 'Timestamp when the record was
 COMMENT ON COLUMN review_of_systems.updated_at IS 'Timestamp when the record was last updated';
 
 -- Create trigger to automatically update updated_at timestamp
-CREATE TRIGGER update_review_of_systems_updated_at
-  BEFORE UPDATE ON review_of_systems
+DROP TRIGGER IF EXISTS update_review_of_systems_updated_at ON review_of_systems;
+CREATE TRIGGER update_review_of_systems_updated_at BEFORE UPDATE ON review_of_systems
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

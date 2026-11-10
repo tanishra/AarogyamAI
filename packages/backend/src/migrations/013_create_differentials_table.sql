@@ -64,13 +64,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_update_differentials_modified_at
-  BEFORE UPDATE ON differentials
+DROP TRIGGER IF EXISTS trigger_update_differentials_modified_at ON differentials;
+CREATE TRIGGER trigger_update_differentials_modified_at BEFORE UPDATE ON differentials
   FOR EACH ROW
   EXECUTE FUNCTION update_differentials_modified_at();
 
 -- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_differentials_updated_at
-  BEFORE UPDATE ON differentials
+DROP TRIGGER IF EXISTS update_differentials_updated_at ON differentials;
+CREATE TRIGGER update_differentials_updated_at BEFORE UPDATE ON differentials
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

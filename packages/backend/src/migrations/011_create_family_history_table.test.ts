@@ -20,8 +20,9 @@ describe('Family History Table Migration', () => {
 
     // Create a test user for foreign key reference
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-family-history@example.com', 'hashed_password', 'Patient']);
     testUserId = userResult.rows[0].id;
@@ -35,12 +36,7 @@ describe('Family History Table Migration', () => {
   });
 
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '011_create_family_history_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test user
     await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
@@ -356,8 +352,9 @@ describe('Family History Table Migration', () => {
   it('should cascade delete family history when patient is deleted', async () => {
     // Create a temporary test user
     const tempUserResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['temp-family-patient@example.com', 'hashed_password', 'Patient']);
     const tempUserId = tempUserResult.rows[0].id;

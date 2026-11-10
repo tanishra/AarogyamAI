@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AuthGuard } from '@/lib/auth/AuthGuard';
 import { RoleGuard } from '@/lib/auth/RoleGuard';
 import { Navigation } from '@/components/Navigation';
-import { AppShell, PageHeader, AnimatedButton } from '@/components/common';
+import { AppShell, AnimatedButton } from '@/components/common';
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly';
 

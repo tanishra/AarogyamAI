@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigation } from '@/components/Navigation';
-import { AppShell, PageHeader, AnimatedButton, EmptyState } from '@/components/common';
+import { AppShell, AnimatedButton, EmptyState } from '@/components/common';
 
 interface AuditLogEntry {
   id: string;

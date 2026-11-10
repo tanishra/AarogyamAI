@@ -3,7 +3,7 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -31,8 +31,9 @@ describe('Fatigue Metrics Table Migration', () => {
 
     // Create a test user for foreign key reference
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-fatigue-patient@example.com', 'hashed_password', 'Patient']);
     testUserId = userResult.rows[0].id;
@@ -53,25 +54,17 @@ describe('Fatigue Metrics Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM fatigue_metrics');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '009_create_fatigue_metrics_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test session and user
     await pool.query('DELETE FROM questionnaire_sessions WHERE id = $1', [testSessionId]);
     await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
-    
-    // Rollback prerequisite migration
-    const prerequisiteRollbackSQL = readFileSync(
-      join(__dirname, '008_create_questionnaire_sessions_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(prerequisiteRollbackSQL);
-    
+
     await pool.end();
   });
 
@@ -259,7 +252,7 @@ describe('Fatigue Metrics Table Migration', () => {
   });
 
   it('should automatically set recorded_at timestamp', async () => {
-    const beforeInsert = new Date();
+    const beforeInsert = (await pool.query('SELECT NOW() AS now')).rows[0].now;
 
     const result = await pool.query(`
       INSERT INTO fatigue_metrics (session_id, fatigue_severity)
@@ -267,7 +260,7 @@ describe('Fatigue Metrics Table Migration', () => {
       RETURNING recorded_at;
     `, [testSessionId, 'none']);
 
-    const afterInsert = new Date();
+    const afterInsert = (await pool.query('SELECT NOW() AS now')).rows[0].now;
     const recordedAt = new Date(result.rows[0].recorded_at);
 
     expect(recordedAt.getTime()).toBeGreaterThanOrEqual(beforeInsert.getTime());

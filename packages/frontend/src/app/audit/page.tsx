@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AuthGuard } from '@/lib/auth/AuthGuard';
 import { RoleGuard } from '@/lib/auth/RoleGuard';
 import { Navigation } from '@/components/Navigation';
-import { AppShell, PageHeader, PanelTabs } from '@/components/common';
+import { AppShell, PanelTabs } from '@/components/common';
 import AuditLogSearch from '@/components/audit/AuditLogSearch';
 import AuditLogTable from '@/components/audit/AuditLogTable';
 import AccessPatternViewer from '@/components/audit/AccessPatternViewer';

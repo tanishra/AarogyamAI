@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { setAuthTokenGetter, setRefreshTokenFunction } from '@/lib/api';
-import type { AuthState, User, LoginCredentials, LoginResponse, RefreshResponse } from './types';
+import type { AuthState, LoginCredentials, RefreshResponse } from './types';
 
 interface AuthContextValue extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;

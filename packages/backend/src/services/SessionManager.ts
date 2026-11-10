@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 /**
  * Session Manager Service
@@ -206,7 +206,6 @@ export class SessionManager {
   }
 
   private hashToken(token: string): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(token).digest('hex');
+    return createHash('sha256').update(token).digest('hex');
   }
 }

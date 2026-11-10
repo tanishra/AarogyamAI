@@ -84,7 +84,9 @@ describe('AccountStatusToggle', () => {
     const reasonInput = screen.getByPlaceholderText('Provide a reason for this action...');
     await userEvent.type(reasonInput, 'User requested account closure');
 
-    const confirmButton = screen.getByRole('button', { name: /Deactivate/i });
+    // The trigger button and the dialog's confirm button share the label;
+    // the dialog renders last in DOM order.
+    const confirmButton = screen.getAllByRole('button', { name: /Deactivate/i }).at(-1)!;
     await userEvent.click(confirmButton);
 
     await waitFor(() => {
@@ -113,7 +115,7 @@ describe('AccountStatusToggle', () => {
       expect(screen.getByText('Confirm Account Activation')).toBeInTheDocument();
     });
 
-    const confirmButton = screen.getByRole('button', { name: /Activate/i });
+    const confirmButton = screen.getAllByRole('button', { name: /Activate/i }).at(-1)!;
     await userEvent.click(confirmButton);
 
     await waitFor(() => {
@@ -150,7 +152,7 @@ describe('AccountStatusToggle', () => {
       expect(screen.getByText('Confirm Account Deactivation')).toBeInTheDocument();
     });
 
-    const confirmButton = screen.getByRole('button', { name: /Deactivate/i });
+    const confirmButton = screen.getAllByRole('button', { name: /Deactivate/i }).at(-1)!;
     await userEvent.click(confirmButton);
 
     await waitFor(() => {

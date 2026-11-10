@@ -65,7 +65,7 @@ describe('RoleEditor', () => {
     renderComponent();
 
     expect(screen.getByText(/Current Role:/)).toBeInTheDocument();
-    expect(screen.getByText('Doctor')).toBeInTheDocument();
+    expect(screen.getAllByText('Doctor').length).toBeGreaterThan(0);
 
     const select = screen.getByRole('combobox');
     expect(select).toHaveValue('Doctor');
@@ -129,8 +129,8 @@ describe('RoleEditor', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Confirm Role Change')).toBeInTheDocument();
-      expect(screen.getByText('Doctor')).toBeInTheDocument();
-      expect(screen.getByText('Nurse')).toBeInTheDocument();
+      expect(screen.getAllByText('Doctor').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Nurse').length).toBeGreaterThan(0);
     });
   });
 

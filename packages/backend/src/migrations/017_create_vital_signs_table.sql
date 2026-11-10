@@ -54,7 +54,7 @@ COMMENT ON COLUMN vital_signs.created_at IS 'Timestamp when the record was creat
 COMMENT ON COLUMN vital_signs.updated_at IS 'Timestamp when the record was last updated';
 
 -- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_vital_signs_updated_at
-  BEFORE UPDATE ON vital_signs
+DROP TRIGGER IF EXISTS update_vital_signs_updated_at ON vital_signs;
+CREATE TRIGGER update_vital_signs_updated_at BEFORE UPDATE ON vital_signs
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

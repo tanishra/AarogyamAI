@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Pool } from 'pg';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   createMigrationsTable,
-  runMigration,
-  rollbackMigration,
   recordMigration,
   isMigrationApplied,
   removeMigrationRecord,
@@ -102,8 +102,8 @@ describe('Migration System', () => {
 
   describe('Migration File Structure', () => {
     it('should have matching forward and rollback migration files', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFiles = fs.readdirSync(__dirname)
         .filter((file: string) => file.endsWith('.sql') && !file.includes('rollback'));
@@ -120,8 +120,8 @@ describe('Migration System', () => {
     });
 
     it('should have valid SQL syntax in migration files', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFile = '001_create_user_management_tables.sql';
       const migrationPath = path.join(__dirname, migrationFile);
@@ -135,8 +135,8 @@ describe('Migration System', () => {
     });
 
     it('should have valid SQL syntax in rollback files', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const rollbackFile = '001_create_user_management_tables_rollback.sql';
       const rollbackPath = path.join(__dirname, rollbackFile);
@@ -152,8 +152,8 @@ describe('Migration System', () => {
 
   describe('Migration SQL Content', () => {
     it('should create registration_requests table with required columns', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFile = '001_create_user_management_tables.sql';
       const migrationPath = path.join(__dirname, migrationFile);
@@ -172,8 +172,8 @@ describe('Migration System', () => {
     });
 
     it('should extend users table with required columns', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFile = '001_create_user_management_tables.sql';
       const migrationPath = path.join(__dirname, migrationFile);
@@ -189,8 +189,8 @@ describe('Migration System', () => {
     });
 
     it('should create required indexes', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFile = '001_create_user_management_tables.sql';
       const migrationPath = path.join(__dirname, migrationFile);
@@ -204,8 +204,8 @@ describe('Migration System', () => {
     });
 
     it('should use IF NOT EXISTS for idempotency', () => {
-      const fs = require('fs');
-      const path = require('path');
+      
+      
       
       const migrationFile = '001_create_user_management_tables.sql';
       const migrationPath = path.join(__dirname, migrationFile);

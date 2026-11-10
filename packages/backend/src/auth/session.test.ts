@@ -11,7 +11,7 @@ import {
   countUserSessions,
   CreateSessionParams,
 } from './session';
-import { getRedisClient, connectRedis, closeRedisClient } from '../config/redis';
+import { getRedisClient, connectRedis } from '../config/redis';
 
 describe('Session Management', () => {
   beforeEach(async () => {

@@ -41,7 +41,7 @@ COMMENT ON COLUMN physician_feedback.created_at IS 'Timestamp when the feedback 
 COMMENT ON COLUMN physician_feedback.updated_at IS 'Timestamp when the feedback was last updated';
 
 -- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_physician_feedback_updated_at
-  BEFORE UPDATE ON physician_feedback
+DROP TRIGGER IF EXISTS update_physician_feedback_updated_at ON physician_feedback;
+CREATE TRIGGER update_physician_feedback_updated_at BEFORE UPDATE ON physician_feedback
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

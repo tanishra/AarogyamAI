@@ -4,12 +4,6 @@ import type {
   UserAccount,
   ActivityEntry,
   PaginatedResponse,
-  ApproveRegistrationRequest,
-  RejectRegistrationRequest,
-  ChangeRoleRequest,
-  ChangeStatusRequest,
-  PasswordResetRequest,
-  MFAUpdateRequest,
 } from '../types';
 
 export class UserManagementAPI {

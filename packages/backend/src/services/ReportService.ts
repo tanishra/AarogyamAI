@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Pool } from 'pg';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import * as fs from 'fs';

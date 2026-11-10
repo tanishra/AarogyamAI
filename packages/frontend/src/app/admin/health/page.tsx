@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navigation } from '@/components/Navigation';
-import { AppShell, PageHeader, StatTile, AnimatedButton } from '@/components/common';
+import { AppShell, StatTile, AnimatedButton } from '@/components/common';
 
 interface HealthStatus {
   apiConnected: boolean;

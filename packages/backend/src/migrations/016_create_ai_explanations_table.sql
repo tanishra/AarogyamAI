@@ -36,7 +36,7 @@ COMMENT ON COLUMN ai_explanations.created_at IS 'Timestamp when the record was c
 COMMENT ON COLUMN ai_explanations.updated_at IS 'Timestamp when the record was last updated';
 
 -- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_ai_explanations_updated_at
-  BEFORE UPDATE ON ai_explanations
+DROP TRIGGER IF EXISTS update_ai_explanations_updated_at ON ai_explanations;
+CREATE TRIGGER update_ai_explanations_updated_at BEFORE UPDATE ON ai_explanations
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

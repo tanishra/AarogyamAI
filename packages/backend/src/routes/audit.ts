@@ -7,9 +7,9 @@ import { requireAdminOrDPO } from '../auth/authorizationMiddleware';
 const router = Router();
 const auditRepo = new AuditLogRepository();
 
-// Mock audit logging for MVP (DynamoDB not configured)
+// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
-  console.log('[AUDIT LOG - DISABLED FOR MVP]:', data.actionType, data.userId);
+  await auditRepo.create(data);
 };
 
 // Apply authentication and authorization middleware to all routes

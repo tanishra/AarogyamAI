@@ -46,7 +46,7 @@ COMMENT ON COLUMN critical_alerts.created_at IS 'Timestamp when the alert was cr
 COMMENT ON COLUMN critical_alerts.updated_at IS 'Timestamp when the alert was last updated';
 
 -- Create trigger to update updated_at timestamp
-CREATE TRIGGER update_critical_alerts_updated_at
-  BEFORE UPDATE ON critical_alerts
+DROP TRIGGER IF EXISTS update_critical_alerts_updated_at ON critical_alerts;
+CREATE TRIGGER update_critical_alerts_updated_at BEFORE UPDATE ON critical_alerts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

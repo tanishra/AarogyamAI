@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
 
 // Mock fetch
@@ -8,6 +8,7 @@ global.fetch = vi.fn();
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -29,15 +30,16 @@ describe('AuthContext', () => {
 
   it('should login successfully and update state', async () => {
     const mockResponse = {
-      user: {
-        id: '1',
-        email: 'admin@example.com',
-        name: 'Admin User',
-        role: 'Administrator' as const,
+      data: {
+        user: {
+          id: '1',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'Administrator' as const,
+        },
+        accessToken: 'mock-token',
+        refreshToken: 'mock-refresh-token',
       },
-      token: 'mock-token',
-      refreshToken: 'mock-refresh-token',
-      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
     };
 
     (global.fetch as any).mockResolvedValueOnce({
@@ -55,7 +57,7 @@ describe('AuthContext', () => {
     });
 
     expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.user).toEqual(mockResponse.user);
+    expect(result.current.user).toEqual(mockResponse.data.user);
     expect(result.current.token).toBe('mock-token');
     expect(result.current.role).toBe('Administrator');
   });
@@ -82,15 +84,16 @@ describe('AuthContext', () => {
 
   it('should logout and clear state', async () => {
     const mockLoginResponse = {
-      user: {
-        id: '1',
-        email: 'admin@example.com',
-        name: 'Admin User',
-        role: 'Administrator' as const,
+      data: {
+        user: {
+          id: '1',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'Administrator' as const,
+        },
+        accessToken: 'mock-token',
+        refreshToken: 'mock-refresh-token',
       },
-      token: 'mock-token',
-      refreshToken: 'mock-refresh-token',
-      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
     };
 
     (global.fetch as any)
@@ -128,15 +131,16 @@ describe('AuthContext', () => {
 
   it('should refresh access token', async () => {
     const mockLoginResponse = {
-      user: {
-        id: '1',
-        email: 'admin@example.com',
-        name: 'Admin User',
-        role: 'Administrator' as const,
+      data: {
+        user: {
+          id: '1',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'Administrator' as const,
+        },
+        accessToken: 'old-token',
+        refreshToken: 'mock-refresh-token',
       },
-      token: 'old-token',
-      refreshToken: 'mock-refresh-token',
-      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
     };
 
     const mockRefreshResponse = {

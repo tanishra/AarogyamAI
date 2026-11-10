@@ -13,6 +13,7 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository';
 
 // Extend Express Request type to include user
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: TokenPayload;
@@ -47,7 +48,7 @@ function extractToken(req: Request): string | null {
 /**
  * Authentication middleware factory
  */
-export function authenticate(options: AuthMiddlewareOptions = {}) {
+export function authenticate(_options: AuthMiddlewareOptions = {}) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Extract token from header
@@ -65,16 +66,19 @@ export function authenticate(options: AuthMiddlewareOptions = {}) {
       }
 
       // Check if token is blacklisted
-      // DISABLED FOR MVP - blacklist causing issues with session completion
-      // const blacklisted = await isTokenBlacklisted(token);
-      // if (blacklisted) {
-      //   console.log('[Auth Middleware] Token blacklisted');
-      //   res.status(401).json({
-      //     error: 'Unauthorized',
-      //     message: 'Token has been revoked',
-      //   });
-      //   return;
-      // }
+      try {
+        const blacklisted = await isTokenBlacklisted(token);
+        if (blacklisted) {
+          console.log('[Auth Middleware] Token blacklisted');
+          res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Token has been revoked',
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('[Auth Middleware] Blacklist check failed:', error);
+      }
 
       // Verify token
       let payload: TokenPayload;

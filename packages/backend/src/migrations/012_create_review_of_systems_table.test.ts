@@ -3,7 +3,7 @@
  * Requirements: 7.1, 7.2, 7.4, 7.5
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -21,8 +21,9 @@ describe('Review of Systems Table Migration', () => {
 
     // Create a test user for foreign key reference
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-ros@example.com', 'hashed_password', 'Patient']);
     testUserId = userResult.rows[0].id;
@@ -43,13 +44,12 @@ describe('Review of Systems Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM review_of_systems');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '012_create_review_of_systems_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test data
     await pool.query('DELETE FROM chat_sessions WHERE id = $1', [testSessionId]);
@@ -547,8 +547,9 @@ describe('Review of Systems Table Migration', () => {
   it('should cascade delete review of systems when patient is deleted', async () => {
     // Create a temporary test user
     const tempUserResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['temp-ros-patient@example.com', 'hashed_password', 'Patient']);
     const tempUserId = tempUserResult.rows[0].id;

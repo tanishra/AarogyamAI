@@ -8,7 +8,7 @@ import { Navigation } from '@/components/Navigation';
 import { SessionManager } from '@/components/SessionManager';
 import { AuthGuard } from '@/lib/auth';
 import type { UserAccount } from '@/lib/api/types';
-import { AppShell, PageHeader, PanelTabs } from '@/components/common';
+import { AppShell, PanelTabs } from '@/components/common';
 
 type AdminTab = 'queue' | 'users';
 

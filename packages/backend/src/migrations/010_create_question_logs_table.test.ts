@@ -3,7 +3,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.6
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -31,8 +31,9 @@ describe('Question Logs Table Migration', () => {
 
     // Create a test user for foreign key reference
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-question-logs-patient@example.com', 'hashed_password', 'Patient']);
     testUserId = userResult.rows[0].id;
@@ -53,25 +54,17 @@ describe('Question Logs Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM question_logs');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '010_create_question_logs_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test session and user
     await pool.query('DELETE FROM questionnaire_sessions WHERE id = $1', [testSessionId]);
     await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
-    
-    // Rollback prerequisite migration
-    const prerequisiteRollbackSQL = readFileSync(
-      join(__dirname, '008_create_questionnaire_sessions_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(prerequisiteRollbackSQL);
-    
+
     await pool.end();
   });
 
@@ -334,7 +327,7 @@ describe('Question Logs Table Migration', () => {
   });
 
   it('should automatically set asked_at timestamp', async () => {
-    const beforeInsert = new Date();
+    const beforeInsert = (await pool.query('SELECT NOW() AS now')).rows[0].now;
 
     const result = await pool.query(`
       INSERT INTO question_logs (session_id, question_id, question_text)
@@ -342,7 +335,7 @@ describe('Question Logs Table Migration', () => {
       RETURNING asked_at;
     `, [testSessionId, '123e4567-e89b-12d3-a456-426614174050', 'Test question']);
 
-    const afterInsert = new Date();
+    const afterInsert = (await pool.query('SELECT NOW() AS now')).rows[0].now;
     const askedAt = new Date(result.rows[0].asked_at);
 
     expect(askedAt.getTime()).toBeGreaterThanOrEqual(beforeInsert.getTime());

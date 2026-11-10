@@ -26,12 +26,7 @@ describe('Sessions Table Migration', () => {
   });
 
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '005_create_sessions_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     await pool.end();
   });
 
@@ -117,6 +112,7 @@ describe('Sessions Table Migration', () => {
     const userResult = await pool.query(`
       INSERT INTO users (email, password_hash, role, name)
       VALUES ('test@example.com', 'hashed_password', 'Patient', 'Test User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `);
     const userId = userResult.rows[0].id;
@@ -157,6 +153,7 @@ describe('Sessions Table Migration', () => {
     const userResult = await pool.query(`
       INSERT INTO users (email, password_hash, role, name)
       VALUES ('activity@example.com', 'hashed_password', 'Patient', 'Activity User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `);
     const userId = userResult.rows[0].id;
@@ -206,6 +203,7 @@ describe('Sessions Table Migration', () => {
     const userResult = await pool.query(`
       INSERT INTO users (email, password_hash, role, name)
       VALUES ('terminate@example.com', 'hashed_password', 'Patient', 'Terminate User')
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `);
     const userId = userResult.rows[0].id;

@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
-import { query } from '../config/database';
+import { query, getDatabasePool } from '../config/database';
 import { chatRepository } from '../repositories/ChatRepository';
 import { ConsentRepository } from '../repositories/ConsentRepository';
 import { QuestionnaireSessionManager } from '../services/QuestionnaireSessionManager';
 
 const router = Router();
 const consentRepo = new ConsentRepository();
-const questionnaireManager = new QuestionnaireSessionManager();
+const questionnaireManager = new QuestionnaireSessionManager(getDatabasePool());
 
 const updateMedicalHistorySchema = z.object({
   medicalHistory: z.array(z.string()).optional(),
@@ -527,7 +527,19 @@ router.post('/questionnaire/sessions/:sessionId/progress', authenticate({}), asy
       return;
     }
 
-    await questionnaireManager.saveSession(validation.data);
+    const { patientId: progressPatientId, currentStep, responses } = validation.data;
+    await questionnaireManager.saveSession({
+      patientId: progressPatientId,
+      sessionData: {
+        patientId: progressPatientId,
+        currentQuestionIndex: currentStep,
+        answers: responses,
+        skippedQuestions: [],
+        uncertainAnswers: [],
+        startedAt: new Date(),
+        lastActivity: new Date(),
+      },
+    });
 
     res.status(200).json({
       message: 'Questionnaire progress saved',
@@ -547,7 +559,6 @@ router.post('/questionnaire/sessions/:sessionId/progress', authenticate({}), asy
  */
 router.get('/questionnaire/sessions/:sessionId/resume', authenticate({}), async (req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params;
     const patientId = req.user!.userId;
 
     if (!canAccessPatientData(req, patientId)) {
@@ -558,7 +569,7 @@ router.get('/questionnaire/sessions/:sessionId/resume', authenticate({}), async 
       return;
     }
 
-    const session = await questionnaireManager.loadSession(sessionId, patientId);
+    const session = await questionnaireManager.loadSession(patientId);
 
     if (!session) {
       res.status(404).json({
@@ -587,7 +598,6 @@ router.get('/questionnaire/sessions/:sessionId/resume', authenticate({}), async 
  */
 router.get('/questionnaire/sessions/:sessionId/can-resume', authenticate({}), async (req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params;
     const patientId = req.user!.userId;
 
     if (!canAccessPatientData(req, patientId)) {
@@ -598,7 +608,7 @@ router.get('/questionnaire/sessions/:sessionId/can-resume', authenticate({}), as
       return;
     }
 
-    const canResume = await questionnaireManager.canResumeSession(sessionId, patientId);
+    const canResume = await questionnaireManager.canResumeSession(patientId);
 
     res.status(200).json({
       message: 'Resume status checked',

@@ -95,7 +95,7 @@ export class QuestionnaireSessionManager {
     const row = result.rows[0];
     
     try {
-      const decryptedData = this.decryptSessionData(row.session_data);
+      this.decryptSessionData(row.session_data);
       return {
         patientId,
         currentQuestionIndex: row.current_question_index,

@@ -3,7 +3,7 @@
  * Requirements: 1.3, 1.4, 1.5, 3.1, 3.2, 3.3
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -20,8 +20,9 @@ describe('Questionnaire Sessions Table Migration', () => {
 
     // Create a test user for foreign key reference
     const userResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['test-patient@example.com', 'hashed_password', 'Patient']);
     testUserId = userResult.rows[0].id;
@@ -34,13 +35,12 @@ describe('Questionnaire Sessions Table Migration', () => {
     await pool.query(migrationSQL);
   });
 
+  beforeEach(async () => {
+    await pool.query('DELETE FROM questionnaire_sessions');
+  });
+
   afterAll(async () => {
-    // Clean up - run rollback
-    const rollbackSQL = readFileSync(
-      join(__dirname, '008_create_questionnaire_sessions_table_rollback.sql'),
-      'utf-8'
-    );
-    await pool.query(rollbackSQL);
+    // Tables persist for subsequent migration tests (shared test DB)
     
     // Clean up test user
     await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
@@ -353,8 +353,9 @@ describe('Questionnaire Sessions Table Migration', () => {
   it('should cascade delete sessions when patient is deleted', async () => {
     // Create a temporary test user
     const tempUserResult = await pool.query(`
-      INSERT INTO users (email, password_hash, role)
-      VALUES ($1, $2, $3)
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES ('Test User', $1, $2, $3)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
       RETURNING id;
     `, ['temp-patient@example.com', 'hashed_password', 'Patient']);
     const tempUserId = tempUserResult.rows[0].id;

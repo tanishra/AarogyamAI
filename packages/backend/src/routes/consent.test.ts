@@ -79,6 +79,7 @@ vi.mock('../auth/authMiddleware', () => ({
 
 vi.mock('../auth/authorizationMiddleware', () => ({
   requireDPO: () => (_req: any, _res: any, next: any) => next(),
+  requireAdminOrDPO: () => (_req: any, _res: any, next: any) => next(),
 }));
 
 describe('Consent Routes', () => {

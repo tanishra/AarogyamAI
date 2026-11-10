@@ -118,18 +118,18 @@ CREATE TABLE IF NOT EXISTS patient_queue (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_chat_sessions_patient ON chat_sessions(patient_id);
-CREATE INDEX idx_chat_sessions_status ON chat_sessions(status);
-CREATE INDEX idx_chat_messages_session ON chat_messages(session_id);
-CREATE INDEX idx_patient_summaries_patient ON patient_summaries(patient_id);
-CREATE INDEX idx_vitals_patient ON vitals(patient_id);
-CREATE INDEX idx_vitals_session ON vitals(session_id);
-CREATE INDEX idx_clinical_considerations_patient ON clinical_considerations(patient_id);
-CREATE INDEX idx_clinical_considerations_status ON clinical_considerations(status);
-CREATE INDEX idx_clinical_reasoning_patient ON clinical_reasoning(patient_id);
-CREATE INDEX idx_clinical_reasoning_doctor ON clinical_reasoning(doctor_id);
-CREATE INDEX idx_patient_queue_status ON patient_queue(status);
-CREATE INDEX idx_patient_queue_patient ON patient_queue(patient_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_patient ON chat_sessions(patient_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_status ON chat_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_patient_summaries_patient ON patient_summaries(patient_id);
+CREATE INDEX IF NOT EXISTS idx_vitals_patient ON vitals(patient_id);
+CREATE INDEX IF NOT EXISTS idx_vitals_session ON vitals(session_id);
+CREATE INDEX IF NOT EXISTS idx_clinical_considerations_patient ON clinical_considerations(patient_id);
+CREATE INDEX IF NOT EXISTS idx_clinical_considerations_status ON clinical_considerations(status);
+CREATE INDEX IF NOT EXISTS idx_clinical_reasoning_patient ON clinical_reasoning(patient_id);
+CREATE INDEX IF NOT EXISTS idx_clinical_reasoning_doctor ON clinical_reasoning(doctor_id);
+CREATE INDEX IF NOT EXISTS idx_patient_queue_status ON patient_queue(status);
+CREATE INDEX IF NOT EXISTS idx_patient_queue_patient ON patient_queue(patient_id);
 
 -- Update timestamp triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -140,17 +140,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_chat_sessions_updated_at ON chat_sessions;
 CREATE TRIGGER update_chat_sessions_updated_at BEFORE UPDATE ON chat_sessions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_patient_summaries_updated_at ON patient_summaries;
 CREATE TRIGGER update_patient_summaries_updated_at BEFORE UPDATE ON patient_summaries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clinical_considerations_updated_at ON clinical_considerations;
 CREATE TRIGGER update_clinical_considerations_updated_at BEFORE UPDATE ON clinical_considerations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clinical_reasoning_updated_at ON clinical_reasoning;
 CREATE TRIGGER update_clinical_reasoning_updated_at BEFORE UPDATE ON clinical_reasoning
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_patient_queue_updated_at ON patient_queue;
 CREATE TRIGGER update_patient_queue_updated_at BEFORE UPDATE ON patient_queue
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AppShell, PageHeader, AnimatedButton, StatTile } from '@/components/common';
+import { AppShell, AnimatedButton, StatTile } from '@/components/common';
 import { Navigation } from '@/components/Navigation';
 
 interface MetricsSummary {

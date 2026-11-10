@@ -4,6 +4,9 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { invalidateUserSessions } from '../auth/session';
 import { User, RegistrationRequest } from '../repositories/types';
 import { randomBytes } from 'crypto';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+import { EmailService } from './EmailService';
 
 /**
  * User Management Service
@@ -338,10 +341,6 @@ export class UserManagementService {
    * Generates TOTP secret and sends email notification
    */
   async enableMFA(params: EnableMFAParams): Promise<{ user: User; secret: string; qrCode: string }> {
-    const speakeasy = require('speakeasy');
-    const QRCode = require('qrcode');
-    const { EmailService } = require('./EmailService');
-
     const user = await this.userRepo.findById(params.userId);
     if (!user) {
       throw new Error('User not found');
@@ -400,8 +399,6 @@ export class UserManagementService {
    * Removes MFA settings and sends email notification
    */
   async disableMFA(params: DisableMFAParams): Promise<User> {
-    const { EmailService } = require('./EmailService');
-
     const user = await this.userRepo.findById(params.userId);
     if (!user) {
       throw new Error('User not found');
@@ -451,8 +448,6 @@ export class UserManagementService {
    * Invalidates current MFA and forces user to set up again
    */
   async requireMFAReenrollment(params: RequireMFAReenrollmentParams): Promise<User> {
-    const { EmailService } = require('./EmailService');
-
     const user = await this.userRepo.findById(params.userId);
     if (!user) {
       throw new Error('User not found');

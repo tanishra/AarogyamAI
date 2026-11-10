@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { SessionManager } from './SessionManager';
 import { useAuth } from '@/lib/auth';
 
@@ -46,7 +46,7 @@ describe('SessionManager', () => {
 
     render(<SessionManager />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText(/your session will expire/i)).toBeInTheDocument();
     });
 
@@ -66,14 +66,14 @@ describe('SessionManager', () => {
 
     render(<SessionManager />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText(/your session will expire/i)).toBeInTheDocument();
     });
 
     const extendButton = screen.getByRole('button', { name: /extend session/i });
     fireEvent.click(extendButton);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(mockRefreshAccessToken).toHaveBeenCalled();
     });
   });
@@ -92,7 +92,7 @@ describe('SessionManager', () => {
     // Fast-forward time past expiration
     vi.advanceTimersByTime(2000);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(mockLogout).toHaveBeenCalled();
     });
   });
@@ -108,7 +108,7 @@ describe('SessionManager', () => {
 
     render(<SessionManager />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText(/your session will expire/i)).toBeInTheDocument();
     });
 
@@ -118,7 +118,7 @@ describe('SessionManager', () => {
     // Advance time by 1 minute
     vi.advanceTimersByTime(60 * 1000);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText(/2:00/)).toBeInTheDocument();
     });
   });
