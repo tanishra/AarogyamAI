@@ -1,5 +1,6 @@
 import Redis, { RedisOptions } from 'ioredis';
 import { config } from './index';
+import { logger } from '../lib/logger';
 
 /**
  * Redis Client Configuration
@@ -28,11 +29,11 @@ export function createRedisClient(): Redis {
     
     // Handle connection events
     client.on('error', (err) => {
-      console.error('Redis client error:', err);
+      logger.error('Redis client error:', err);
     });
 
     client.on('connect', () => {
-      console.log('Redis client connected');
+      logger.debug('Redis client connected');
     });
 
     return client;
@@ -70,7 +71,7 @@ export async function checkRedisHealth(): Promise<boolean> {
     const result = await client.ping();
     return result === 'PONG';
   } catch (error) {
-    console.error('Redis health check failed:', error);
+    logger.error('Redis health check failed:', error);
     return false;
   }
 }

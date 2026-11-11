@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { logger } from '../lib/logger';
 
 /**
  * Questionnaire Session Continuity Manager
@@ -106,7 +107,7 @@ export class QuestionnaireSessionManager {
         lastActivity: row.last_activity,
       };
     } catch (error) {
-      console.error('Failed to decrypt session data:', error);
+      logger.error('Failed to decrypt session data:', error);
       return null;
     }
   }

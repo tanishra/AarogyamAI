@@ -10,7 +10,6 @@ import nurseWorkflowRoutes from './nurseWorkflow';
 import doctorWorkflowRoutes from './doctorWorkflow';
 import profileRoutes from './profile';
 import reportsRoutes from './reports';
-import awsTestRoutes from './awsTest';
 
 const router = Router();
 
@@ -25,7 +24,6 @@ router.use('/nurse', nurseWorkflowRoutes);
 router.use('/doctor', doctorWorkflowRoutes);
 router.use('/profile', profileRoutes);
 router.use('/reports', reportsRoutes);
-router.use('/aws-test', awsTestRoutes);
 router.use('/', consentRoutes); // Mount at root since consent routes define their own paths
 
 export default router;

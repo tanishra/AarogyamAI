@@ -62,8 +62,9 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
 
 - [x] Phase 0: green baseline (`pre-refactor-baseline`)
 - [x] Phase 1: single codebase — legacy removed, naming unified, docs
-- [ ] Phase 2: backend layering — composition root, thin routes,
-      repositories own all SQL, validated config, typed errors
+- [x] Phase 2: backend layering — `src/composition.ts` container,
+      `WorkflowRepository`/`ProfileRepository` own all route SQL,
+      zod-validated config, winston logger, typed errors + `asyncHandler`
 - [ ] Phase 3: real audit writes, real TOTP MFA, AI pipeline
       (PII→LLM→filter→fallback)
 - [ ] Phase 4: DB consolidation (`vitals`/`vital_signs`,

@@ -1,18 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { ConsentRepository } from '../repositories/ConsentRepository';
-import { GrievanceRepository } from '../repositories/GrievanceRepository';
-import { DataAccessRequestRepository } from '../repositories/DataAccessRequestRepository';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { authenticate } from '../auth/authMiddleware';
 import { requireAdminOrDPO } from '../auth/authorizationMiddleware';
 import { randomBytes } from 'crypto';
 
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
+
 const router = Router();
-const consentRepo = new ConsentRepository();
-const grievanceRepo = new GrievanceRepository();
-const dataAccessRepo = new DataAccessRequestRepository();
-const auditRepo = new AuditLogRepository();
+const consentRepo = getContainer().repositories.consent;
+const grievanceRepo = getContainer().repositories.grievance;
+const dataAccessRepo = getContainer().repositories.dataAccessRequest;
+const auditRepo = getContainer().repositories.auditLog;
 
 // Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
@@ -78,7 +77,7 @@ router.get('/consent/records', async (req: Request, res: Response) => {
       count: records.length,
     });
   } catch (error) {
-    console.error('Error fetching consent records:', error);
+    logger.error('Error fetching consent records:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch consent records',
@@ -100,7 +99,7 @@ router.get('/consent/withdrawal-requests', async (_req: Request, res: Response) 
       count: requests.length,
     });
   } catch (error) {
-    console.error('Error fetching withdrawal requests:', error);
+    logger.error('Error fetching withdrawal requests:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch consent withdrawal requests',
@@ -157,7 +156,7 @@ router.post('/consent/withdrawal-requests/:id/process', async (req: Request, res
     });
 
     // Mock email notification
-    console.log(`[MOCK EMAIL] Consent withdrawal confirmed for patient ${withdrawalRequest.patient_id}`);
+    logger.debug(`[MOCK EMAIL] Consent withdrawal confirmed for patient ${withdrawalRequest.patient_id}`);
 
     res.status(200).json({
       message: 'Consent withdrawal processed successfully',
@@ -167,7 +166,7 @@ router.post('/consent/withdrawal-requests/:id/process', async (req: Request, res
       },
     });
   } catch (error) {
-    console.error('Error processing withdrawal request:', error);
+    logger.error('Error processing withdrawal request:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to process consent withdrawal request',
@@ -189,7 +188,7 @@ router.get('/grievances', async (_req: Request, res: Response) => {
       count: grievances.length,
     });
   } catch (error) {
-    console.error('Error fetching grievances:', error);
+    logger.error('Error fetching grievances:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch grievances',
@@ -254,7 +253,7 @@ router.put('/grievances/:id', async (req: Request, res: Response) => {
 
     // Send email notification if resolved
     if (status === 'resolved') {
-      console.log(`[MOCK EMAIL] Grievance resolved notification sent to patient ${existingGrievance.patient_id}`);
+      logger.debug(`[MOCK EMAIL] Grievance resolved notification sent to patient ${existingGrievance.patient_id}`);
     }
 
     res.status(200).json({
@@ -262,7 +261,7 @@ router.put('/grievances/:id', async (req: Request, res: Response) => {
       data: updatedGrievance,
     });
   } catch (error) {
-    console.error('Error updating grievance:', error);
+    logger.error('Error updating grievance:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to update grievance',
@@ -284,7 +283,7 @@ router.get('/data-access-requests', async (_req: Request, res: Response) => {
       count: requests.length,
     });
   } catch (error) {
-    console.error('Error fetching data access requests:', error);
+    logger.error('Error fetching data access requests:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch data access requests',
@@ -343,14 +342,14 @@ router.put('/data-access-requests/:id/fulfill', async (req: Request, res: Respon
     });
 
     // Mock email notification
-    console.log(`[MOCK EMAIL] Data access request fulfilled for patient ${fulfilledRequest.patient_id}`);
+    logger.debug(`[MOCK EMAIL] Data access request fulfilled for patient ${fulfilledRequest.patient_id}`);
 
     res.status(200).json({
       message: 'Data access request fulfilled successfully',
       data: fulfilledRequest,
     });
   } catch (error) {
-    console.error('Error fulfilling data access request:', error);
+    logger.error('Error fulfilling data access request:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fulfill data access request',
@@ -442,7 +441,7 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
       note: 'This is placeholder functionality for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error generating compliance report:', error);
+    logger.error('Error generating compliance report:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to generate compliance report',

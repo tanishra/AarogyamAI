@@ -1,9 +1,10 @@
+import { config } from './index';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 
 /**
  * DynamoDB Client Configuration
- * 
+ *
  * For MVP: Supports both local DynamoDB (for development) and AWS DynamoDB (for production)
  */
 
@@ -20,22 +21,22 @@ interface DynamoDBConfig {
  * Create DynamoDB client based on environment
  */
 export function createDynamoDBClient(): DynamoDBDocumentClient {
-  const config: DynamoDBConfig = {
-    region: process.env.AWS_REGION || 'us-east-1',
+  const clientConfig: DynamoDBConfig = {
+    region: config.aws.region,
   };
 
   // For local development, use local DynamoDB endpoint
-  if (process.env.NODE_ENV === 'development' || process.env.DYNAMODB_ENDPOINT) {
-    config.endpoint = process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000';
-    
+  if (config.nodeEnv === 'development' || config.aws.dynamodb.endpoint) {
+    clientConfig.endpoint = config.aws.dynamodb.endpoint || 'http://localhost:8000';
+
     // Local DynamoDB requires dummy credentials
-    config.credentials = {
+    clientConfig.credentials = {
       accessKeyId: 'local',
       secretAccessKey: 'local',
     };
   }
 
-  const client = new DynamoDBClient(config);
+  const client = new DynamoDBClient(clientConfig);
 
   // Create document client with marshalling options
   return DynamoDBDocumentClient.from(client, {

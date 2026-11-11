@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, TokenPayload } from './jwt';
 import { isTokenBlacklisted, getSession } from './session';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
+import { logger } from '../lib/logger';
 
 /**
  * Authentication Middleware
@@ -54,10 +55,10 @@ export function authenticate(_options: AuthMiddlewareOptions = {}) {
       // Extract token from header
       const token = extractToken(req);
       
-      console.log('[Auth Middleware] Token extracted:', !!token);
+      logger.debug('[Auth Middleware] Token extracted:', !!token);
       
       if (!token) {
-        console.log('[Auth Middleware] No token provided');
+        logger.debug('[Auth Middleware] No token provided');
         res.status(401).json({
           error: 'Unauthorized',
           message: 'No authentication token provided',
@@ -69,7 +70,7 @@ export function authenticate(_options: AuthMiddlewareOptions = {}) {
       try {
         const blacklisted = await isTokenBlacklisted(token);
         if (blacklisted) {
-          console.log('[Auth Middleware] Token blacklisted');
+          logger.debug('[Auth Middleware] Token blacklisted');
           res.status(401).json({
             error: 'Unauthorized',
             message: 'Token has been revoked',
@@ -77,17 +78,17 @@ export function authenticate(_options: AuthMiddlewareOptions = {}) {
           return;
         }
       } catch (error) {
-        console.error('[Auth Middleware] Blacklist check failed:', error);
+        logger.error('[Auth Middleware] Blacklist check failed:', error);
       }
 
       // Verify token
       let payload: TokenPayload;
       try {
         payload = verifyAccessToken(token);
-        console.log('[Auth Middleware] Token verified, userId:', payload.userId);
+        logger.debug('[Auth Middleware] Token verified, userId:', payload.userId);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Invalid token';
-        console.log('[Auth Middleware] Token verification failed:', message);
+        logger.debug('[Auth Middleware] Token verification failed:', message);
         
         res.status(401).json({
           error: 'Unauthorized',
@@ -98,7 +99,7 @@ export function authenticate(_options: AuthMiddlewareOptions = {}) {
 
       // Attach user payload to request
       req.user = payload;
-      console.log('[Auth Middleware] User attached to request:', req.user.userId);
+      logger.debug('[Auth Middleware] User attached to request:', req.user.userId);
 
       // Optionally verify session exists (if sessionId is in custom header)
       const sessionId = req.headers['x-session-id'] as string;
@@ -116,7 +117,7 @@ export function authenticate(_options: AuthMiddlewareOptions = {}) {
 
       next();
     } catch (error) {
-      console.error('Authentication middleware error:', error);
+      logger.error('Authentication middleware error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Authentication failed',
@@ -166,7 +167,7 @@ export function optionalAuthenticate() {
 
       next();
     } catch (error) {
-      console.error('Optional authentication middleware error:', error);
+      logger.error('Optional authentication middleware error:', error);
       next();
     }
   };

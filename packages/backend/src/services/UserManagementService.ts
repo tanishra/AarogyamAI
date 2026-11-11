@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { EmailService } from './EmailService';
+import { logger } from '../lib/logger';
 
 /**
  * User Management Service
@@ -76,10 +77,14 @@ export class UserManagementService {
   private registrationRepo: RegistrationRequestRepository;
   private auditRepo: AuditLogRepository;
 
-  constructor() {
-    this.userRepo = new UserRepository();
-    this.registrationRepo = new RegistrationRequestRepository();
-    this.auditRepo = new AuditLogRepository();
+  constructor(
+    userRepo?: UserRepository,
+    registrationRepo?: RegistrationRequestRepository,
+    auditRepo?: AuditLogRepository
+  ) {
+    this.userRepo = userRepo ?? new UserRepository();
+    this.registrationRepo = registrationRepo ?? new RegistrationRequestRepository();
+    this.auditRepo = auditRepo ?? new AuditLogRepository();
   }
 
   /**
@@ -131,8 +136,8 @@ export class UserManagementService {
     });
 
     // Mock email notification (in production, send actual email)
-    console.log(`[MOCK EMAIL] Registration approved for ${result.user.email}`);
-    console.log(`[MOCK EMAIL] Temporary password: ${tempPassword}`);
+    logger.debug(`[MOCK EMAIL] Registration approved for ${result.user.email}`);
+    logger.debug(`[MOCK EMAIL] Temporary password: ${tempPassword}`);
 
     return result;
   }
@@ -178,8 +183,8 @@ export class UserManagementService {
     });
 
     // Mock email notification (in production, send actual email)
-    console.log(`[MOCK EMAIL] Registration rejected for ${rejectedRequest.email}`);
-    console.log(`[MOCK EMAIL] Reason: ${params.reason}`);
+    logger.debug(`[MOCK EMAIL] Registration rejected for ${rejectedRequest.email}`);
+    logger.debug(`[MOCK EMAIL] Reason: ${params.reason}`);
 
     return rejectedRequest;
   }
@@ -229,8 +234,8 @@ export class UserManagementService {
       hash: '', // Hash will be computed by audit service
     });
 
-    console.log(`[INFO] Role changed for user ${params.userId}: ${previousRole} -> ${params.newRole}`);
-    console.log(`[INFO] Invalidated ${invalidatedCount} active sessions`);
+    logger.debug(`[INFO] Role changed for user ${params.userId}: ${previousRole} -> ${params.newRole}`);
+    logger.debug(`[INFO] Invalidated ${invalidatedCount} active sessions`);
 
     return updatedUser;
   }
@@ -282,9 +287,9 @@ export class UserManagementService {
       hash: '', // Hash will be computed by audit service
     });
 
-    console.log(`[INFO] Account deactivated for user ${params.userId}`);
-    console.log(`[INFO] Reason: ${params.reason}`);
-    console.log(`[INFO] Terminated ${invalidatedCount} active sessions`);
+    logger.debug(`[INFO] Account deactivated for user ${params.userId}`);
+    logger.debug(`[INFO] Reason: ${params.reason}`);
+    logger.debug(`[INFO] Terminated ${invalidatedCount} active sessions`);
 
     return updatedUser;
   }
@@ -328,9 +333,9 @@ export class UserManagementService {
       hash: '', // Hash will be computed by audit service
     });
 
-    console.log(`[INFO] Account activated for user ${params.userId}`);
+    logger.debug(`[INFO] Account activated for user ${params.userId}`);
     if (params.reason) {
-      console.log(`[INFO] Reason: ${params.reason}`);
+      logger.debug(`[INFO] Reason: ${params.reason}`);
     }
 
     return updatedUser;
@@ -389,7 +394,7 @@ export class UserManagementService {
       hash: '',
     });
 
-    console.log(`[INFO] MFA enabled for user ${params.userId}`);
+    logger.debug(`[INFO] MFA enabled for user ${params.userId}`);
 
     return { user: updatedUser, secret: secret.base32, qrCode };
   }
@@ -438,7 +443,7 @@ export class UserManagementService {
       hash: '',
     });
 
-    console.log(`[INFO] MFA disabled for user ${params.userId}`);
+    logger.debug(`[INFO] MFA disabled for user ${params.userId}`);
 
     return updatedUser;
   }
@@ -488,7 +493,7 @@ export class UserManagementService {
       hash: '',
     });
 
-    console.log(`[INFO] MFA re-enrollment required for user ${params.userId}`);
+    logger.debug(`[INFO] MFA re-enrollment required for user ${params.userId}`);
 
     return updatedUser;
   }

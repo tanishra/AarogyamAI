@@ -1,16 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../lib/errors';
+import { logger } from '../lib/logger';
+import { config } from '../config';
 
-export class AppError extends Error {
-  statusCode: number;
-  isOperational: boolean;
-
-  constructor(message: string, statusCode: number) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = true;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+export { AppError };
 
 export const errorHandler = (
   err: Error | AppError,
@@ -26,6 +19,9 @@ export const errorHandler = (
     statusCode = err.statusCode;
     message = err.message;
     isOperational = err.isOperational;
+  } else if (err.name === 'ZodError') {
+    statusCode = 400;
+    message = 'Validation error';
   } else if (err.name === 'ValidationError') {
     statusCode = 400;
     message = 'Validation error: ' + err.message;
@@ -43,9 +39,7 @@ export const errorHandler = (
     message = err.message;
   }
 
-  // Log error with structured format
-  console.error({
-    timestamp: new Date().toISOString(),
+  logger.error('request failed', {
     requestId: (req as any).id,
     method: req.method,
     path: req.path,
@@ -61,7 +55,7 @@ export const errorHandler = (
     error: {
       message,
       statusCode,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      ...(config.nodeEnv === 'development' && { stack: err.stack }),
     },
   });
 };

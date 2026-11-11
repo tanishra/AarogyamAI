@@ -1,18 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { UserManagementService } from '../services/UserManagementService';
-import { UserRepository } from '../repositories/UserRepository';
-import { RegistrationRequestRepository } from '../repositories/RegistrationRequestRepository';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { authenticate } from '../auth/authMiddleware';
 import { requireAdministrator } from '../auth/authorizationMiddleware';
 import { randomBytes } from 'crypto';
 
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
+
 const router = Router();
-const userManagementService = new UserManagementService();
-const userRepo = new UserRepository();
-const registrationRepo = new RegistrationRequestRepository();
-const auditRepo = new AuditLogRepository();
+const userManagementService = getContainer().services.userManagement;
+const userRepo = getContainer().repositories.user;
+const registrationRepo = getContainer().repositories.registrationRequest;
+const auditRepo = getContainer().repositories.auditLog;
 
 // Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
@@ -102,7 +101,7 @@ router.post('/registration-requests/:id/approve', async (req: Request, res: Resp
       },
     });
   } catch (error) {
-    console.error('Error approving registration:', error);
+    logger.error('Error approving registration:', { error });
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -168,7 +167,7 @@ router.post('/registration-requests/:id/reject', async (req: Request, res: Respo
       data: result,
     });
   } catch (error) {
-    console.error('Error rejecting registration:', error);
+    logger.error('Error rejecting registration:', { error });
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -208,7 +207,7 @@ router.get('/registration-requests', async (_req: Request, res: Response) => {
       count: requests.length,
     });
   } catch (error) {
-    console.error('Error fetching registration requests:', error);
+    logger.error('Error fetching registration requests:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch registration requests',
@@ -247,7 +246,7 @@ router.get('/users', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    logger.error('Error fetching users:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch users',
@@ -278,7 +277,7 @@ router.get('/users/:id', async (req: Request, res: Response) => {
       data: user,
     });
   } catch (error) {
-    console.error('Error fetching user:', error);
+    logger.error('Error fetching user:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch user',
@@ -323,7 +322,7 @@ router.put('/users/:id/role', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    console.error('Error changing user role:', error);
+    logger.error('Error changing user role:', { error });
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -407,7 +406,7 @@ router.put('/users/:id/status', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    console.error('Error changing user status:', error);
+    logger.error('Error changing user status:', { error });
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -496,8 +495,8 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
     });
 
     // Mock email notification
-    console.log(`[MOCK EMAIL] Password reset initiated for ${user.email}`);
-    console.log(`[MOCK EMAIL] Reset token: ${resetToken}`);
+    logger.debug(`[MOCK EMAIL] Password reset initiated for ${user.email}`);
+    logger.debug(`[MOCK EMAIL] Reset token: ${resetToken}`);
 
     res.status(200).json({
       message: 'Password reset initiated successfully',
@@ -508,7 +507,7 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('Error initiating password reset:', error);
+    logger.error('Error initiating password reset:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to initiate password reset',
@@ -574,14 +573,14 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
     });
 
     // Mock email notification
-    console.log(`[MOCK EMAIL] MFA ${enabled ? 'enabled' : 'disabled'} for ${user.email}`);
+    logger.debug(`[MOCK EMAIL] MFA ${enabled ? 'enabled' : 'disabled'} for ${user.email}`);
 
     res.status(200).json({
       message: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,
       data: updatedUser,
     });
   } catch (error) {
-    console.error('Error managing MFA:', error);
+    logger.error('Error managing MFA:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to manage MFA settings',
@@ -644,7 +643,7 @@ router.get('/users/:id/activity', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching user activity:', error);
+    logger.error('Error fetching user activity:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch user activity',

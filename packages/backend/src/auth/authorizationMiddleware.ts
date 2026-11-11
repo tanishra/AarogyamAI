@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
+import { logger } from '../lib/logger';
 
 /**
  * Authorization Middleware
@@ -40,7 +41,7 @@ export function authorize(options: AuthorizationMiddlewareOptions) {
 
       if (!isAuthorized) {
         // Log unauthorized access attempt (audit logging disabled for MVP)
-        console.log('[AUTHORIZATION FAILED]:', req.user.userId, userRole, req.path);
+        logger.debug('[AUTHORIZATION FAILED]:', req.user.userId, userRole, req.path);
 
         res.status(403).json({
           error: 'Forbidden',
@@ -52,7 +53,7 @@ export function authorize(options: AuthorizationMiddlewareOptions) {
       // User is authorized, proceed
       next();
     } catch (error) {
-      console.error('Authorization middleware error:', error);
+      logger.error('Authorization middleware error:', error);
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Authorization check failed',

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
 import { chatRepository } from '../repositories/ChatRepository';
 import { llmService } from '../services/LLMService';
-import { query } from '../config/database';
+import { workflowRepository } from '../repositories/WorkflowRepository';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -71,7 +72,7 @@ router.post('/start', authenticate({}), async (req: Request, res: Response) => {
         'Hello, I need to speak with a nurse about my health concern.'
       );
     } catch (aiError) {
-      console.error('Failed to generate AI welcome message, using default:', aiError);
+      logger.error('Failed to generate AI welcome message, using default:', { error: aiError });
       // Continue with default message
     }
 
@@ -85,7 +86,7 @@ router.post('/start', authenticate({}), async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error starting chat session:', error);
+    logger.error('Error starting chat session:', { error: error });
     
     // Provide more specific error message
     const errorMessage = error instanceof Error ? error.message : 'Failed to start chat session';
@@ -103,11 +104,9 @@ router.post('/start', authenticate({}), async (req: Request, res: Response) => {
  */
 router.post('/message', authenticate({}), async (req: Request, res: Response) => {
   try {
-    console.log('[POST /message] Request body:', JSON.stringify(req.body, null, 2));
     
     const validation = sendMessageSchema.safeParse(req.body);
     if (!validation.success) {
-      console.log('[POST /message] Validation failed:', validation.error.errors);
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
@@ -188,7 +187,7 @@ router.post('/message', authenticate({}), async (req: Request, res: Response) =>
       },
     });
   } catch (error) {
-    console.error('Error sending message:', error);
+    logger.error('Error sending message:', { error: error });
     
     // Provide more specific error message
     const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
@@ -216,7 +215,7 @@ router.get('/history', authenticate({}), async (req: Request, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('Error getting chat history:', error);
+    logger.error('Error getting chat history:', { error: error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get chat history',
@@ -241,9 +240,6 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
       return;
     }
 
-    console.log('[GET Session] req.user.userId:', req.user!.userId);
-    console.log('[GET Session] session.patient_id:', session.patientId);
-    console.log('[GET Session] req.user.role:', req.user!.role);
 
     // Check permission - allow patient, admin, nurse, or doctor
     if (
@@ -252,7 +248,6 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
       req.user!.role !== 'Nurse' &&
       req.user!.role !== 'Doctor'
     ) {
-      console.log('[GET Session] Permission denied');
       res.status(403).json({
         error: 'Forbidden',
         message: 'You do not have access to this chat session',
@@ -271,24 +266,9 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
     // Get clinical reasoning if available
     let clinicalReasoning = null;
     try {
-      const reasoning = await query(
-        `SELECT 
-          id,
-          session_id,
-          differential_diagnosis,
-          diagnostic_plan,
-          reasoning_rationale,
-          final_notes,
-          status,
-          approved_at
-        FROM clinical_reasoning
-        WHERE session_id = $1 AND status = 'approved'
-        LIMIT 1`,
-        [sessionId]
-      );
-      
-      if (reasoning.length > 0) {
-        const record = reasoning[0];
+      const record = await workflowRepository.getApprovedReasoningPlain(sessionId);
+
+      if (record) {
         clinicalReasoning = {
           id: record.id,
           sessionId: record.session_id,
@@ -301,7 +281,7 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
         };
       }
     } catch (err) {
-      console.error('[GET Session] Error fetching clinical reasoning:', err);
+      logger.error('[GET Session] Error fetching clinical reasoning:', { error: err });
       // Don't fail the request if clinical reasoning fetch fails
     }
 
@@ -315,7 +295,7 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
       },
     });
   } catch (error) {
-    console.error('Error getting chat history:', error);
+    logger.error('Error getting chat history:', { error: error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get chat history',
@@ -328,32 +308,23 @@ router.get('/:sessionId', authenticate({}), async (req: Request, res: Response) 
  * Complete chat session and extract summary
  */
 router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: Response) => {
-  console.log('[Complete Session] ===== START =====');
-  console.log('[Complete Session] Session ID:', req.params.sessionId);
-  console.log('[Complete Session] User ID:', req.user?.userId);
   
   try {
     const { sessionId } = req.params;
 
     // Get session
-    console.log('[Complete Session] Fetching session...');
     const session = await chatRepository.getSession(sessionId);
     if (!session) {
-      console.log('[Complete Session] Session not found');
       res.status(404).json({
         error: 'Not Found',
         message: 'Chat session not found',
       });
       return;
     }
-    console.log('[Complete Session] Session found:', session);
 
-    console.log('[Complete Session] Session patient ID:', session.patientId);
-    console.log('[Complete Session] Request user ID:', req.user!.userId);
 
     // Check permission
     if (req.user!.userId !== session.patientId && req.user!.role !== 'Administrator') {
-      console.log('[Complete Session] Permission denied');
       res.status(403).json({
         error: 'Forbidden',
         message: 'You do not have access to this chat session',
@@ -362,7 +333,6 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
     }
 
     if (session.status !== 'active') {
-      console.log('[Complete Session] Session not active, status:', session.status);
       res.status(400).json({
         error: 'Bad Request',
         message: `Chat session is not active (status: ${session.status})`,
@@ -371,12 +341,9 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
     }
 
     // Get conversation history
-    console.log('[Complete Session] Fetching messages...');
     const messages = await chatRepository.getMessages(sessionId);
-    console.log(`[Complete Session] Found ${messages.length} messages`);
     
     if (messages.length === 0) {
-      console.log('[Complete Session] No messages found');
       res.status(400).json({
         error: 'Bad Request',
         message: 'Cannot complete session with no messages',
@@ -390,14 +357,11 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
     }));
 
     // Extract structured summary
-    console.log('[Complete Session] Extracting patient summary with AI...');
     let extractedData;
     try {
       extractedData = await llmService.extractPatientSummary(conversationHistory);
-      console.log('[Complete Session] AI extraction successful');
-      console.log('[Complete Session] Extracted data:', JSON.stringify(extractedData, null, 2));
     } catch (aiError) {
-      console.error('[Complete Session] AI extraction failed:', aiError);
+      logger.error('[Complete Session] AI extraction failed:', { error: aiError });
       // Use fallback summary if AI fails
       extractedData = {
         chiefComplaint: messages.find(m => m.role === 'user')?.content.substring(0, 100) || 'See chat history',
@@ -410,11 +374,9 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
         socialHistory: {},
         reviewOfSystems: {},
       };
-      console.log('[Complete Session] Using fallback summary');
     }
 
     // Save summary
-    console.log('[Complete Session] Saving summary to database...');
     try {
       await chatRepository.saveSummary({
         sessionId,
@@ -429,38 +391,27 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
         socialHistory: extractedData.socialHistory || {},
         reviewOfSystems: extractedData.reviewOfSystems || {},
       });
-      console.log('[Complete Session] Summary saved successfully');
     } catch (saveError) {
-      console.error('[Complete Session] Failed to save summary:', saveError);
+      logger.error('[Complete Session] Failed to save summary:', { error: saveError });
       throw saveError;
     }
 
     // Update session status
-    console.log('[Complete Session] Updating session status to completed...');
     try {
       await chatRepository.updateSessionStatus(sessionId, 'completed');
-      console.log('[Complete Session] Session status updated');
     } catch (statusError) {
-      console.error('[Complete Session] Failed to update status:', statusError);
+      logger.error('[Complete Session] Failed to update status:', { error: statusError });
       throw statusError;
     }
 
     // Add to patient queue
-    console.log('[Complete Session] Adding patient to queue...');
     try {
-      await query(
-        `INSERT INTO patient_queue (patient_id, session_id, status, priority)
-         VALUES ($1, $2, 'chat_completed', 'routine')
-         ON CONFLICT (patient_id, session_id) DO NOTHING`,
-        [session.patientId, sessionId]
-      );
-      console.log('[Complete Session] Patient added to queue');
+      await workflowRepository.addToQueue(session.patientId, sessionId);
     } catch (queueError) {
-      console.error('[Complete Session] Failed to add to queue:', queueError);
+      logger.error('[Complete Session] Failed to add to queue:', { error: queueError });
       // Don't throw - queue is not critical
     }
 
-    console.log('[Complete Session] ===== SUCCESS =====');
     res.status(200).json({
       message: 'Chat session completed',
       data: {
@@ -470,8 +421,7 @@ router.post('/:sessionId/complete', authenticate({}), async (req: Request, res: 
       },
     });
   } catch (error) {
-    console.error('[Complete Session] ===== ERROR =====');
-    console.error('[Complete Session] Error:', error);
+    logger.error('[Complete Session] failed', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: error instanceof Error ? error.message : 'Failed to complete chat session',

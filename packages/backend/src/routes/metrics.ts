@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
 import { requireAdministrator } from '../auth/authorizationMiddleware';
 
+import { logger } from '../lib/logger';
+
 const router = Router();
 
 // Apply authentication and authorization middleware to all routes
@@ -74,7 +76,7 @@ router.get('/consultations', async (req: Request, res: Response) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching consultation metrics:', error);
+    logger.error('Error fetching consultation metrics:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch consultation metrics',
@@ -121,7 +123,7 @@ router.get('/active-users', async (_req: Request, res: Response) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching active user metrics:', error);
+    logger.error('Error fetching active user metrics:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch active user metrics',
@@ -170,7 +172,7 @@ router.get('/ai-acceptance', async (req: Request, res: Response) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching AI acceptance metrics:', error);
+    logger.error('Error fetching AI acceptance metrics:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch AI acceptance metrics',
@@ -222,7 +224,7 @@ router.get('/preparation-time', async (req: Request, res: Response) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching preparation time metrics:', error);
+    logger.error('Error fetching preparation time metrics:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch preparation time metrics',
@@ -272,7 +274,7 @@ router.get('/questionnaire-completion', async (req: Request, res: Response) => {
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching questionnaire completion metrics:', error);
+    logger.error('Error fetching questionnaire completion metrics:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch questionnaire completion metrics',
@@ -373,7 +375,7 @@ router.get('/dashboard-summary', async (_req: Request, res: Response) => {
       cached: false,
     });
   } catch (error) {
-    console.error('Error fetching dashboard summary:', error);
+    logger.error('Error fetching dashboard summary:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch dashboard summary',

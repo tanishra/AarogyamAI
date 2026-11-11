@@ -1,5 +1,6 @@
 import { Pool, PoolClient, PoolConfig } from 'pg';
 import { config } from './index';
+import { logger } from '../lib/logger';
 
 /**
  * PostgreSQL Connection Pool Configuration
@@ -22,18 +23,18 @@ export function createDatabasePool(): Pool {
   };
 
   // Enable SSL for RDS/production databases
-  if (config.database.url.includes('rds.amazonaws.com') || process.env.DB_SSL === 'true') {
+  if (config.database.url.includes('rds.amazonaws.com') || config.database.ssl) {
     poolConfig.ssl = {
       rejectUnauthorized: false
     };
   }
 
-  console.log('Connecting to database:', config.database.url);
+  logger.debug('Connecting to database');
   const newPool = new Pool(poolConfig);
 
   // Handle pool errors
   newPool.on('error', (err) => {
-    console.error('Unexpected database pool error:', err);
+    logger.error('Unexpected database pool error:', err);
   });
 
   return newPool;
@@ -68,7 +69,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     const result = await dbPool.query('SELECT 1 as health');
     return result.rows[0].health === 1;
   } catch (error) {
-    console.error('Database health check failed:', error);
+    logger.error('Database health check failed:', error);
     return false;
   }
 }

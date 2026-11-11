@@ -3,6 +3,8 @@ import { Pool } from 'pg';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '../lib/logger';
+import { config } from '../config';
 
 interface ExportFilters {
   userId?: string;
@@ -24,7 +26,7 @@ export class ReportService {
   constructor(pool: Pool) {
     this.pool = pool;
     this.auditRepo = new AuditLogRepository();
-    this.bucketName = process.env.S3_REPORTS_BUCKET || process.env.AWS_S3_BUCKET || 'aarogyam-reports';
+    this.bucketName = config.aws.s3.reportsBucket || 'aarogyam-reports';
     this.useS3 = false;
     this.s3Healthy = true;
     this.localStoragePath = path.join(process.cwd(), 'storage', 'reports');
@@ -32,16 +34,16 @@ export class ReportService {
     // Initialize S3 client if credentials available
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       this.s3Client = new S3Client({
-        region: process.env.AWS_REGION || 'us-east-1',
+        region: config.aws.region,
         credentials: {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         },
       });
       this.useS3 = true;
-      console.log('[S3] Client initialized for bucket:', this.bucketName);
+      logger.debug('[S3] Client initialized for bucket:', this.bucketName);
     } else {
-      console.log('[S3] No credentials found, using local filesystem fallback');
+      logger.debug('[S3] No credentials found, using local filesystem fallback');
     }
 
     // Ensure local storage directory exists
@@ -54,7 +56,7 @@ export class ReportService {
   private ensureLocalStorageExists(): void {
     if (!fs.existsSync(this.localStoragePath)) {
       fs.mkdirSync(this.localStoragePath, { recursive: true });
-      console.log('[Storage] Created local storage directory:', this.localStoragePath);
+      logger.debug('[Storage] Created local storage directory:', this.localStoragePath);
     }
   }
 
@@ -79,13 +81,13 @@ export class ReportService {
           })
         );
         
-        const region = process.env.AWS_REGION || 'us-east-1';
+        const region = config.aws.region;
         const downloadUrl = `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
-        console.log('[S3] File uploaded successfully:', key);
+        logger.debug('[S3] File uploaded successfully:', key);
         return downloadUrl;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn('[S3] Upload failed, falling back to local storage:', message);
+        logger.warn('[S3] Upload failed, falling back to local storage:', message);
         this.s3Healthy = false;
         // Fall through to local storage
       }
@@ -95,7 +97,7 @@ export class ReportService {
     const filePath = path.join(this.localStoragePath, filename);
     fs.writeFileSync(filePath, content);
     const downloadUrl = `/api/reports/download/${filename}`;
-    console.log('[Storage] File saved locally:', filePath);
+    logger.debug('[Storage] File saved locally:', filePath);
     return downloadUrl;
   }
 
@@ -136,7 +138,7 @@ export class ReportService {
       hash: '',
     });
 
-    console.log(`[Report] Audit logs exported: ${filename}`);
+    logger.debug(`[Report] Audit logs exported: ${filename}`);
     return downloadUrl;
   }
 
@@ -188,7 +190,7 @@ export class ReportService {
       hash: '',
     });
 
-    console.log(`[Report] Compliance report generated: ${filename}`);
+    logger.debug(`[Report] Compliance report generated: ${filename}`);
     return downloadUrl;
   }
 

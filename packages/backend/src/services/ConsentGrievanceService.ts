@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { EmailService } from './EmailService';
+import { logger } from '../lib/logger';
 
 interface ConsentRecord {
   id: number;
@@ -152,7 +153,7 @@ export class ConsentGrievanceService {
         hash: '',
       });
 
-      console.log(`[INFO] Consent withdrawal processed: ${withdrawalId}`);
+      logger.debug(`[INFO] Consent withdrawal processed: ${withdrawalId}`);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -249,7 +250,7 @@ export class ConsentGrievanceService {
         hash: '',
       });
 
-      console.log(`[INFO] Grievance ${grievanceId} status updated to ${status}`);
+      logger.debug(`[INFO] Grievance ${grievanceId} status updated to ${status}`);
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
@@ -342,7 +343,7 @@ export class ConsentGrievanceService {
         hash: '',
       });
 
-      console.log(`[INFO] Data access request ${requestId} fulfilled`);
+      logger.debug(`[INFO] Data access request ${requestId} fulfilled`);
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');

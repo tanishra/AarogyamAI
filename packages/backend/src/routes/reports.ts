@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { authenticate } from '../auth/authMiddleware';
 
+import { logger } from '../lib/logger';
+
 const router = Router();
 
 /**
@@ -59,9 +61,9 @@ router.get('/download/:filename', authenticate({}), async (req: Request, res: Re
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
 
-    console.log(`[Reports] File downloaded: ${filename} by user ${req.user!.userId}`);
+    logger.debug(`[Reports] File downloaded: ${filename} by user ${req.user!.userId}`);
   } catch (error) {
-    console.error('Error downloading report:', error);
+    logger.error('Error downloading report:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to download report',

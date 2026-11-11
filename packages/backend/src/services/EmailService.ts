@@ -1,3 +1,5 @@
+import { logger } from '../lib/logger';
+import { config } from '../config';
 interface MailPayload {
   to: string;
   subject: string;
@@ -8,7 +10,7 @@ interface MailPayload {
 class EmailService {
   private async sendMail(payload: MailPayload): Promise<void> {
     // Fallback transport for environments where SMTP/nodemailer is unavailable.
-    console.log('[MOCK EMAIL SEND]', {
+    logger.debug('[MOCK EMAIL SEND]', {
       to: payload.to,
       subject: payload.subject,
       preview: payload.text?.slice(0, 120) || '',
@@ -16,7 +18,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
 
     await this.sendMail({
       to: email,
@@ -33,7 +35,7 @@ class EmailService {
   }
 
   async sendRegistrationApprovalEmail(email: string, name: string): Promise<void> {
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const loginUrl = `${config.frontendUrl}/login`;
 
     await this.sendMail({
       to: email,

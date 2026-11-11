@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../lib/logger';
 
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const requestId = uuidv4();
@@ -9,7 +10,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   (req as any).id = requestId;
 
   // Log request
-  console.log({
+  logger.debug({
     timestamp: new Date().toISOString(),
     requestId,
     method: req.method,
@@ -23,7 +24,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   // Log response when finished
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    console.log({
+    logger.debug({
       timestamp: new Date().toISOString(),
       requestId,
       method: req.method,

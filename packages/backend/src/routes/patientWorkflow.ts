@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
-import { query, getDatabasePool } from '../config/database';
+import { workflowRepository } from '../repositories/WorkflowRepository';
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
 import { chatRepository } from '../repositories/ChatRepository';
-import { ConsentRepository } from '../repositories/ConsentRepository';
-import { QuestionnaireSessionManager } from '../services/QuestionnaireSessionManager';
 
 const router = Router();
-const consentRepo = new ConsentRepository();
-const questionnaireManager = new QuestionnaireSessionManager(getDatabasePool());
+const consentRepo = getContainer().repositories.consent;
+const questionnaireManager = getContainer().services.questionnaireSession;
 
 const updateMedicalHistorySchema = z.object({
   medicalHistory: z.array(z.string()).optional(),
@@ -57,23 +57,7 @@ router.get('/medical-history', authenticate({}), async (req: Request, res: Respo
       return;
     }
 
-    const rows = await query(
-      `SELECT
-        ps.id,
-        ps.session_id,
-        ps.medical_history,
-        ps.current_medications,
-        ps.allergies,
-        ps.social_history,
-        ps.updated_at,
-        cs.started_at
-      FROM patient_summaries ps
-      LEFT JOIN chat_sessions cs ON cs.id = ps.session_id
-      WHERE ps.patient_id = $1
-      ORDER BY ps.updated_at DESC
-      LIMIT 1`,
-      [patientId]
-    );
+    const rows = await workflowRepository.getSummariesByPatient(patientId);
 
     if (rows.length === 0) {
       res.status(200).json({
@@ -106,7 +90,7 @@ router.get('/medical-history', authenticate({}), async (req: Request, res: Respo
       },
     });
   } catch (error) {
-    console.error('Error getting medical history:', error);
+    logger.error('Error getting medical history:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to retrieve medical history',
@@ -131,74 +115,15 @@ router.get('/encounters', authenticate({}), async (req: Request, res: Response) 
     }
 
     // Get completed encounters with full details
-    console.log('[Patient Encounters] Fetching encounters for patient:', patientId);
-    const completedEncounters = await query(
-      `SELECT 
-        cs.id as session_id,
-        cs.status,
-        cs.started_at,
-        cs.completed_at,
-        cs.duration_minutes,
-        cs.emergency_detected,
-        ps.chief_complaint,
-        ps.symptoms,
-        ps.duration as symptom_duration,
-        ps.severity,
-        ps.medical_history,
-        ps.current_medications,
-        ps.allergies,
-        cr.id as reasoning_id,
-        cr.differential_diagnosis,
-        cr.diagnostic_plan,
-        cr.reasoning_rationale,
-        cr.final_notes,
-        cr.status as reasoning_status,
-        cr.approved_at,
-        doctor.name as doctor_name,
-        doctor.email as doctor_email,
-        pq.priority,
-        nurse.name as nurse_name
-      FROM chat_sessions cs
-      LEFT JOIN patient_summaries ps ON cs.id = ps.session_id
-      LEFT JOIN clinical_reasoning cr ON cs.id = cr.session_id AND cr.status = 'approved'
-      LEFT JOIN users doctor ON cr.doctor_id = doctor.id
-      LEFT JOIN patient_queue pq ON cs.id = pq.session_id
-      LEFT JOIN users nurse ON pq.assigned_nurse = nurse.id
-      WHERE cs.patient_id = $1 
-        AND cs.status = 'completed'
-        AND cr.id IS NOT NULL
-      ORDER BY cs.completed_at DESC
-      LIMIT 20`,
-      [patientId]
-    );
-    console.log('[Patient Encounters] Found encounters:', completedEncounters.length);
+    logger.debug('[Patient Encounters] Fetching encounters', { patientId });
+    const completedEncounters = await workflowRepository.getCompletedEncounters(patientId);
+    logger.debug('[Patient Encounters] Found encounters', { count: completedEncounters.length });
 
     // For each encounter, get clinical considerations
     const encountersWithConsiderations = await Promise.all(
       completedEncounters.map(async (encounter: any) => {
-        const considerations = await query(
-          `SELECT 
-            condition_name,
-            likelihood,
-            urgency,
-            explanation,
-            doctor_notes,
-            status
-          FROM clinical_considerations
-          WHERE session_id = $1
-          ORDER BY 
-            CASE likelihood
-              WHEN 'high' THEN 1
-              WHEN 'moderate' THEN 2
-              WHEN 'low' THEN 3
-            END,
-            CASE urgency
-              WHEN 'urgent' THEN 1
-              WHEN 'routine' THEN 2
-              WHEN 'non-urgent' THEN 3
-            END
-          LIMIT 10`,
-          [encounter.session_id]
+        const considerations = await workflowRepository.getConsiderationsForEncounter(
+          encounter.session_id
         );
 
         return {
@@ -248,22 +173,9 @@ router.get('/encounters', authenticate({}), async (req: Request, res: Response) 
       considerations: raw.considerations || [],
     }));
 
-    console.log('[Patient Encounters] Returning encounters:', encounters.length);
-    console.log('[Patient Encounters] Sample encounter:', encounters[0] ? {
-      sessionId: encounters[0].sessionId,
-      hasClinicalReasoning: !!encounters[0].clinicalReasoning,
-      hasConsiderations: encounters[0].considerations.length > 0,
-    } : 'none');
-
-    res.status(200).json({
-      message: 'Patient encounters retrieved',
-      data: {
-        encounters,
-        count: encounters.length,
-      },
-    });
+    logger.debug('[Patient Encounters] Returning encounters', { count: encounters.length });
   } catch (error) {
-    console.error('Error getting patient encounters:', error);
+    logger.error('Error getting patient encounters:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to retrieve patient encounters',
@@ -297,16 +209,9 @@ router.put('/medical-history', authenticate({}), async (req: Request, res: Respo
       return;
     }
 
-    const existing = await query(
-      `SELECT session_id
-       FROM patient_summaries
-       WHERE patient_id = $1
-       ORDER BY updated_at DESC
-       LIMIT 1`,
-      [patientId]
-    );
+    const existingSessionId = await workflowRepository.getSummarySessionId(patientId);
 
-    if (existing.length === 0) {
+    if (!existingSessionId) {
       res.status(400).json({
         error: 'Bad Request',
         message: 'No intake summary exists yet. Complete one intake session first.',
@@ -314,7 +219,7 @@ router.put('/medical-history', authenticate({}), async (req: Request, res: Respo
       return;
     }
 
-    const sessionId = existing[0].session_id as string;
+    const sessionId = existingSessionId;
     const current = await chatRepository.getSummary(sessionId);
 
     if (!current) {
@@ -354,7 +259,7 @@ router.put('/medical-history', authenticate({}), async (req: Request, res: Respo
       },
     });
   } catch (error) {
-    console.error('Error updating medical history:', error);
+    logger.error('Error updating medical history:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to update medical history',
@@ -386,7 +291,7 @@ router.get('/consent', authenticate({}), async (req: Request, res: Response) => 
       count: records.length,
     });
   } catch (error) {
-    console.error('Error fetching patient consent records:', error);
+    logger.error('Error fetching patient consent records:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch consent records',
@@ -440,7 +345,7 @@ router.post('/consent/withdraw', authenticate({}), async (req: Request, res: Res
       data: withdrawal,
     });
   } catch (error) {
-    console.error('Error creating consent withdrawal request:', error);
+    logger.error('Error creating consent withdrawal request:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to submit consent withdrawal request',
@@ -487,7 +392,7 @@ router.put('/consent/:id', authenticate({}), async (req: Request, res: Response)
       data: updated,
     });
   } catch (error) {
-    console.error('Error updating consent record:', error);
+    logger.error('Error updating consent record:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to update consent record',
@@ -545,7 +450,7 @@ router.post('/questionnaire/sessions/:sessionId/progress', authenticate({}), asy
       message: 'Questionnaire progress saved',
     });
   } catch (error) {
-    console.error('Error saving questionnaire progress:', error);
+    logger.error('Error saving questionnaire progress:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to save questionnaire progress',
@@ -584,7 +489,7 @@ router.get('/questionnaire/sessions/:sessionId/resume', authenticate({}), async 
       data: session,
     });
   } catch (error) {
-    console.error('Error resuming questionnaire session:', error);
+    logger.error('Error resuming questionnaire session:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to resume questionnaire session',
@@ -617,7 +522,7 @@ router.get('/questionnaire/sessions/:sessionId/can-resume', authenticate({}), as
       },
     });
   } catch (error) {
-    console.error('Error checking resume status:', error);
+    logger.error('Error checking resume status:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to check resume status',
@@ -634,34 +539,16 @@ router.get('/session/:sessionId/clinical-reasoning', authenticate({}), async (re
     const { sessionId } = req.params;
     const patientId = req.user!.userId;
 
-    console.log('[Clinical Reasoning] ===== START =====');
-    console.log('[Clinical Reasoning] Request for session:', sessionId);
-    console.log('[Clinical Reasoning] Patient ID:', patientId);
-    console.log('[Clinical Reasoning] User role:', req.user!.role);
+    logger.debug('[Clinical Reasoning] request', {
+      sessionId,
+      patientId,
+      role: req.user!.role,
+    });
 
     // Get approved clinical reasoning for this session
-    const reasoning = await query(
-      `SELECT 
-        cr.id,
-        cr.session_id,
-        cr.differential_diagnosis,
-        cr.diagnostic_plan,
-        cr.reasoning_rationale,
-        cr.final_notes,
-        cr.status,
-        cr.approved_at,
-        cs.patient_id
-      FROM clinical_reasoning cr
-      JOIN chat_sessions cs ON cr.session_id = cs.id
-      WHERE cr.session_id = $1 AND cr.status = 'approved'
-      LIMIT 1`,
-      [sessionId]
-    );
+    const record = await workflowRepository.getApprovedReasoning(sessionId);
 
-    console.log('[Clinical Reasoning] Found records:', reasoning.length);
-
-    if (reasoning.length === 0) {
-      console.log('[Clinical Reasoning] No clinical reasoning found, returning null');
+    if (!record) {
       res.status(200).json({
         message: 'No clinical reasoning found for this session',
         data: null,
@@ -669,11 +556,9 @@ router.get('/session/:sessionId/clinical-reasoning', authenticate({}), async (re
       return;
     }
 
-    const record = reasoning[0];
-    
     // Check if patient owns this session
     if (record.patient_id !== patientId && req.user!.role !== 'Administrator') {
-      console.log('[Clinical Reasoning] Access denied - record patient_id:', record.patient_id, 'vs user:', patientId);
+      logger.warn('[Clinical Reasoning] access denied', { recordPatientId: record.patient_id, patientId });
       res.status(403).json({
         error: 'Forbidden',
         message: 'You do not have access to this session',
@@ -681,7 +566,6 @@ router.get('/session/:sessionId/clinical-reasoning', authenticate({}), async (re
       return;
     }
 
-    console.log('[Clinical Reasoning] Returning data');
     res.status(200).json({
       message: 'Clinical reasoning retrieved',
       data: {
@@ -696,7 +580,7 @@ router.get('/session/:sessionId/clinical-reasoning', authenticate({}), async (re
       },
     });
   } catch (error) {
-    console.error('[Clinical Reasoning] Error:', error);
+    logger.error('[Clinical Reasoning] Error:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to retrieve clinical reasoning',

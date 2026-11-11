@@ -1,11 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { authenticate } from '../auth/authMiddleware';
 import { requireAdminOrDPO } from '../auth/authorizationMiddleware';
 
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
+
 const router = Router();
-const auditRepo = new AuditLogRepository();
+const auditRepo = getContainer().repositories.auditLog;
 
 // Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
@@ -65,7 +67,7 @@ router.get('/logs', async (req: Request, res: Response) => {
 
     // Search audit logs (fallback to empty if DynamoDB not configured)
     const result = await auditRepo.search(filter).catch((err) => {
-      console.log('Audit logs not available (DynamoDB not configured for MVP):', err.message);
+      logger.debug('Audit logs not available (DynamoDB not configured for MVP):', err.message);
       return {
         items: [],
         total: 0,
@@ -86,7 +88,7 @@ router.get('/logs', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error searching audit logs:', error);
+    logger.error('Error searching audit logs:', { error });
     // Return empty result instead of 500 for MVP
     res.status(200).json({
       message: 'Audit logs retrieved successfully',
@@ -128,7 +130,7 @@ router.get('/logs/:id', async (req: Request, res: Response) => {
       data: logEntry,
     });
   } catch (error) {
-    console.error('Error fetching audit log entry:', error);
+    logger.error('Error fetching audit log entry:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch audit log entry',
@@ -206,7 +208,7 @@ router.get('/access-patterns/:patientId', async (req: Request, res: Response) =>
       note: 'This is placeholder data for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error fetching access patterns:', error);
+    logger.error('Error fetching access patterns:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch access patterns',
@@ -254,7 +256,7 @@ router.get('/anomalies', async (_req: Request, res: Response) => {
       note: 'This is placeholder data for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error fetching anomalies:', error);
+    logger.error('Error fetching anomalies:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to fetch anomaly alerts',
@@ -300,7 +302,7 @@ router.post('/anomalies/:id/acknowledge', async (req: Request, res: Response) =>
       note: 'This is placeholder functionality for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error acknowledging anomaly:', error);
+    logger.error('Error acknowledging anomaly:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to acknowledge anomaly alert',
@@ -359,7 +361,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       note: 'This is placeholder functionality for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error verifying audit logs:', error);
+    logger.error('Error verifying audit logs:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to verify audit log integrity',
@@ -424,7 +426,7 @@ router.post('/export', async (req: Request, res: Response) => {
       note: 'This is placeholder functionality for MVP. Full implementation pending.',
     });
   } catch (error) {
-    console.error('Error exporting audit logs:', error);
+    logger.error('Error exporting audit logs:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to export audit logs',

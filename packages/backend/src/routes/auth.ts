@@ -1,17 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { UserRepository } from '../repositories/UserRepository';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../auth/jwt';
 import { createSession, invalidateSession } from '../auth/session';
 import { blacklistToken } from '../auth/session';
 import { authenticate } from '../auth/authMiddleware';
 import { randomBytes } from 'crypto';
 
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
+
 const router = Router();
-const userRepo = new UserRepository();
-const auditRepo = new AuditLogRepository();
+const userRepo = getContainer().repositories.user;
+const auditRepo = getContainer().repositories.auditLog;
 
 // Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
 const mockAuditLog = async (data: any) => {
@@ -132,7 +133,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error during signup:', error);
+    logger.error('Error during signup:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Signup failed',
@@ -300,7 +301,7 @@ router.post('/login', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error during login:', error);
+    logger.error('Error during login:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Login failed',
@@ -345,7 +346,7 @@ router.post('/logout', authenticate({}), async (req: Request, res: Response) => 
       message: 'Logout successful',
     });
   } catch (error) {
-    console.error('Error during logout:', error);
+    logger.error('Error during logout:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Logout failed',
@@ -415,7 +416,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    logger.error('Error refreshing token:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Token refresh failed',
@@ -534,7 +535,7 @@ router.post('/mfa-verify', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error verifying MFA:', error);
+    logger.error('Error verifying MFA:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'MFA verification failed',
@@ -601,7 +602,7 @@ router.post('/password-reset/request', async (req: Request, res: Response) => {
       message: 'If an account exists with this email, a password reset link has been sent',
     });
   } catch (error) {
-    console.error('Error requesting password reset:', error);
+    logger.error('Error requesting password reset:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Password reset request failed',
@@ -680,7 +681,7 @@ router.post('/password-reset/confirm', async (req: Request, res: Response) => {
       message: 'Password reset successful',
     });
   } catch (error) {
-    console.error('Error resetting password:', error);
+    logger.error('Error resetting password:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Password reset failed',

@@ -10,9 +10,11 @@ import routes from './routes';
 import { securityHeaders, sanitizeInput, rateLimit } from './middleware/securityMiddleware';
 import { requestLogger, responseTimeTracker } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { config } from './config';
+import { logger } from './lib/logger';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // Request tracking middleware
 app.use(requestLogger);
@@ -21,7 +23,7 @@ app.use(responseTimeTracker);
 // Security middleware
 app.use(securityHeaders);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: config.frontendUrl,
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -45,10 +47,10 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server only if not in test mode
-if (process.env.NODE_ENV !== 'test') {
+if (config.nodeEnv !== 'test') {
   app.listen(PORT, () => {
-    console.log(`AarogyamAI backend listening on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.debug(`AarogyamAI backend listening on port ${PORT}`);
+    logger.debug(`Environment: ${config.nodeEnv}`);
   });
 }
 

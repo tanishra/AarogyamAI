@@ -1,4 +1,6 @@
 import Redis from 'ioredis';
+import { logger } from '../lib/logger';
+import { config as appConfig } from '../config';
 
 interface CacheConfig {
   host: string;
@@ -26,12 +28,12 @@ export class CacheService {
 
       this.client.on('connect', () => {
         this.isConnected = true;
-        console.log('Redis connected');
+        logger.debug('Redis connected');
       });
 
       this.client.on('error', (err) => {
         this.isConnected = false;
-        console.error('Redis error:', err);
+        logger.error('Redis error:', err);
       });
     }
   }
@@ -43,7 +45,7 @@ export class CacheService {
       const value = await this.client.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      logger.error('Cache get error:', error);
       return null;
     }
   }
@@ -60,7 +62,7 @@ export class CacheService {
       }
       return true;
     } catch (error) {
-      console.error('Cache set error:', error);
+      logger.error('Cache set error:', error);
       return false;
     }
   }
@@ -72,7 +74,7 @@ export class CacheService {
       await this.client.del(key);
       return true;
     } catch (error) {
-      console.error('Cache delete error:', error);
+      logger.error('Cache delete error:', error);
       return false;
     }
   }
@@ -84,7 +86,7 @@ export class CacheService {
       const result = await this.client.exists(key);
       return result === 1;
     } catch (error) {
-      console.error('Cache exists error:', error);
+      logger.error('Cache exists error:', error);
       return false;
     }
   }
@@ -114,10 +116,10 @@ let cacheInstance: CacheService | null = null;
 
 export function getCacheService(): CacheService {
   if (!cacheInstance) {
-    const config = process.env.REDIS_HOST ? {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
+    const config = appConfig.redis.host !== 'localhost' || process.env.REDIS_HOST ? {
+      host: appConfig.redis.host,
+      port: appConfig.redis.port,
+      password: appConfig.redis.password,
     } : undefined;
     
     cacheInstance = new CacheService(config);

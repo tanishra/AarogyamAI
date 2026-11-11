@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { config } from '../config';
+import { logger } from '../lib/logger';
 
 /**
  * LLM Service for AI interactions
@@ -28,34 +29,33 @@ export class LLMService {
 
   constructor() {
     // Read directly from process.env to avoid config caching issues
-    const envProvider = process.env.AI_PROVIDER || 'openai';
+    const envProvider = config.ai.provider;
     this.provider = envProvider as 'openai' | 'bedrock' | 'hybrid';
     
-    console.log('[LLMService] Initializing with provider:', this.provider);
-    console.log('[LLMService] AI_PROVIDER env:', process.env.AI_PROVIDER);
-    console.log('[LLMService] config.ai.provider:', config.ai?.provider);
+    logger.debug('[LLMService] Initializing with provider:', this.provider);
+        logger.debug('[LLMService] config.ai.provider:', config.ai?.provider);
     
     // Initialize both clients for hybrid mode
     if (this.provider === 'hybrid' || this.provider === 'bedrock') {
       try {
         this.bedrock = new BedrockRuntimeClient({
-          region: process.env.AWS_REGION || 'ap-south-1',
+          region: config.aws.bedrock.region,
           credentials: {
             accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
             secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
           },
         });
-        console.log('[LLMService] Bedrock client initialized for region:', process.env.AWS_REGION);
+        logger.debug('[LLMService] Bedrock client initialized', { region: config.aws.bedrock.region });
       } catch (error) {
-        console.error('[LLMService] Failed to initialize Bedrock:', error);
+        logger.error('[LLMService] Failed to initialize Bedrock:', error);
       }
     }
     
     if (this.provider === 'hybrid' || this.provider === 'openai') {
-      const apiKey = process.env.OPENAI_API_KEY || config.ai?.openaiApiKey;
+      const apiKey = config.ai.openaiApiKey;
       if (apiKey) {
         this.openai = new OpenAI({ apiKey });
-        console.log('[LLMService] OpenAI client initialized');
+        logger.debug('[LLMService] OpenAI client initialized');
       }
     }
   }
@@ -68,25 +68,25 @@ export class LLMService {
     maxTokens?: number;
     model?: string;
   }): Promise<LLMResponse> {
-    console.log('[LLMService.chat] Provider:', this.provider);
-    console.log('[LLMService.chat] Bedrock client exists:', !!this.bedrock);
-    console.log('[LLMService.chat] OpenAI client exists:', !!this.openai);
+    logger.debug('[LLMService.chat] Provider:', this.provider);
+    logger.debug('[LLMService.chat] Bedrock client exists:', !!this.bedrock);
+    logger.debug('[LLMService.chat] OpenAI client exists:', !!this.openai);
     
     // Hybrid mode: try Bedrock first, fallback to OpenAI
     if (this.provider === 'hybrid') {
       if (this.bedrock) {
         try {
-          console.log('[LLMService.chat] Trying Bedrock first (hybrid mode)');
+          logger.debug('[LLMService.chat] Trying Bedrock first (hybrid mode)');
           return await this.chatBedrock(messages, options);
         } catch (error) {
-          console.warn('[LLMService.chat] Bedrock failed, falling back to OpenAI:', error);
+          logger.warn('[LLMService.chat] Bedrock failed, falling back to OpenAI:', error);
           if (this.openai) {
             return await this.chatOpenAI(messages, options);
           }
           throw new Error('Both Bedrock and OpenAI failed. Please check your configuration.');
         }
       } else if (this.openai) {
-        console.log('[LLMService.chat] Bedrock not available, using OpenAI');
+        logger.debug('[LLMService.chat] Bedrock not available, using OpenAI');
         return await this.chatOpenAI(messages, options);
       }
       throw new Error('No LLM provider configured. Please set OPENAI_API_KEY or AWS credentials.');
@@ -125,7 +125,7 @@ export class LLMService {
     const maxTokens = options?.maxTokens || 1000;
 
     try {
-      console.log(`[OpenAI] Invoking model: ${model}`);
+      logger.debug(`[OpenAI] Invoking model: ${model}`);
       const completion = await this.openai.chat.completions.create({
         model,
         messages,
@@ -142,7 +142,7 @@ export class LLMService {
         },
       };
     } catch (error) {
-      console.error('OpenAI API error:', error);
+      logger.error('OpenAI API error:', error);
       throw new Error('Failed to generate AI response from OpenAI');
     }
   }
@@ -204,7 +204,7 @@ export class LLMService {
         body: JSON.stringify(payload),
       });
 
-      console.log(`[Bedrock] Invoking model: ${model}`);
+      logger.debug(`[Bedrock] Invoking model: ${model}`);
       const response = await this.bedrock.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
@@ -217,7 +217,7 @@ export class LLMService {
         },
       };
     } catch (error: any) {
-      console.error('Bedrock API error:', error);
+      logger.error('Bedrock API error:', error);
       
       // Provide helpful error messages
       if (error.name === 'AccessDeniedException') {
@@ -340,8 +340,8 @@ If information not mentioned, use null or empty array. Be accurate and don't inf
       
       return JSON.parse(content.trim());
     } catch (error) {
-      console.error('Failed to parse extracted summary:', error);
-      console.error('Raw response content:', response.content);
+      logger.error('Failed to parse extracted summary:', error);
+      logger.error('Raw response content:', response.content);
       throw new Error('Failed to extract structured data from conversation');
     }
   }
@@ -420,8 +420,8 @@ Generate clinical considerations for the physician to review.
       
       return JSON.parse(content);
     } catch (error) {
-      console.error('Failed to parse clinical considerations:', error);
-      console.error('Raw response:', response.content);
+      logger.error('Failed to parse clinical considerations:', error);
+      logger.error('Raw response:', response.content);
       throw new Error('Failed to generate clinical considerations');
     }
   }

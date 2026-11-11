@@ -9,6 +9,7 @@ import {
 import { AuditLogEntry, SearchFilters, PaginatedResult } from './types';
 import { randomUUID } from 'crypto';
 import { query as pgQuery } from '../config/database';
+import { logger } from '../lib/logger';
 
 /**
  * Audit Log Repository
@@ -30,8 +31,8 @@ export class AuditLogRepository {
     this.client = getDynamoDBClient();
     this.persistenceEnabled =
       process.env.ENABLE_DYNAMODB_AUDIT === 'true' ||
-      process.env.NODE_ENV === 'production';
-    this.useDynamoDB = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? true : false;
+      config.nodeEnv === 'production';
+    this.useDynamoDB = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
     this.dynamoDBHealthy = true; // Assume healthy initially
   }
 
@@ -59,11 +60,11 @@ export class AuditLogRepository {
             Item: logEntry,
           })
         );
-        console.log('[AuditLog] Successfully saved to DynamoDB');
+        logger.debug('[AuditLog] Successfully saved to DynamoDB');
         return logEntry;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.warn('[AuditLog] DynamoDB write failed, falling back to PostgreSQL:', message);
+        logger.warn('[AuditLog] DynamoDB write failed, falling back to PostgreSQL:', message);
         this.dynamoDBHealthy = false; // Mark as unhealthy
         
         // Fall through to PostgreSQL fallback
@@ -73,9 +74,9 @@ export class AuditLogRepository {
     // Fallback to PostgreSQL
     try {
       await this.saveToPostgreSQL(logEntry);
-      console.log('[AuditLog] Successfully saved to PostgreSQL (fallback)');
+      logger.debug('[AuditLog] Successfully saved to PostgreSQL (fallback)');
     } catch (pgError) {
-      console.error('[AuditLog] PostgreSQL fallback also failed:', pgError);
+      logger.error('[AuditLog] PostgreSQL fallback also failed:', pgError);
       // Don't throw - we don't want audit logging to break the application
     }
 
@@ -124,9 +125,9 @@ export class AuditLogRepository {
     if (this.useDynamoDB && this.dynamoDBHealthy) {
       try {
         items = await this.searchDynamoDB(filters);
-        console.log('[AuditLog] Successfully searched DynamoDB');
+        logger.debug('[AuditLog] Successfully searched DynamoDB');
       } catch (error) {
-        console.warn('[AuditLog] DynamoDB search failed, falling back to PostgreSQL:', error);
+        logger.warn('[AuditLog] DynamoDB search failed, falling back to PostgreSQL:', error);
         this.dynamoDBHealthy = false;
         items = await this.searchPostgreSQL(filters);
       }

@@ -1,16 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
-import { query, getDatabasePool } from '../config/database';
+import { workflowRepository } from '../repositories/WorkflowRepository';
+import { getContainer } from '../composition';
+import { logger } from '../lib/logger';
 import { chatRepository } from '../repositories/ChatRepository';
 import { vitalsRepository } from '../repositories/VitalsRepository';
 import { clinicalRepository } from '../repositories/ClinicalRepository';
 import { llmService } from '../services/LLMService';
-import { DifferentialManager } from '../services/DifferentialManager';
 
 const router = Router();
-const pool = getDatabasePool();
-const differentialManager = new DifferentialManager(pool);
+const differentialManager = getContainer().services.differentialManager;
 
 // Validation schemas
 const generateConsiderationsSchema = z.object({
@@ -62,32 +62,7 @@ router.get('/queue', authenticate({}), async (req: Request, res: Response) => {
     }
 
     // Get patients ready for review
-    const patients = await query(
-      `SELECT 
-        pq.id as queue_id,
-        pq.patient_id,
-        pq.session_id,
-        pq.status,
-        pq.priority,
-        pq.created_at,
-        u.name as patient_name,
-        u.email as patient_email,
-        cs.completed_at as chat_completed_at,
-        cs.emergency_detected,
-        nurse.name as nurse_name
-      FROM patient_queue pq
-      JOIN users u ON pq.patient_id = u.id
-      JOIN chat_sessions cs ON pq.session_id = cs.id
-      LEFT JOIN users nurse ON pq.assigned_nurse = nurse.id
-      WHERE pq.status IN ('ready_for_doctor', 'under_review')
-      ORDER BY 
-        CASE pq.priority 
-          WHEN 'emergency' THEN 1 
-          WHEN 'urgent' THEN 2 
-          WHEN 'routine' THEN 3 
-        END,
-        pq.created_at ASC`
-    );
+    const patients = await workflowRepository.getDoctorQueue();
 
     res.status(200).json({
       message: 'Doctor queue retrieved',
@@ -97,7 +72,7 @@ router.get('/queue', authenticate({}), async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error getting doctor queue:', error);
+    logger.error('Error getting doctor queue:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get doctor queue',
@@ -132,12 +107,9 @@ router.get('/patient/:patientId/context', authenticate({}), async (req: Request,
     }
 
     // Get patient info
-    const patientInfo = await query(
-      'SELECT id, name, email FROM users WHERE id = $1',
-      [patientId]
-    );
+    const patientInfo = await workflowRepository.findUserBasic(patientId);
 
-    if (patientInfo.length === 0) {
+    if (!patientInfo) {
       res.status(404).json({
         error: 'Not Found',
         message: 'Patient not found',
@@ -149,10 +121,10 @@ router.get('/patient/:patientId/context', authenticate({}), async (req: Request,
     const session = await chatRepository.getSession(sessionId as string);
     
     if (!session || session.patientId !== patientId) {
-      console.log('[Doctor Context] Session not found or patient mismatch');
-      console.log('[Doctor Context] Session:', session);
-      console.log('[Doctor Context] Expected patientId:', patientId);
-      console.log('[Doctor Context] Session patientId:', session?.patientId);
+      logger.debug('[Doctor Context] Session not found or patient mismatch');
+      logger.debug('[Doctor Context] Session:', { value: session });
+      logger.debug('[Doctor Context] Expected patientId:', { value: patientId });
+      logger.debug('[Doctor Context] Session patientId:', { value: session?.patientId });
       res.status(404).json({
         error: 'Not Found',
         message: 'Chat session not found',
@@ -173,17 +145,12 @@ router.get('/patient/:patientId/context', authenticate({}), async (req: Request,
     const reasoning = await clinicalRepository.getReasoningBySession(sessionId as string);
 
     // Update queue status to under_review
-    await query(
-      `UPDATE patient_queue 
-       SET status = 'under_review', assigned_doctor = $1
-       WHERE patient_id = $2 AND session_id = $3`,
-      [req.user!.userId, patientId, sessionId]
-    );
+    await workflowRepository.updateQueueStatus(patientId, sessionId as string, 'under_review', req.user!.userId);
 
     res.status(200).json({
       message: 'Patient context retrieved',
       data: {
-        patient: patientInfo[0],
+        patient: patientInfo,
         session,
         summary,
         vitals,
@@ -192,7 +159,7 @@ router.get('/patient/:patientId/context', authenticate({}), async (req: Request,
       },
     });
   } catch (error) {
-    console.error('Error getting patient context:', error);
+    logger.error('Error getting patient context:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get patient context',
@@ -276,7 +243,7 @@ router.post('/patient/:patientId/considerations', authenticate({}), async (req: 
       },
     });
   } catch (error) {
-    console.error('Error generating considerations:', error);
+    logger.error('Error generating considerations:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to generate clinical considerations',
@@ -324,7 +291,7 @@ router.put('/consideration/:considerationId', authenticate({}), async (req: Requ
       message: 'Consideration updated',
     });
   } catch (error) {
-    console.error('Error updating consideration:', error);
+    logger.error('Error updating consideration:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to update consideration',
@@ -399,7 +366,7 @@ router.post('/patient/:patientId/reasoning', authenticate({}), async (req: Reque
       });
     }
   } catch (error) {
-    console.error('Error saving clinical reasoning:', error);
+    logger.error('Error saving clinical reasoning:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to save clinical reasoning',
@@ -450,19 +417,14 @@ router.post('/reasoning/:reasoningId/approve', authenticate({}), async (req: Req
 
     // Update patient queue status to completed
     if (reasoning.sessionId) {
-      await query(
-        `UPDATE patient_queue 
-         SET status = 'completed'
-         WHERE session_id = $1`,
-        [reasoning.sessionId]
-      );
+      await workflowRepository.updateQueueStatusBySession(reasoning.sessionId, 'completed');
     }
 
     res.status(200).json({
       message: 'Clinical reasoning approved and patient review completed',
     });
   } catch (error) {
-    console.error('Error approving clinical reasoning:', error);
+    logger.error('Error approving clinical reasoning:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to approve clinical reasoning',
@@ -488,44 +450,7 @@ router.get('/patient/:patientId/history', authenticate({}), async (req: Request,
     }
 
     // Get completed encounters with full details
-    const completedEncounters = await query(
-      `SELECT 
-        cs.id as session_id,
-        cs.status,
-        cs.started_at,
-        cs.completed_at,
-        cs.duration_minutes,
-        cs.emergency_detected,
-        ps.chief_complaint,
-        ps.symptoms,
-        ps.duration as symptom_duration,
-        ps.severity,
-        ps.medical_history,
-        ps.current_medications,
-        ps.allergies,
-        cr.id as reasoning_id,
-        cr.differential_diagnosis,
-        cr.diagnostic_plan,
-        cr.reasoning_rationale,
-        cr.final_notes,
-        cr.status as reasoning_status,
-        cr.approved_at,
-        doctor.name as doctor_name,
-        doctor.email as doctor_email,
-        pq.priority,
-        nurse.name as nurse_name
-      FROM chat_sessions cs
-      LEFT JOIN patient_summaries ps ON cs.id = ps.session_id
-      LEFT JOIN clinical_reasoning cr ON cs.id = cr.session_id
-      LEFT JOIN users doctor ON cr.doctor_id = doctor.id
-      LEFT JOIN patient_queue pq ON cs.id = pq.session_id
-      LEFT JOIN users nurse ON pq.assigned_nurse = nurse.id
-      WHERE cs.patient_id = $1 
-        AND cs.status = 'completed'
-      ORDER BY cs.completed_at DESC
-      LIMIT 20`,
-      [patientId]
-    );
+    const completedEncounters = await workflowRepository.getCompletedEncounters(patientId);
 
     // Transform to camelCase and structure the data
     const encounters = completedEncounters.map((raw: any) => ({
@@ -563,18 +488,7 @@ router.get('/patient/:patientId/history', authenticate({}), async (req: Request,
     const vitalsHistory = await vitalsRepository.getByPatient(patientId, 20);
 
     // Get all clinical reasoning (including drafts)
-    const allReasoning = await query(
-      `SELECT 
-        cr.*,
-        doctor.name as doctor_name,
-        doctor.email as doctor_email
-      FROM clinical_reasoning cr
-      LEFT JOIN users doctor ON cr.doctor_id = doctor.id
-      WHERE cr.patient_id = $1 
-      ORDER BY cr.created_at DESC 
-      LIMIT 20`,
-      [patientId]
-    );
+    const allReasoning = await workflowRepository.getReasoningHistoryByPatient(patientId);
 
     const reasoningHistory = allReasoning.map((raw: any) => ({
       id: raw.id,
@@ -603,7 +517,7 @@ router.get('/patient/:patientId/history', authenticate({}), async (req: Request,
       },
     });
   } catch (error) {
-    console.error('Error getting patient history:', error);
+    logger.error('Error getting patient history:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get patient history',
@@ -629,28 +543,9 @@ router.get('/completed-patients', authenticate({}), async (req: Request, res: Re
     const { limit = '20' } = req.query;
 
     // Get completed patients for this doctor
-    const completedPatients = await query(
-      `SELECT DISTINCT ON (u.id)
-        u.id as patient_id,
-        u.name as patient_name,
-        u.email as patient_email,
-        cs.id as last_session_id,
-        cs.completed_at as last_visit,
-        ps.chief_complaint as last_complaint,
-        cr.diagnostic_plan as last_plan,
-        cr.status as reasoning_status,
-        pq.priority as last_priority
-      FROM users u
-      JOIN chat_sessions cs ON u.id = cs.patient_id
-      JOIN clinical_reasoning cr ON cs.id = cr.session_id
-      LEFT JOIN patient_summaries ps ON cs.id = ps.session_id
-      LEFT JOIN patient_queue pq ON cs.id = pq.session_id
-      WHERE cr.doctor_id = $1 
-        AND cs.status = 'completed'
-        AND cr.status = 'approved'
-      ORDER BY u.id, cs.completed_at DESC
-      LIMIT $2`,
-      [req.user!.userId, parseInt(limit as string)]
+    const completedPatients = await workflowRepository.getCompletedPatientsForDoctor(
+      req.user!.userId,
+      parseInt(limit as string)
     );
 
     const patients = completedPatients.map((raw: any) => ({
@@ -673,7 +568,7 @@ router.get('/completed-patients', authenticate({}), async (req: Request, res: Re
       },
     });
   } catch (error) {
-    console.error('Error getting completed patients:', error);
+    logger.error('Error getting completed patients:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get completed patients',
@@ -709,20 +604,15 @@ router.post('/encounters/:encounterId/differentials', authenticate({}), async (r
     }
 
     // Get patient ID from encounter
-    const encounterRows = await query(
-      'SELECT patient_id FROM chat_sessions WHERE id = $1',
-      [encounterId]
-    );
+    const patientId = await workflowRepository.getSessionPatientId(encounterId);
 
-    if (encounterRows.length === 0) {
+    if (!patientId) {
       res.status(404).json({
         error: 'Not Found',
         message: 'Encounter not found',
       });
       return;
     }
-
-    const patientId = encounterRows[0].patient_id;
 
     const differentialId = await differentialManager.addDiagnosis({
       encounterId,
@@ -744,7 +634,7 @@ router.post('/encounters/:encounterId/differentials', authenticate({}), async (r
       data: { id: differentialId },
     });
   } catch (error) {
-    console.error('Error adding differential:', error);
+    logger.error('Error adding differential:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to add differential diagnosis',
@@ -777,7 +667,7 @@ router.get('/encounters/:encounterId/differentials', authenticate({}), async (re
       count: differentials.length,
     });
   } catch (error) {
-    console.error('Error getting differentials:', error);
+    logger.error('Error getting differentials:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to get differentials',
@@ -808,7 +698,7 @@ router.delete('/encounters/:encounterId/differentials/:id', authenticate({}), as
       message: 'Differential diagnosis removed',
     });
   } catch (error) {
-    console.error('Error removing differential:', error);
+    logger.error('Error removing differential:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to remove differential diagnosis',
@@ -855,7 +745,7 @@ router.put('/encounters/:encounterId/differentials/order', authenticate({}), asy
       message: 'Differentials reordered successfully',
     });
   } catch (error) {
-    console.error('Error reordering differentials:', error);
+    logger.error('Error reordering differentials:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to reorder differentials',
@@ -896,7 +786,7 @@ router.get('/diagnoses/search', authenticate({}), async (req: Request, res: Resp
       count: results.length,
     });
   } catch (error) {
-    console.error('Error searching diagnoses:', error);
+    logger.error('Error searching diagnoses:', { error });
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to search diagnoses',
