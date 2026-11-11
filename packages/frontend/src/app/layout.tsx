@@ -4,7 +4,7 @@ import { Providers } from './providers';
 import { SystemHealthIndicator } from '@/components/common/SystemHealthIndicator';
 
 export const metadata: Metadata = {
-  title: 'Clinical Zen - AI-Assisted Clinical Reasoning',
+  title: 'AarogyamAI - AI-Assisted Clinical Reasoning',
   description: 'Healthcare management system with AI-powered clinical decision support',
 };
 

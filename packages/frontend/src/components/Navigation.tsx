@@ -35,7 +35,7 @@ export function Navigation() {
             CZ
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900">Clinical Zen Control</p>
+            <p className="text-sm font-bold text-slate-900">AarogyamAI Control</p>
             <p className="text-[11px] uppercase tracking-wide text-slate-500">{role || 'Access'}</p>
           </div>
           <div className="hidden items-center gap-1 md:flex">

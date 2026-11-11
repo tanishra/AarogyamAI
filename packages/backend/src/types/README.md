@@ -123,8 +123,8 @@ const result = await client.send(new QueryCommand({
 ## Related Documentation
 
 - [DynamoDB Setup Guide](../config/DYNAMODB_SETUP.md) - Local and production setup instructions
-- [Design Document](.kiro/specs/admin-panel/design.md) - Complete system design
-- [Requirements](.kiro/specs/admin-panel/requirements.md) - Requirements 12.1, 27.1
+- [Design Document](../../../../design.md) - Complete system design
+- [Requirements](../../../../requirements.md) - Requirements 12.1, 27.1
 
 ## Testing
 

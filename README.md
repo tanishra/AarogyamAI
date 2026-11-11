@@ -1,174 +1,92 @@
-<div align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,100:2563eb&height=220&section=header&text=AarogyamAI&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=38" width="100%" alt="AarogyamAI Banner" />
+# AarogyamAI
 
-  <br/>
+AI-assisted clinical workflow and pre-consultation support system. AarogyamAI
+replaces fragmented clinic paperwork — consent forms, verbal intake, manual
+vitals entry, handwritten notes — with one secure, auditable workflow where the
+doctor stays in control of every clinical decision.
 
-  ### **The Next Generation of Clinical Workflow Intelligence**
-  *Bridging the gap between fragmented patient data and AI-assisted clinical excellence.*
+## What it does
 
-  <br/>
+1. **Patient** authenticates (OTP/JWT), grants DPDP-style digital consent, then
+   completes an adaptive intake questionnaire that can pause and resume.
+2. **Nurse** sees a live queue, reviews intake, and records vitals. Outlier
+   vitals raise critical alerts.
+3. **AI synthesis** strips PII, structures intake + vitals into context, and
+   generates differential considerations with reasoning traces.
+4. **Doctor** reviews, accepts/edits/rejects each suggestion, documents final
+   reasoning and treatment, and commits the encounter to the medical record.
+5. **Every action** is written to a hash-chained, tamper-evident audit trail.
 
-  [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![Amazon Bedrock](https://img.shields.io/badge/Amazon_Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
-  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+The AI is decision **support**, not decision **making**. It never diagnoses,
+prescribes, triages, or acts on its own — all output is framed for physician
+review and nothing enters the record without doctor sign-off.
 
-  <br/>
+## Repository layout
 
-  ---
-
-  **Replacing fragmented clinic paperwork with an intelligent, role-based clinical workflow.**
-  *Digital consent, adaptive intake, nurse vitals capture, AI differential diagnosis synthesis, and doctor sign-off — all in one secure system.*
-
-  <br/>
-
-</div>
-
-<br/>
-
-## What We're Building
-
-AarogyamAI is an end-to-end clinical workflow platform powered by **Claude on Amazon Bedrock**. It unifies the entire patient journey — digital consent, adaptive intake questionnaire, nurse vitals capture, AI differential diagnosis synthesis, and doctor sign-off — into one secure, auditable system.
-
-No more paper forms. No more disconnected systems. No more manual SOAP note writing.
-
-Recent updates include **real patient OTP login (JWT session)**, a **text-only conversational intake assistant**, **LLM-based nurse handoff summaries**, and a **live nurse dashboard** with vitals capture and status management.
-
-<br/>
-
-## The Problem
-
-A typical clinic visit involves 4–6 disconnected steps across different tools — paper consent forms, verbal intake, manual vitals entry, handwritten notes, and separate EHR systems. This creates delays, errors, and no audit trail. Doctors spend 30–40% of their time on documentation instead of patients.
-
-<br/>
-
-## Live Demo
-
-🚀 **Click here :** [Link](https://aarogyam-ai-frontend.vercel.app)
-
-All features working including AI nurse intake, differential diagnosis, and real-time chat.
-
-### Test Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| **Patient** | `patient@test.com` | `admin123` |
-| **Nurse** | `nurse@test.com` | `admin123` |
-| **Doctor** | `doctor@test.com` | `admin123` |
-| **Admin** | `admin@hospital.com` | `admin123` |
-
-> **Note:** This is a hackathon demo instance. For production use, credentials will be securely managed through AWS Cognito
-
-<br/>
-
-## How It Works
-
-```mermaid
-flowchart LR
-    A["🧑 Patient<br/>Consent + Intake<br/>Questionnaire"] -->|"Encrypted<br/>Session"| B["👩‍⚕️ Nurse<br/>Vitals Capture<br/>+ Observation"]
-    B -->|"SQS<br/>Job Fire"| C["⚡ AgentLoop<br/>AI Orchestrator"]
-    C -->|"Claude on<br/>Bedrock"| D["🤖 AI Synthesis<br/>Differential<br/>Diagnosis"]
-    D -->|"Review<br/>Interface"| E["👨‍⚕️ Doctor<br/>Accept / Modify<br/>+ Commit"]
-    E -->|"Audit<br/>Chain"| F["📋 Signed<br/>Medical Record<br/>+ S3 Export"]
-
-    style A fill:#EFF6FF,stroke:#2563EB,color:#1e40af
-    style B fill:#EEF2FF,stroke:#4F46E5,color:#3730a3
-    style C fill:#0F172A,stroke:#334155,color:#94a3b8
-    style D fill:#0F172A,stroke:#334155,color:#94a3b8
-    style E fill:#EFF6FF,stroke:#2563EB,color:#1e40af
-    style F fill:#F0FDF4,stroke:#10B981,color:#065f46
+```
+packages/
+  backend/    Express + TypeScript API (port 3001)
+  frontend/   Next.js 14 + TypeScript web app (port 3000)
+docs/         PORT-NOTES.md — behaviors ported from the legacy codebase
+docker/      initdb scripts for local Postgres
+infrastructure/ Terraform (see Phase 6 status in docs)
+design.md / requirements.md — product spec
 ```
 
-<br/>
+The legacy Python prototype (`clinical-ai/`) was removed after its
+safety-critical components were ported — see `docs/PORT-NOTES.md`.
 
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Client["Frontend — Next.js"]
-        P["Patient Portal"]
-        N["Nurse Dashboard"]
-        D["Doctor Workspace"]
-    end
-
-    subgraph API["Backend — FastAPI on AWS Lambda"]
-        GW["API Gateway"]
-        Auth["Cognito Auth<br/>+ RBAC Middleware"]
-        Routes["22+ REST Endpoints<br/>6 Route Modules"]
-        Agent["AgentLoop<br/>Orchestrator"]
-    end
-
-    subgraph Data["Data Layer"]
-        RDS["Amazon RDS<br/>PostgreSQL<br/>3 Schemas"]
-        DDB["DynamoDB<br/>Session State"]
-        SQS["Amazon SQS<br/>AI Task Queue"]
-        S3["Amazon S3<br/>Exports + Audits"]
-    end
-
-    subgraph AI["AI Layer"]
-        Bedrock["Amazon Bedrock<br/>Claude Sonnet 4.5"]
-        PII["PII Stripper"]
-        Filter["Output Filter"]
-    end
-
-    Client --> GW
-    GW --> Auth --> Routes
-    Routes --> Agent
-    Agent --> SQS --> Bedrock
-    Agent --> PII --> Bedrock
-    Bedrock --> Filter
-    Routes --> RDS
-    Routes --> DDB
-    Agent --> S3
-
-    linkStyle default stroke:#0f172a,stroke-width:2px
-
-    style Client fill:#EFF6FF,stroke:#2563EB,color:#0f172a,stroke-width:2px
-    style API fill:#F8FAFC,stroke:#94A3B8,color:#0f172a,stroke-width:2px
-    style Data fill:#F0FDF4,stroke:#10B981,color:#0f172a,stroke-width:2px
-    style AI fill:#F5F3FF,stroke:#8B5CF6,color:#0f172a,stroke-width:2px
-```
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Next.js 14, TypeScript, Framer Motion |
-| **Backend** | FastAPI, Python, SQLAlchemy, Alembic |
-| **AI Model** | Claude Sonnet 4.5 via Amazon Bedrock |
-| **AI Providers** | AWS Bedrock (primary) + OpenAI (fallback) |
-| **Auth** | Amazon Cognito (staff JWT) + real patient OTP/JWT flow |
-| **Database** | Amazon RDS PostgreSQL (3-schema design) |
-| **Queue** | Amazon SQS + AWS Lambda workers (doctor synthesis handoff) |
-| **Storage** | Amazon S3 (exports, audit archives) + local fallback |
-| **Audit** | DynamoDB + PostgreSQL dual-write with fallback |
-| **Observability** | Amazon CloudWatch, structured JSON logs |
-| **Compliance** | DPDP-compliant consent, hash-chain audit trail |
+| Frontend | Next.js 14 (App Router), React, TypeScript |
+| Backend | Express, TypeScript |
+| Database | PostgreSQL 15 (migrations in `packages/backend/src/migrations/`) |
+| Cache/session | Redis 7 |
+| Audit | DynamoDB hash-chained records (PostgreSQL fallback) |
+| AI | AWS Bedrock (Claude) primary, OpenAI fallback |
+| Storage | AWS S3 for exports/reports |
+| Tests | Vitest (backend), Vitest + Testing Library (frontend) |
 
-<br/>
+## Getting started
 
-## Key Features
+Prerequisites: Node 20+, Docker (for Postgres + Redis).
 
-**Patient Portal**
-- Conversational AI intake assistant with natural chat interface
-- Real OTP-based authentication with JWT sessions
-- Complete medical history with doctor diagnosis and treatment plans
+```bash
+# Start Postgres (admin_panel + admin_panel_test DBs) and Redis
+docker compose up -d postgres redis
 
-**Nurse Dashboard**
-- Live patient queue with priority management
-- Vitals capture with previous history display
-- Mark patients ready for doctor review
+# Install dependencies (npm workspaces)
+npm install
 
-**Doctor Workspace**
-- AI-powered differential diagnosis suggestions
-- Clinical reasoning documentation with treatment plans
-- Patient history review with complete encounter details
+# Configure backend env
+cp packages/backend/.env.example packages/backend/.env
+# defaults point at the docker-compose stack
 
-**System Capabilities**
-- Hybrid AI (AWS Bedrock + OpenAI fallback)
-- Dual storage (S3 + local fallback)
-- Dual audit logging (DynamoDB + PostgreSQL)
-- Role-based access control with DPDP-compliant consent
+# Apply migrations
+cd packages/backend && npm run migrate
 
-<br/>
+# Run everything
+cd ../.. && npm run dev
+# frontend → http://localhost:3000   backend → http://localhost:3001
+```
+
+## Development commands
+
+```bash
+npm run dev        # both apps
+npm run build      # build both workspaces
+npm run test       # backend + frontend test suites
+npm run lint       # lint both workspaces
+
+cd packages/backend
+npm run typecheck  # tsc --noEmit
+npm run migrate:status
+```
+
+## Verification status
+
+See `docs/ARCHITECTURE.md` for the target architecture and refactor progress.
+The `pre-refactor-baseline` tag marks the green baseline: backend 385 tests,
+frontend 102 tests, 0 lint errors, clean builds, 10 API contract tests.

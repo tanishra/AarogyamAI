@@ -25,7 +25,7 @@ function PatientDashboardContent() {
   return (
     <AppShell tone="patient">
       <PageHeader
-        title="Clinical Zen Patient Portal"
+        title="AarogyamAI Patient Portal"
         subtitle="Secure pre-consultation intake and symptom capture"
         badge="Patient"
         actions={

@@ -42,7 +42,7 @@ export NODE_ENV=development
 
 ```bash
 aws dynamodb create-table \
-  --table-name admin-panel-audit-logs-dev \
+  --table-name aarogyamai-audit-logs-dev \
   --attribute-definitions \
     AttributeName=userId,AttributeType=S \
     AttributeName=timestamp,AttributeType=N \
@@ -111,8 +111,8 @@ terraform apply
 ```
 
 This will create:
-- `admin-panel-audit-logs-{environment}` table
-- `admin-panel-anomaly-alerts-{environment}` table
+- `aarogyamai-audit-logs-{environment}` table
+- `aarogyamai-anomaly-alerts-{environment}` table
 - Both with GSIs, TTL, point-in-time recovery, and encryption
 
 ### Environment Variables

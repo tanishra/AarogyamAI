@@ -92,8 +92,8 @@ describe('AuditLogSchema', () => {
 
 describe('AUDIT_LOG_TABLE_CONFIG', () => {
   it('should generate correct table name for environment', () => {
-    expect(AUDIT_LOG_TABLE_CONFIG.tableName('dev')).toBe('admin-panel-audit-logs-dev');
-    expect(AUDIT_LOG_TABLE_CONFIG.tableName('prod')).toBe('admin-panel-audit-logs-prod');
+    expect(AUDIT_LOG_TABLE_CONFIG.tableName('dev')).toBe('aarogyamai-audit-logs-dev');
+    expect(AUDIT_LOG_TABLE_CONFIG.tableName('prod')).toBe('aarogyamai-audit-logs-prod');
   });
 
   it('should have correct partition and sort keys', () => {

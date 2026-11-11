@@ -47,7 +47,7 @@ app.use(errorHandler);
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
-    console.log(`Admin Panel Backend running on port ${PORT}`);
+    console.log(`AarogyamAI backend listening on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }

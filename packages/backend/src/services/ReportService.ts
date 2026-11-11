@@ -24,7 +24,7 @@ export class ReportService {
   constructor(pool: Pool) {
     this.pool = pool;
     this.auditRepo = new AuditLogRepository();
-    this.bucketName = process.env.S3_REPORTS_BUCKET || process.env.AWS_S3_BUCKET || 'clinical-ai-reports';
+    this.bucketName = process.env.S3_REPORTS_BUCKET || process.env.AWS_S3_BUCKET || 'aarogyam-reports';
     this.useS3 = false;
     this.s3Healthy = true;
     this.localStoragePath = path.join(process.cwd(), 'storage', 'reports');

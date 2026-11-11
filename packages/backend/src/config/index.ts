@@ -8,7 +8,7 @@ export const config = {
   port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://tanishrajput@localhost:5432/clinical_ai_dev',
+    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/admin_panel',
     poolMin: parseInt(process.env.DATABASE_POOL_MIN || '2'),
     poolMax: parseInt(process.env.DATABASE_POOL_MAX || '10'),
   },
@@ -45,7 +45,7 @@ export const config = {
   },
   logging: {
     level: process.env.LOG_LEVEL || 'info',
-    cloudWatchLogGroup: process.env.CLOUDWATCH_LOG_GROUP || '/admin-panel/backend',
+    cloudWatchLogGroup: process.env.CLOUDWATCH_LOG_GROUP || '/aarogyamai/backend',
   },
   ai: {
     provider: process.env.AI_PROVIDER || 'openai',

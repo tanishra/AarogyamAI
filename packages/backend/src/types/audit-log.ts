@@ -57,7 +57,7 @@ export type CreateAuditLogInput = Omit<AuditLogItem, 'id' | 'timestamp' | 'hash'
  * DynamoDB table configuration constants
  */
 export const AUDIT_LOG_TABLE_CONFIG = {
-  tableName: (environment: string) => `admin-panel-audit-logs-${environment}`,
+  tableName: (environment: string) => `aarogyamai-audit-logs-${environment}`,
   partitionKey: 'userId',
   sortKey: 'timestamp',
   gsi: {

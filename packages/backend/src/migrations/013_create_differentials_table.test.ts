@@ -16,7 +16,7 @@ describe('Differentials Table Migration', () => {
   beforeAll(async () => {
     // Create a test database connection
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://tanishrajput:@localhost:5432/clinical_ai_dev',
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/admin_panel_test',
     });
 
     // Create test users for foreign key references

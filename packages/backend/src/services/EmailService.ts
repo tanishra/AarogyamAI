@@ -37,21 +37,21 @@ class EmailService {
 
     await this.sendMail({
       to: email,
-      subject: 'Registration Approved - Clinical Zen',
+      subject: 'Registration Approved - AarogyamAI',
       html: `
         <h2>Registration Approved</h2>
         <p>Hello ${name},</p>
-        <p>Your registration has been approved! You can now log in to Clinical Zen.</p>
+        <p>Your registration has been approved! You can now log in to AarogyamAI.</p>
         <p><a href="${loginUrl}">Login Here</a></p>
       `,
-      text: `Registration Approved\n\nHello ${name},\n\nYour registration has been approved! You can now log in to Clinical Zen.\n\nLogin at: ${loginUrl}`,
+      text: `Registration Approved\n\nHello ${name},\n\nYour registration has been approved! You can now log in to AarogyamAI.\n\nLogin at: ${loginUrl}`,
     });
   }
 
   async sendRegistrationRejectionEmail(email: string, name: string, reason: string): Promise<void> {
     await this.sendMail({
       to: email,
-      subject: 'Registration Status - Clinical Zen',
+      subject: 'Registration Status - AarogyamAI',
       html: `
         <h2>Registration Update</h2>
         <p>Hello ${name},</p>
@@ -66,7 +66,7 @@ class EmailService {
   async sendMFAChangeNotification(email: string, name: string, action: 'enabled' | 'disabled'): Promise<void> {
     await this.sendMail({
       to: email,
-      subject: 'MFA Settings Changed - Clinical Zen',
+      subject: 'MFA Settings Changed - AarogyamAI',
       html: `
         <h2>MFA Settings Changed</h2>
         <p>Hello ${name},</p>
@@ -88,7 +88,7 @@ class EmailService {
   async sendMFAReenrollmentEmail(email: string, name: string): Promise<void> {
     await this.sendMail({
       to: email,
-      subject: 'MFA Re-enrollment Required - Clinical Zen',
+      subject: 'MFA Re-enrollment Required - AarogyamAI',
       html: `
         <h2>MFA Re-enrollment Required</h2>
         <p>Hello ${name},</p>

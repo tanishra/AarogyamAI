@@ -82,7 +82,7 @@ export default function LoginPage() {
 
   return (
     <AuthScene
-      title="Welcome to Clinical Zen"
+      title="Welcome to AarogyamAI"
       subtitle="Modern AI-assisted care intake with secure, role-based workflows"
       sideTitle="Nurse intake and vitals workflow in one view"
       sideText="Capture triage context, monitor patient queue, and move cases forward with confidence."
