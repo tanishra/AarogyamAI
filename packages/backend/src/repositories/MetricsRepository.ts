@@ -121,8 +121,8 @@ export class MetricsRepository {
          date_trunc($2, NOW()),
          ('1 ' || $2)::interval
        ) AS gs(bucket)
-       LEFT JOIN clinical_considerations t
-         ON date_trunc($2, t.generated_at) = gs.bucket AND t.status <> 'pending'
+       LEFT JOIN differentials t
+         ON date_trunc($2, t.added_at) = gs.bucket AND t.source = 'ai' AND t.status <> 'pending'
        GROUP BY gs.bucket
        ORDER BY gs.bucket`,
       [buckets, unit]
@@ -135,7 +135,7 @@ export class MetricsRepository {
       `SELECT COALESCE(
          ROUND(100.0 * COUNT(*) FILTER (WHERE status IN ('accepted','modified'))
                / NULLIF(COUNT(*), 0), 1), 0) AS n
-       FROM clinical_considerations WHERE status <> 'pending'`
+       FROM differentials WHERE source = 'ai' AND status <> 'pending'`
     );
     const byDoctor = await this.mapColumn(
       (
@@ -143,8 +143,8 @@ export class MetricsRepository {
           `SELECT reviewed_by AS key,
                   ROUND(100.0 * COUNT(*) FILTER (WHERE status IN ('accepted','modified'))
                         / NULLIF(COUNT(*), 0), 1) AS n
-           FROM clinical_considerations
-           WHERE status <> 'pending' AND reviewed_by IS NOT NULL
+           FROM differentials
+           WHERE source = 'ai' AND status <> 'pending' AND reviewed_by IS NOT NULL
            GROUP BY reviewed_by`
         )
       ).rows

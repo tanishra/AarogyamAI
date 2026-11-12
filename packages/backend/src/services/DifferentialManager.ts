@@ -64,8 +64,8 @@ export class DifferentialManager {
       `INSERT INTO differentials (
         encounter_id, patient_id, diagnosis_code, diagnosis_name,
         diagnosis_category, priority, source, added_by,
-        clinical_reasoning, confidence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        clinical_reasoning, confidence, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id`,
       [
         params.encounterId,
@@ -78,6 +78,9 @@ export class DifferentialManager {
         params.addedBy,
         params.clinicalReasoning || null,
         params.confidence || null,
+        // Physician-added entries are the doctor's own working list —
+        // implicitly accepted; AI entries await doctor review.
+        params.source === 'physician' ? 'accepted' : 'pending',
       ]
     );
 

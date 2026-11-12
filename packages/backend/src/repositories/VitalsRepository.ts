@@ -47,18 +47,18 @@ export class VitalsRepository {
     // Flag abnormal vitals
     const flaggedAbnormal = this.checkAbnormalVitals(vitals);
 
-    const result = await query<Vitals>(
-      `INSERT INTO vitals (
-        patient_id, session_id, recorded_by,
-        blood_pressure_systolic, blood_pressure_diastolic,
-        heart_rate, temperature_fahrenheit, oxygen_saturation,
-        respiratory_rate, weight_kg, height_cm, bmi,
+    const result = await query<any>(
+      `INSERT INTO vital_signs (
+        patient_id, encounter_id, recorded_by,
+        systolic_bp, diastolic_bp,
+        heart_rate, temperature, temperature_unit, oxygen_saturation,
+        respiratory_rate, weight, weight_unit, height, height_unit, bmi,
         notes, flagged_abnormal
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'F', $8, $9, $10, 'kg', $11, 'cm', $12, $13, $14)
       RETURNING *`,
       [
         vitals.patientId,
-        vitals.sessionId || null,
+        vitals.sessionId || vitals.patientId,
         vitals.recordedBy,
         vitals.bloodPressureSystolic || null,
         vitals.bloodPressureDiastolic || null,
@@ -74,7 +74,28 @@ export class VitalsRepository {
       ]
     );
 
-    return result[0];
+    return this.mapRow(result[0]);
+  }
+
+  private mapRow(row: any): Vitals {
+    return {
+      id: row.id,
+      patientId: row.patient_id,
+      sessionId: row.encounter_id,
+      recordedBy: row.recorded_by,
+      bloodPressureSystolic: row.systolic_bp,
+      bloodPressureDiastolic: row.diastolic_bp,
+      heartRate: row.heart_rate,
+      temperatureFahrenheit: row.temperature,
+      oxygenSaturation: row.oxygen_saturation,
+      respiratoryRate: row.respiratory_rate,
+      weightKg: row.weight,
+      heightCm: row.height,
+      bmi: row.bmi,
+      notes: row.notes ?? undefined,
+      flaggedAbnormal: row.flagged_abnormal ?? false,
+      recordedAt: row.recorded_at,
+    };
   }
 
   /**
@@ -82,49 +103,15 @@ export class VitalsRepository {
    */
   async getBySession(sessionId: string): Promise<Vitals | null> {
     const result = await query<any>(
-      `SELECT 
-        id,
-        patient_id,
-        encounter_id as session_id,
-        recorded_by,
-        systolic_bp as blood_pressure_systolic,
-        diastolic_bp as blood_pressure_diastolic,
-        heart_rate,
-        temperature as temperature_fahrenheit,
-        oxygen_saturation,
-        respiratory_rate,
-        weight as weight_kg,
-        height as height_cm,
-        bmi,
-        recorded_at
-       FROM vital_signs 
-       WHERE encounter_id = $1 
-       ORDER BY recorded_at DESC 
+      `SELECT * FROM vital_signs
+       WHERE encounter_id = $1
+       ORDER BY recorded_at DESC
        LIMIT 1`,
       [sessionId]
     );
-    
+
     if (result.length === 0) return null;
-    
-    const row = result[0];
-    return {
-      id: row.id,
-      patientId: row.patient_id,
-      sessionId: row.session_id,
-      recordedBy: row.recorded_by,
-      bloodPressureSystolic: row.blood_pressure_systolic,
-      bloodPressureDiastolic: row.blood_pressure_diastolic,
-      heartRate: row.heart_rate,
-      temperatureFahrenheit: row.temperature_fahrenheit,
-      oxygenSaturation: row.oxygen_saturation,
-      respiratoryRate: row.respiratory_rate,
-      weightKg: row.weight_kg,
-      heightCm: row.height_cm,
-      bmi: row.bmi,
-      notes: undefined,
-      flaggedAbnormal: false,
-      recordedAt: row.recorded_at,
-    };
+    return this.mapRow(result[0]);
   }
 
   /**
@@ -132,46 +119,14 @@ export class VitalsRepository {
    */
   async getByPatient(patientId: string, limit: number = 10): Promise<Vitals[]> {
     const result = await query<any>(
-      `SELECT 
-        id,
-        patient_id,
-        encounter_id as session_id,
-        recorded_by,
-        systolic_bp as blood_pressure_systolic,
-        diastolic_bp as blood_pressure_diastolic,
-        heart_rate,
-        temperature as temperature_fahrenheit,
-        oxygen_saturation,
-        respiratory_rate,
-        weight as weight_kg,
-        height as height_cm,
-        bmi,
-        recorded_at
-       FROM vital_signs 
-       WHERE patient_id = $1 
-       ORDER BY recorded_at DESC 
+      `SELECT * FROM vital_signs
+       WHERE patient_id = $1
+       ORDER BY recorded_at DESC
        LIMIT $2`,
       [patientId, limit]
     );
-    
-    return result.map(row => ({
-      id: row.id,
-      patientId: row.patient_id,
-      sessionId: row.session_id,
-      recordedBy: row.recorded_by,
-      bloodPressureSystolic: row.blood_pressure_systolic,
-      bloodPressureDiastolic: row.blood_pressure_diastolic,
-      heartRate: row.heart_rate,
-      temperatureFahrenheit: row.temperature_fahrenheit,
-      oxygenSaturation: row.oxygen_saturation,
-      respiratoryRate: row.respiratory_rate,
-      weightKg: row.weight_kg,
-      heightCm: row.height_cm,
-      bmi: row.bmi,
-      notes: undefined,
-      flaggedAbnormal: false,
-      recordedAt: row.recorded_at,
-    }));
+
+    return result.map(row => this.mapRow(row));
   }
 
   /**

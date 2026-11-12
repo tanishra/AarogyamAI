@@ -69,8 +69,9 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
       `verifyIntegrity`), real TOTP MFA via speakeasy, real email
       notifications, real metrics aggregation, AI pipeline
       (PII→LLM→filter→fallback) enforced inside `LLMService.chat`
-- [ ] Phase 4: DB consolidation (`vitals`/`vital_signs`,
-      `differentials`/`clinical_considerations`) + schema doc
+- [x] Phase 4: DB consolidation — `vitals`→`vital_signs`,
+      `clinical_considerations`→`differentials` (migration 019 +
+      rollback); `docs/SCHEMA.md`
 - [ ] Phase 5: frontend dedup + typed API layer
 - [ ] Phase 6: infra — compose, Dockerfiles, Terraform, CI
 - [ ] Phase 7: ADRs + final verification + `post-refactor` tag

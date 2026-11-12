@@ -49,10 +49,10 @@ export class ClinicalRepository {
 
     for (const consideration of considerations) {
       const result = await query(
-        `INSERT INTO clinical_considerations (
-          patient_id, session_id, condition_name, likelihood, urgency,
-          supporting_factors, explanation, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+        `INSERT INTO differentials (
+          patient_id, encounter_id, diagnosis_name, likelihood, urgency,
+          supporting_evidence, clinical_reasoning, status, source, added_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'ai', NULL)
         RETURNING *`,
         [
           patientId,
@@ -64,28 +64,29 @@ export class ClinicalRepository {
           consideration.explanation,
         ]
       );
-      
-      const raw = result[0];
-      
-      // Transform snake_case to camelCase
-      results.push({
-        id: raw.id,
-        patientId: raw.patient_id,
-        sessionId: raw.session_id,
-        conditionName: raw.condition_name,
-        likelihood: raw.likelihood,
-        urgency: raw.urgency,
-        supportingFactors: raw.supporting_factors,
-        explanation: raw.explanation,
-        status: raw.status,
-        doctorNotes: raw.doctor_notes,
-        reviewedBy: raw.reviewed_by,
-        reviewedAt: raw.reviewed_at,
-        generatedAt: raw.generated_at,
-      });
+
+      results.push(this.mapConsideration(result[0]));
     }
 
     return results;
+  }
+
+  private mapConsideration(raw: any): ClinicalConsideration {
+    return {
+      id: raw.id,
+      patientId: raw.patient_id,
+      sessionId: raw.encounter_id,
+      conditionName: raw.diagnosis_name,
+      likelihood: raw.likelihood,
+      urgency: raw.urgency,
+      supportingFactors: raw.supporting_evidence,
+      explanation: raw.clinical_reasoning,
+      status: raw.status,
+      doctorNotes: raw.doctor_notes,
+      reviewedBy: raw.reviewed_by,
+      reviewedAt: raw.reviewed_at,
+      generatedAt: raw.added_at,
+    };
   }
 
   /**
@@ -93,38 +94,23 @@ export class ClinicalRepository {
    */
   async getConsiderationsBySession(sessionId: string): Promise<ClinicalConsideration[]> {
     const result = await query(
-      `SELECT * FROM clinical_considerations 
-       WHERE session_id = $1 
-       ORDER BY 
-         CASE urgency 
-           WHEN 'urgent' THEN 1 
-           WHEN 'routine' THEN 2 
-           WHEN 'non-urgent' THEN 3 
+      `SELECT * FROM differentials
+       WHERE encounter_id = $1 AND source = 'ai'
+       ORDER BY
+         CASE urgency
+           WHEN 'urgent' THEN 1
+           WHEN 'routine' THEN 2
+           WHEN 'non-urgent' THEN 3
          END,
-         CASE likelihood 
-           WHEN 'high' THEN 1 
-           WHEN 'moderate' THEN 2 
-           WHEN 'low' THEN 3 
+         CASE likelihood
+           WHEN 'high' THEN 1
+           WHEN 'moderate' THEN 2
+           WHEN 'low' THEN 3
          END`,
       [sessionId]
     );
-    
-    // Transform snake_case to camelCase for each consideration
-    return result.map((raw: any) => ({
-      id: raw.id,
-      patientId: raw.patient_id,
-      sessionId: raw.session_id,
-      conditionName: raw.condition_name,
-      likelihood: raw.likelihood,
-      urgency: raw.urgency,
-      supportingFactors: raw.supporting_factors,
-      explanation: raw.explanation,
-      status: raw.status,
-      doctorNotes: raw.doctor_notes,
-      reviewedBy: raw.reviewed_by,
-      reviewedAt: raw.reviewed_at,
-      generatedAt: raw.generated_at,
-    }));
+
+    return result.map((raw: any) => this.mapConsideration(raw));
   }
 
   /**
@@ -137,9 +123,9 @@ export class ClinicalRepository {
     doctorNotes?: string
   ): Promise<void> {
     await query(
-      `UPDATE clinical_considerations 
+      `UPDATE differentials
        SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP, doctor_notes = $3
-       WHERE id = $4`,
+       WHERE id = $4 AND source = 'ai'`,
       [status, doctorId, doctorNotes || null, considerationId]
     );
   }

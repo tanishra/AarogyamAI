@@ -172,7 +172,7 @@ export class ProfileRepository {
 
   async getPatientVitalsCount(userId: string): Promise<number> {
     const rows = await query<{ count: string }>(
-      'SELECT COUNT(*) as count FROM vitals WHERE patient_id = $1',
+      'SELECT COUNT(*) as count FROM vital_signs WHERE patient_id = $1',
       [userId]
     );
     return Number(rows[0]?.count || 0);

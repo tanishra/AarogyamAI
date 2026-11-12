@@ -318,18 +318,18 @@ export class WorkflowRepository {
   async getConsiderationsForEncounter(sessionId: string): Promise<any[]> {
     return query(
       `SELECT
-        condition_name,
+        diagnosis_name AS condition_name,
         likelihood,
         urgency,
-        explanation,
+        clinical_reasoning AS explanation,
         doctor_notes,
         status
-      FROM clinical_considerations
-      WHERE session_id = $1
+      FROM differentials
+      WHERE encounter_id = $1 AND source = 'ai'
       ORDER BY
         CASE likelihood
           WHEN 'high' THEN 1
-          WHEN 'medium' THEN 2
+          WHEN 'moderate' THEN 2
           WHEN 'low' THEN 3
           ELSE 4
         END`,
