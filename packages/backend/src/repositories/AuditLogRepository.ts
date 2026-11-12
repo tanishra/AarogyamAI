@@ -8,8 +8,9 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { AuditLogEntry, SearchFilters, PaginatedResult } from './types';
 import { randomUUID } from 'crypto';
-import { query as pgQuery } from '../config/database';
+import { query as pgQuery, getDatabasePool } from '../config/database';
 import { logger } from '../lib/logger';
+import { computeAuditHash } from '../lib/auditHash';
 
 /**
  * Audit Log Repository
@@ -37,8 +38,12 @@ export class AuditLogRepository {
   }
 
   /**
-   * Create a new audit log entry
-   * Tries DynamoDB first, falls back to PostgreSQL
+   * Create a new audit log entry.
+   *
+   * PostgreSQL is the authoritative store — every entry is hash-chained
+   * (previous_hash → sha256(entry + previousHash)) for tamper-evidence.
+   * DynamoDB, when configured, is a best-effort mirror for query performance.
+   * Audit failures are logged but never break the request flow.
    */
   async create(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): Promise<AuditLogEntry> {
     const logEntry: AuditLogEntry = {
@@ -47,12 +52,17 @@ export class AuditLogRepository {
       timestamp: Date.now(),
     };
 
-    if (!this.persistenceEnabled) {
-      return logEntry;
+    // Authoritative write: hash-chained PostgreSQL record
+    try {
+      const { hash, previousHash } = await this.saveToPostgreSQL(logEntry);
+      logEntry.hash = hash;
+      logEntry.previousHash = previousHash;
+    } catch (pgError) {
+      logger.error('[AuditLog] PostgreSQL write failed:', pgError);
     }
 
-    // Try DynamoDB first if configured and healthy
-    if (this.useDynamoDB && this.dynamoDBHealthy) {
+    // Best-effort mirror to DynamoDB when configured
+    if (this.persistenceEnabled && this.useDynamoDB && this.dynamoDBHealthy) {
       try {
         await this.client.send(
           new PutCommand({
@@ -60,55 +70,81 @@ export class AuditLogRepository {
             Item: logEntry,
           })
         );
-        logger.debug('[AuditLog] Successfully saved to DynamoDB');
-        return logEntry;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        logger.warn('[AuditLog] DynamoDB write failed, falling back to PostgreSQL:', message);
-        this.dynamoDBHealthy = false; // Mark as unhealthy
-        
-        // Fall through to PostgreSQL fallback
+        logger.warn('[AuditLog] DynamoDB mirror write failed:', message);
+        this.dynamoDBHealthy = false;
       }
-    }
-
-    // Fallback to PostgreSQL
-    try {
-      await this.saveToPostgreSQL(logEntry);
-      logger.debug('[AuditLog] Successfully saved to PostgreSQL (fallback)');
-    } catch (pgError) {
-      logger.error('[AuditLog] PostgreSQL fallback also failed:', pgError);
-      // Don't throw - we don't want audit logging to break the application
     }
 
     return logEntry;
   }
 
   /**
-   * Save audit log to PostgreSQL (fallback)
+   * Save audit log to PostgreSQL inside a hash-chaining transaction.
+   * Reads the previous chain tip, computes this entry's hash, and writes
+   * both — making silent edits detectable by verifyIntegrity.
    */
-  private async saveToPostgreSQL(entry: AuditLogEntry): Promise<void> {
-    await pgQuery(
-      `INSERT INTO audit_logs (
-        id, user_id, user_name, user_role, action_type, resource, 
-        resource_id, outcome, ip_address, user_agent, request_id, 
-        hash, timestamp, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
-      [
-        entry.id,
-        entry.userId,
-        entry.userName,
-        entry.userRole,
-        entry.actionType,
-        entry.resource,
-        entry.resourceId,
-        entry.outcome,
-        entry.ipAddress,
-        entry.userAgent,
-        entry.requestId,
-        entry.hash,
-        entry.timestamp,
-      ]
-    );
+  private async saveToPostgreSQL(
+    entry: AuditLogEntry
+  ): Promise<{ hash: string; previousHash: string | null }> {
+    const pool = getDatabasePool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Lock the chain tip so concurrent writers cannot fork the chain
+      const last = await client.query<{ hash: string }>(
+        'SELECT hash FROM audit_logs ORDER BY timestamp DESC, id DESC LIMIT 1 FOR UPDATE'
+      );
+      const previousHash = last.rows.length > 0 ? last.rows[0].hash : null;
+      const hash = computeAuditHash(
+        {
+          userId: entry.userId,
+          userName: entry.userName,
+          userRole: entry.userRole,
+          actionType: entry.actionType,
+          resource: entry.resource,
+          resourceId: entry.resourceId,
+          outcome: entry.outcome,
+          ipAddress: entry.ipAddress,
+          userAgent: entry.userAgent,
+          requestId: entry.requestId,
+          errorDetails: entry.errorDetails,
+        },
+        previousHash
+      );
+      await client.query(
+        `INSERT INTO audit_logs (
+          id, user_id, user_name, user_role, action_type, resource,
+          resource_id, outcome, ip_address, user_agent, request_id,
+          error_details, hash, previous_hash, timestamp, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+        [
+          entry.id,
+          entry.userId,
+          entry.userName,
+          entry.userRole,
+          entry.actionType,
+          entry.resource,
+          entry.resourceId,
+          entry.outcome,
+          entry.ipAddress,
+          entry.userAgent,
+          entry.requestId,
+          entry.errorDetails ?? null,
+          hash,
+          previousHash,
+          new Date(entry.timestamp),
+        ]
+      );
+      await client.query('COMMIT');
+      return { hash, previousHash };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -151,6 +187,89 @@ export class AuditLogRepository {
       page,
       limit,
       hasMore: endIndex < total,
+    };
+  }
+
+  /**
+   * Access-pattern analysis for a patient record: who accessed it, when,
+   * and how often — computed from the audit_logs table.
+   */
+  async getAccessPatterns(
+    patientId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<{
+    accessors: Array<{
+      userId: string;
+      userName: string;
+      role: string;
+      accessCount: number;
+      lastAccess: string;
+      isAnomalous: boolean;
+    }>;
+    timeline: Array<{ date: string; count: number }>;
+    statistics: { totalAccesses: number; uniqueAccessors: number };
+  }> {
+    const params: any[] = [patientId];
+    let rangeClause = '';
+    if (startDate) {
+      params.push(startDate);
+      rangeClause += ` AND timestamp >= $${params.length}`;
+    }
+    if (endDate) {
+      params.push(endDate);
+      rangeClause += ` AND timestamp <= $${params.length}`;
+    }
+
+    const [accessors, timeline, totals] = await Promise.all([
+      pgQuery<any>(
+        `SELECT
+          user_id,
+          user_name,
+          user_role,
+          COUNT(*)::int AS access_count,
+          MAX(timestamp) AS last_access
+        FROM audit_logs
+        WHERE resource_id = $1${rangeClause}
+        GROUP BY user_id, user_name, user_role
+        ORDER BY access_count DESC`,
+        params
+      ),
+      pgQuery<any>(
+        `SELECT
+          date_trunc('day', timestamp) AS day,
+          COUNT(*)::int AS count
+        FROM audit_logs
+        WHERE resource_id = $1${rangeClause}
+        GROUP BY 1
+        ORDER BY 1`,
+        params
+      ),
+      pgQuery<any>(
+        `SELECT COUNT(*)::int AS total, COUNT(DISTINCT user_id)::int AS unique_accessors
+        FROM audit_logs
+        WHERE resource_id = $1${rangeClause}`,
+        params
+      ),
+    ]);
+
+    return {
+      accessors: accessors.map((row: any) => ({
+        userId: row.user_id,
+        userName: row.user_name,
+        role: row.user_role,
+        accessCount: row.access_count,
+        lastAccess: row.last_access,
+        isAnomalous: false,
+      })),
+      timeline: timeline.map((row: any) => ({
+        date: row.day,
+        count: row.count,
+      })),
+      statistics: {
+        totalAccesses: totals[0]?.total ?? 0,
+        uniqueAccessors: totals[0]?.unique_accessors ?? 0,
+      },
     };
   }
 

@@ -12,9 +12,10 @@ const userManagementService = getContainer().services.userManagement;
 const userRepo = getContainer().repositories.user;
 const registrationRepo = getContainer().repositories.registrationRequest;
 const auditRepo = getContainer().repositories.auditLog;
+const emailService = getContainer().services.email;
 
-// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
-const mockAuditLog = async (data: any) => {
+// Audit logging helper — writes hash-chained PostgreSQL record
+const writeAuditLog = async (data: any) => {
   await auditRepo.create(data);
 };
 
@@ -480,7 +481,7 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
     const resetToken = randomBytes(32).toString('hex');
     
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -494,9 +495,7 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
       hash: '',
     });
 
-    // Mock email notification
-    logger.debug(`[MOCK EMAIL] Password reset initiated for ${user.email}`);
-    logger.debug(`[MOCK EMAIL] Reset token: ${resetToken}`);
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
 
     res.status(200).json({
       message: 'Password reset initiated successfully',
@@ -558,7 +557,7 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
     const updatedUser = await userRepo.update(id, updateData);
 
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -572,8 +571,7 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
       hash: '',
     });
 
-    // Mock email notification
-    logger.debug(`[MOCK EMAIL] MFA ${enabled ? 'enabled' : 'disabled'} for ${user.email}`);
+    await emailService.sendMFAChangeNotification(user.email, user.name, enabled ? 'enabled' : 'disabled');
 
     res.status(200).json({
       message: `MFA ${enabled ? 'enabled' : 'disabled'} successfully`,

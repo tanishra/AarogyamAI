@@ -8,9 +8,11 @@ import { logger } from '../lib/logger';
 
 const router = Router();
 const auditRepo = getContainer().repositories.auditLog;
+const auditLogService = getContainer().services.auditLog;
+const anomalyService = getContainer().services.anomalyDetection;
 
 // Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
-const mockAuditLog = async (data: any) => {
+const writeAuditLog = async (data: any) => {
   await auditRepo.create(data);
 };
 
@@ -140,7 +142,7 @@ router.get('/logs/:id', async (req: Request, res: Response) => {
 
 /**
  * GET /api/audit/access-patterns/:patientId
- * Get access pattern analysis for a patient (mock for MVP)
+ * Get access pattern analysis for a patient 
  */
 router.get('/access-patterns/:patientId', async (req: Request, res: Response) => {
   try {
@@ -158,54 +160,18 @@ router.get('/access-patterns/:patientId', async (req: Request, res: Response) =>
 
     const { startDate, endDate } = validation.data;
 
-    // Mock data for MVP - placeholder response
-    const mockAccessPatterns = {
-      patientId,
-      dateRange: {
-        start: startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        end: endDate || new Date().toISOString(),
-      },
-      accessors: [
-        {
-          userId: 'user-1',
-          userName: 'Dr. Smith',
-          role: 'Doctor',
-          accessCount: 12,
-          lastAccess: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          purpose: 'Treatment',
-          isAnomalous: false,
-        },
-        {
-          userId: 'user-2',
-          userName: 'Nurse Johnson',
-          role: 'Nurse',
-          accessCount: 8,
-          lastAccess: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          purpose: 'Care coordination',
-          isAnomalous: false,
-        },
-      ],
-      timeline: [
-        { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), count: 3 },
-        { date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), count: 2 },
-        { date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), count: 4 },
-        { date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), count: 1 },
-        { date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), count: 5 },
-        { date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), count: 3 },
-        { date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), count: 2 },
-      ],
-      statistics: {
-        totalAccesses: 20,
-        uniqueAccessors: 2,
-        averageAccessFrequency: 10.0,
-        standardDeviation: 2.0,
-      },
-    };
+    const patterns = await auditRepo.getAccessPatterns(patientId, startDate, endDate);
 
     res.status(200).json({
-      message: 'Access patterns retrieved successfully (mock data)',
-      data: mockAccessPatterns,
-      note: 'This is placeholder data for MVP. Full implementation pending.',
+      message: 'Access patterns retrieved successfully',
+      data: {
+        patientId,
+        dateRange: {
+          start: startDate || null,
+          end: endDate || null,
+        },
+        ...patterns,
+      },
     });
   } catch (error) {
     logger.error('Error fetching access patterns:', { error });
@@ -218,42 +184,16 @@ router.get('/access-patterns/:patientId', async (req: Request, res: Response) =>
 
 /**
  * GET /api/audit/anomalies
- * Get unacknowledged anomaly alerts (mock for MVP)
+ * Get unacknowledged anomaly alerts 
  */
 router.get('/anomalies', async (_req: Request, res: Response) => {
   try {
-    // Mock data for MVP - placeholder response
-    const mockAnomalies = [
-      {
-        id: 'anomaly-1',
-        userId: 'user-3',
-        userName: 'Dr. Williams',
-        triggerCondition: 'high_frequency_access',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        details: {
-          recordCount: 55,
-          timeWindow: '60 minutes',
-        },
-        acknowledged: false,
-      },
-      {
-        id: 'anomaly-2',
-        userId: 'user-4',
-        userName: 'Nurse Davis',
-        triggerCondition: 'off_hours_access',
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        details: {
-          accessTime: '02:30 AM',
-        },
-        acknowledged: false,
-      },
-    ];
+    const anomalies = await anomalyService.getUnacknowledgedAlerts();
 
     res.status(200).json({
-      message: 'Anomaly alerts retrieved successfully (mock data)',
-      data: mockAnomalies,
-      count: mockAnomalies.length,
-      note: 'This is placeholder data for MVP. Full implementation pending.',
+      message: 'Anomaly alerts retrieved successfully',
+      data: anomalies,
+      count: anomalies.length,
     });
   } catch (error) {
     logger.error('Error fetching anomalies:', { error });
@@ -266,40 +206,24 @@ router.get('/anomalies', async (_req: Request, res: Response) => {
 
 /**
  * POST /api/audit/anomalies/:id/acknowledge
- * Acknowledge an anomaly alert (mock for MVP)
+ * Acknowledge an anomaly alert 
  */
 router.post('/anomalies/:id/acknowledge', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Mock acknowledgment for MVP
-    const mockAcknowledgedAnomaly = {
+    const acknowledged = await anomalyService.acknowledgeAnomaly(
       id,
-      acknowledged: true,
-      acknowledgedBy: req.user!.userId,
-      acknowledgedByName: req.user!.email,
-      acknowledgedAt: new Date().toISOString(),
-    };
-
-    // Create audit log entry
-    await mockAuditLog({
-      userId: req.user!.userId,
-      userName: req.user!.email,
-      userRole: req.user!.role,
-      actionType: 'anomaly_acknowledged',
-      resource: 'anomaly_alert',
-      resourceId: id,
-      outcome: 'success',
-      ipAddress: req.ip || 'unknown',
-      userAgent: req.headers['user-agent'] || 'unknown',
-      requestId: '',
-      hash: '',
-    });
+      req.user!.userId,
+      req.user!.email,
+      req.ip || 'unknown',
+      req.headers['user-agent'] || 'unknown',
+      ''
+    );
 
     res.status(200).json({
-      message: 'Anomaly alert acknowledged successfully (mock)',
-      data: mockAcknowledgedAnomaly,
-      note: 'This is placeholder functionality for MVP. Full implementation pending.',
+      message: 'Anomaly alert acknowledged successfully',
+      data: acknowledged,
     });
   } catch (error) {
     logger.error('Error acknowledging anomaly:', { error });
@@ -312,7 +236,7 @@ router.post('/anomalies/:id/acknowledge', async (req: Request, res: Response) =>
 
 /**
  * POST /api/audit/verify
- * Verify audit log integrity (mock for MVP)
+ * Verify audit log integrity via hash chain
  */
 router.post('/verify', async (req: Request, res: Response) => {
   try {
@@ -328,27 +252,31 @@ router.post('/verify', async (req: Request, res: Response) => {
 
     const { startDate, endDate } = validation.data;
 
-    // Mock verification for MVP
-    const mockVerificationResult = {
-      status: 'verified',
-      entriesVerified: 1250,
-      tamperedEntries: [],
+    const result = await auditLogService.verifyIntegrity(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined
+    );
+
+    const verificationResult = {
+      status: result.isValid ? 'verified' : 'tampered',
+      entriesVerified: result.totalEntries,
+      tamperedEntries: result.tamperedEntries,
+      detail: result.message,
       dateRange: {
-        start: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        end: endDate || new Date().toISOString(),
+        start: startDate || null,
+        end: endDate || null,
       },
       verifiedAt: new Date().toISOString(),
       verifiedBy: req.user!.userId,
     };
 
-    // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
       actionType: 'audit_log_verification',
       resource: 'audit_logs',
-      outcome: 'success',
+      outcome: result.isValid ? 'success' : 'failure',
       ipAddress: req.ip || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown',
       requestId: '',
@@ -356,9 +284,8 @@ router.post('/verify', async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
-      message: 'Audit log verification completed successfully (mock)',
-      data: mockVerificationResult,
-      note: 'This is placeholder functionality for MVP. Full implementation pending.',
+      message: 'Audit log verification completed',
+      data: verificationResult,
     });
   } catch (error) {
     logger.error('Error verifying audit logs:', { error });
@@ -371,7 +298,7 @@ router.post('/verify', async (req: Request, res: Response) => {
 
 /**
  * POST /api/audit/export
- * Export audit logs (mock for MVP)
+ * Export audit logs as CSV
  */
 router.post('/export', async (req: Request, res: Response) => {
   try {
@@ -387,27 +314,46 @@ router.post('/export', async (req: Request, res: Response) => {
 
     const { userId, actionType, resource, startDate, endDate } = validation.data;
 
-    // Mock export for MVP
-    const mockExportResult = {
+    const searchResult = await auditRepo.search({
+      userId,
+      actionType,
+      resource,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      limit: 10000,
+      page: 1,
+    });
+    const items = searchResult.items;
+
+    const header = 'id,user_id,user_name,user_role,action_type,resource,resource_id,outcome,ip_address,timestamp';
+    const escape = (v: unknown) => {
+      const s = v == null ? '' : String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const csv = [
+      header,
+      ...items.map((e: any) =>
+        [
+          e.id, e.userId, e.userName, e.userRole, e.actionType,
+          e.resource, e.resourceId, e.outcome, e.ipAddress, e.timestamp,
+        ].map(escape).join(',')
+      ),
+    ].join('\n');
+
+    const exportResult = {
       exportId: `export-${Date.now()}`,
       format: 'csv',
-      filters: {
-        userId,
-        actionType,
-        resource,
-        startDate,
-        endDate,
-      },
-      recordCount: 450,
-      fileSize: '2.3 MB',
-      downloadUrl: `https://mock-s3-bucket.s3.amazonaws.com/exports/audit-export-${Date.now()}.csv`,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+      filters: { userId, actionType, resource, startDate, endDate },
+      recordCount: items.length,
+      fileSize: `${(Buffer.byteLength(csv) / 1024).toFixed(1)} KB`,
       generatedAt: new Date().toISOString(),
       generatedBy: req.user!.userId,
+      csv,
     };
 
-    // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -421,9 +367,8 @@ router.post('/export', async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
-      message: 'Audit log export initiated successfully (mock)',
-      data: mockExportResult,
-      note: 'This is placeholder functionality for MVP. Full implementation pending.',
+      message: 'Audit log export completed',
+      data: exportResult,
     });
   } catch (error) {
     logger.error('Error exporting audit logs:', { error });

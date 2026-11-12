@@ -17,6 +17,15 @@ class EmailService {
     });
   }
 
+  async sendNotificationEmail(email: string, subject: string, text: string): Promise<void> {
+    await this.sendMail({
+      to: email,
+      subject,
+      html: `<p>${text}</p>`,
+      text,
+    });
+  }
+
   async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
     const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
 
@@ -34,8 +43,14 @@ class EmailService {
     });
   }
 
-  async sendRegistrationApprovalEmail(email: string, name: string): Promise<void> {
+  async sendRegistrationApprovalEmail(email: string, name: string, temporaryPassword?: string): Promise<void> {
     const loginUrl = `${config.frontendUrl}/login`;
+    const credentialsHtml = temporaryPassword
+      ? `<p><strong>Temporary password:</strong> ${temporaryPassword}</p><p>Please change your password after your first login.</p>`
+      : '';
+    const credentialsText = temporaryPassword
+      ? `\n\nTemporary password: ${temporaryPassword}\n\nPlease change your password after your first login.`
+      : '';
 
     await this.sendMail({
       to: email,
@@ -44,9 +59,10 @@ class EmailService {
         <h2>Registration Approved</h2>
         <p>Hello ${name},</p>
         <p>Your registration has been approved! You can now log in to AarogyamAI.</p>
+        ${credentialsHtml}
         <p><a href="${loginUrl}">Login Here</a></p>
       `,
-      text: `Registration Approved\n\nHello ${name},\n\nYour registration has been approved! You can now log in to AarogyamAI.\n\nLogin at: ${loginUrl}`,
+      text: `Registration Approved\n\nHello ${name},\n\nYour registration has been approved! You can now log in to AarogyamAI.${credentialsText}\n\nLogin at: ${loginUrl}`,
     });
   }
 

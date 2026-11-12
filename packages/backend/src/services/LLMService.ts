@@ -2,6 +2,9 @@ import OpenAI from 'openai';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { config } from '../config';
 import { logger } from '../lib/logger';
+import { stripPII } from './ai/piiStripper';
+import { filterLLMOutput } from './ai/outputFilter';
+import { LLMOutputBlockedError, PIIStripError } from '../lib/errors';
 
 /**
  * LLM Service for AI interactions
@@ -71,33 +74,60 @@ export class LLMService {
     logger.debug('[LLMService.chat] Provider:', this.provider);
     logger.debug('[LLMService.chat] Bedrock client exists:', !!this.bedrock);
     logger.debug('[LLMService.chat] OpenAI client exists:', !!this.openai);
-    
+
+    // Safety gate 1 — strip PII from every message before any provider call.
+    // If stripping fails we must NOT send the raw text: abort (fail closed).
+    const sanitizedMessages = this.sanitizeMessages(messages);
+
+    const response = await this.dispatch(sanitizedMessages, options);
+
+    // Safety gate 2 — filter all LLM output before it leaves this service.
+    // Blocked output never reaches callers or dashboards.
+    const filtered = filterLLMOutput(response.content);
+    if (filtered.blocked) {
+      logger.warn('[LLMService.chat] LLM output blocked by safety filter', {
+        matchedCategories: filtered.matchedCategories,
+        outputHash: filtered.outputHash,
+      });
+      throw new LLMOutputBlockedError(filtered.matchedCategories);
+    }
+
+    return { ...response, content: filtered.text };
+  }
+
+  /**
+   * Provider dispatch — extracted so the safety gates in `chat()` wrap every
+   * provider call uniformly. Never call this directly with unsanitized input.
+   */
+  private async dispatch(messages: ChatMessage[], options?: {
+    temperature?: number;
+    maxTokens?: number;
+    model?: string;
+  }): Promise<LLMResponse> {
     // Hybrid mode: try Bedrock first, fallback to OpenAI
     if (this.provider === 'hybrid') {
       if (this.bedrock) {
         try {
-          logger.debug('[LLMService.chat] Trying Bedrock first (hybrid mode)');
+          logger.debug('[LLMService.dispatch] Trying Bedrock first (hybrid mode)');
           return await this.chatBedrock(messages, options);
         } catch (error) {
-          logger.warn('[LLMService.chat] Bedrock failed, falling back to OpenAI:', error);
+          logger.warn('[LLMService.dispatch] Bedrock failed, falling back to OpenAI:', error);
           if (this.openai) {
             return await this.chatOpenAI(messages, options);
           }
           throw new Error('Both Bedrock and OpenAI failed. Please check your configuration.');
         }
       } else if (this.openai) {
-        logger.debug('[LLMService.chat] Bedrock not available, using OpenAI');
+        logger.debug('[LLMService.dispatch] Bedrock not available, using OpenAI');
         return await this.chatOpenAI(messages, options);
       }
       throw new Error('No LLM provider configured. Please set OPENAI_API_KEY or AWS credentials.');
     }
-    
-    // Bedrock-only mode
+
     if (this.provider === 'bedrock') {
       return this.chatBedrock(messages, options);
     }
 
-    // OpenAI-only mode
     if (this.provider === 'openai') {
       if (!this.openai) {
         throw new Error('LLM service not configured. Please set OPENAI_API_KEY in environment.');
@@ -106,6 +136,36 @@ export class LLMService {
     }
 
     throw new Error('Invalid AI provider configuration');
+  }
+
+  /**
+   * Strip PII from all message content. Fail closed: any strip failure
+   * aborts the call — unstripped text must never reach an LLM provider.
+   * Only input hashes and category names are logged, never raw content.
+   */
+  private sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
+    return messages.map((message) => {
+      if (!message.content) {
+        return message;
+      }
+      try {
+        const result = stripPII(message.content);
+        if (result.wasModified) {
+          logger.info('[LLMService] PII stripped from LLM input', {
+            role: message.role,
+            categoriesFound: result.categoriesFound,
+            inputHash: result.inputHash,
+          });
+        }
+        return { ...message, content: result.strippedText };
+      } catch (error) {
+        logger.error('[LLMService] PII stripping failed — aborting LLM call', {
+          role: message.role,
+          error: error instanceof Error ? error.message : error,
+        });
+        throw new PIIStripError();
+      }
+    });
   }
 
   /**
@@ -275,12 +335,21 @@ Remember: You are gathering information for the doctor, not providing medical ad
       { role: 'user', content: userMessage },
     ];
 
-    const response = await this.chat(messages, {
-      temperature: 0.8,
-      maxTokens: 300,
-    });
-
-    return response.content;
+    try {
+      const response = await this.chat(messages, {
+        temperature: 0.8,
+        maxTokens: 300,
+      });
+      return response.content;
+    } catch (error) {
+      // Safe fallback (text_llm → fixed chain): a blocked or failed LLM call
+      // degrades to a fixed safe message rather than surfacing unsafe output
+      // or a hard failure mid-conversation.
+      logger.warn('[LLMService.patientChat] Falling back to fixed safe response', {
+        reason: error instanceof Error ? error.name : 'unknown',
+      });
+      return "Thank you for sharing that. I'm noting it down for the doctor to review. Could you tell me more about your symptoms?";
+    }
   }
 
   /**

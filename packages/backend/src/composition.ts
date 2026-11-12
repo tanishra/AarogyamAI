@@ -7,6 +7,7 @@ import { clinicalRepository } from './repositories/ClinicalRepository';
 import { ConsentRepository } from './repositories/ConsentRepository';
 import { DataAccessRequestRepository } from './repositories/DataAccessRequestRepository';
 import { GrievanceRepository } from './repositories/GrievanceRepository';
+import { MetricsRepository } from './repositories/MetricsRepository';
 import { RegistrationRequestRepository } from './repositories/RegistrationRequestRepository';
 import { UserRepository } from './repositories/UserRepository';
 import { vitalsRepository } from './repositories/VitalsRepository';
@@ -16,6 +17,7 @@ import { ConsentGrievanceService } from './services/ConsentGrievanceService';
 import { CriticalAlertingService } from './services/CriticalAlertingService';
 import { DifferentialManager } from './services/DifferentialManager';
 import { llmService } from './services/LLMService';
+import { emailService } from './services/EmailService';
 import { MetricsService } from './services/MetricsService';
 import { QuestionnaireSessionManager } from './services/QuestionnaireSessionManager';
 import { ReportService } from './services/ReportService';
@@ -37,6 +39,7 @@ export interface Container {
     consent: ConsentRepository;
     dataAccessRequest: DataAccessRequestRepository;
     grievance: GrievanceRepository;
+    metrics: MetricsRepository;
     registrationRequest: RegistrationRequestRepository;
     user: UserRepository;
     vitals: typeof vitalsRepository;
@@ -48,6 +51,7 @@ export interface Container {
     criticalAlerting: CriticalAlertingService;
     differentialManager: DifferentialManager;
     llm: typeof llmService;
+    email: typeof emailService;
     metrics: MetricsService;
     questionnaireSession: QuestionnaireSessionManager;
     report: ReportService;
@@ -78,6 +82,7 @@ export function getContainer(): Container {
       consent: new ConsentRepository(),
       dataAccessRequest: new DataAccessRequestRepository(),
       grievance: new GrievanceRepository(),
+      metrics: new MetricsRepository(pool),
       registrationRequest: registrationRepo,
       user: userRepo,
       vitals: vitalsRepository,
@@ -89,11 +94,12 @@ export function getContainer(): Container {
       criticalAlerting: new CriticalAlertingService(pool),
       differentialManager: new DifferentialManager(pool),
       llm: llmService,
+      email: emailService,
       metrics: new MetricsService(pool),
       questionnaireSession: new QuestionnaireSessionManager(pool),
       report: new ReportService(pool),
       session: new SessionManager(pool),
-      userManagement: new UserManagementService(userRepo, registrationRepo, auditLogRepo),
+      userManagement: new UserManagementService(userRepo, registrationRepo, auditLogRepo, emailService),
       vitals: new VitalsService(pool),
     },
   };

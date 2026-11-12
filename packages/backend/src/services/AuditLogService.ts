@@ -1,5 +1,5 @@
-import { createHash } from 'crypto';
 import { Pool } from 'pg';
+import { computeAuditHash } from '../lib/auditHash';
 
 interface AuditLogEntry {
   userId: string;
@@ -30,14 +30,26 @@ export class AuditLogService {
   }
 
   /**
-   * Compute SHA-256 hash for audit log entry with hash chaining
+   * Compute SHA-256 hash for audit log entry with hash chaining.
+   * Hashes the canonical field set that verifyIntegrity reconstructs.
    */
   private computeHash(entry: AuditLogEntry, previousHash: string | null): string {
-    const data = JSON.stringify({
-      ...entry,
-      previousHash,
-    });
-    return createHash('sha256').update(data).digest('hex');
+    return computeAuditHash(
+      {
+        userId: entry.userId,
+        userName: entry.userName,
+        userRole: entry.userRole,
+        actionType: entry.actionType,
+        resource: entry.resource,
+        resourceId: entry.resourceId,
+        outcome: entry.outcome,
+        ipAddress: entry.ipAddress,
+        userAgent: entry.userAgent,
+        requestId: entry.requestId,
+        errorDetails: entry.errorDetails,
+      },
+      previousHash
+    );
   }
 
   /**
@@ -49,9 +61,9 @@ export class AuditLogService {
     try {
       await client.query('BEGIN');
 
-      // Get the last entry's hash
+      // Get the last entry's hash — locked so concurrent writers cannot fork the chain
       const lastEntryResult = await client.query(
-        'SELECT hash FROM audit_logs ORDER BY timestamp DESC LIMIT 1'
+        'SELECT hash FROM audit_logs ORDER BY timestamp DESC, id DESC LIMIT 1 FOR UPDATE'
       );
       const previousHash = lastEntryResult.rows.length > 0 ? lastEntryResult.rows[0].hash : null;
 

@@ -227,7 +227,7 @@ export class AnomalyDetectionService {
     const result = await this.pool.query(
       `SELECT * FROM anomaly_alerts 
        WHERE acknowledged = false 
-       ORDER BY timestamp DESC`
+       ORDER BY created_at DESC`
     );
 
     return result.rows;

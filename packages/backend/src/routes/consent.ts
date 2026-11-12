@@ -5,6 +5,7 @@ import { requireAdminOrDPO } from '../auth/authorizationMiddleware';
 import { randomBytes } from 'crypto';
 
 import { getContainer } from '../composition';
+import { workflowRepository } from '../repositories/WorkflowRepository';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -12,9 +13,11 @@ const consentRepo = getContainer().repositories.consent;
 const grievanceRepo = getContainer().repositories.grievance;
 const dataAccessRepo = getContainer().repositories.dataAccessRequest;
 const auditRepo = getContainer().repositories.auditLog;
+const userRepo = getContainer().repositories.user;
+const emailService = getContainer().services.email;
 
-// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
-const mockAuditLog = async (data: any) => {
+// Audit logging helper — writes hash-chained PostgreSQL record
+const writeAuditLog = async (data: any) => {
   await auditRepo.create(data);
 };
 
@@ -141,7 +144,7 @@ router.post('/consent/withdrawal-requests/:id/process', async (req: Request, res
     }
 
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -155,8 +158,19 @@ router.post('/consent/withdrawal-requests/:id/process', async (req: Request, res
       hash: '',
     });
 
-    // Mock email notification
-    logger.debug(`[MOCK EMAIL] Consent withdrawal confirmed for patient ${withdrawalRequest.patient_id}`);
+    // Best-effort notification — the withdrawal is already committed
+    try {
+      const withdrawalPatient = await userRepo.findById(withdrawalRequest.patient_id);
+      if (withdrawalPatient?.email) {
+        await emailService.sendNotificationEmail(
+          withdrawalPatient.email,
+          'Consent Withdrawal Confirmed',
+          'Your consent withdrawal request has been processed.'
+        );
+      }
+    } catch (error) {
+      logger.error('Failed to send consent withdrawal notification:', { error });
+    }
 
     res.status(200).json({
       message: 'Consent withdrawal processed successfully',
@@ -237,7 +251,7 @@ router.put('/grievances/:id', async (req: Request, res: Response) => {
     const updatedGrievance = await grievanceRepo.updateStatus(id, updateData);
 
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -251,9 +265,20 @@ router.put('/grievances/:id', async (req: Request, res: Response) => {
       hash: '',
     });
 
-    // Send email notification if resolved
+    // Best-effort notification if resolved — the update is already committed
     if (status === 'resolved') {
-      logger.debug(`[MOCK EMAIL] Grievance resolved notification sent to patient ${existingGrievance.patient_id}`);
+      try {
+        const grievancePatient = await userRepo.findById(existingGrievance.patient_id);
+        if (grievancePatient?.email) {
+          await emailService.sendNotificationEmail(
+            grievancePatient.email,
+            'Grievance Resolved',
+            'Your grievance has been reviewed and resolved.'
+          );
+        }
+      } catch (error) {
+        logger.error('Failed to send grievance resolution notification:', { error });
+      }
     }
 
     res.status(200).json({
@@ -327,7 +352,7 @@ router.put('/data-access-requests/:id/fulfill', async (req: Request, res: Respon
     }
 
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -341,8 +366,19 @@ router.put('/data-access-requests/:id/fulfill', async (req: Request, res: Respon
       hash: '',
     });
 
-    // Mock email notification
-    logger.debug(`[MOCK EMAIL] Data access request fulfilled for patient ${fulfilledRequest.patient_id}`);
+    // Best-effort notification — the request is already fulfilled
+    try {
+      const accessPatient = await userRepo.findById(fulfilledRequest.patient_id);
+      if (accessPatient?.email) {
+        await emailService.sendNotificationEmail(
+          accessPatient.email,
+          'Data Access Request Fulfilled',
+          'Your data access request has been fulfilled.'
+        );
+      }
+    } catch (error) {
+      logger.error('Failed to send data access fulfillment notification:', { error });
+    }
 
     res.status(200).json({
       message: 'Data access request fulfilled successfully',
@@ -375,8 +411,9 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
 
     const { startDate, endDate, format } = validation.data;
 
-    // Mock compliance report generation for MVP
-    const mockReport = {
+    const summary = await workflowRepository.getComplianceSummary(startDate, endDate);
+
+    const report = {
       reportId: `report-${Date.now()}`,
       format,
       dateRange: {
@@ -384,45 +421,18 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
         end: endDate,
       },
       summary: {
-        consentRecords: {
-          total: 1250,
-          active: 1100,
-          withdrawn: 120,
-          expired: 30,
-        },
-        withdrawalRequests: {
-          total: 45,
-          processed: 42,
-          pending: 3,
-          avgProcessingTime: '18 hours',
-        },
-        grievances: {
-          total: 12,
-          pending: 2,
-          investigating: 3,
-          resolved: 6,
-          escalated: 1,
-          avgResolutionTime: '5 days',
-        },
-        dataAccessRequests: {
-          total: 28,
-          pending: 4,
-          fulfilled: 24,
-          avgFulfillmentTime: '48 hours',
-        },
+        ...summary,
         dataBreaches: {
           total: 0,
           incidents: [],
         },
       },
-      downloadUrl: `https://mock-s3-bucket.s3.amazonaws.com/reports/compliance-${Date.now()}.${format}`,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
       generatedAt: new Date().toISOString(),
       generatedBy: req.user!.userId,
     };
 
     // Create audit log entry
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -436,9 +446,8 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
-      message: 'Compliance report generated successfully (mock)',
-      data: mockReport,
-      note: 'This is placeholder functionality for MVP. Full implementation pending.',
+      message: 'Compliance report generated successfully',
+      data: report,
     });
   } catch (error) {
     logger.error('Error generating compliance report:', { error });

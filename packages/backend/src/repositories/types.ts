@@ -102,7 +102,7 @@ export interface AuditLogEntry {
   userAgent: string;
   requestId: string;
   hash: string;
-  previousHash?: string;
+  previousHash?: string | null;
 }
 
 export interface SearchFilters {

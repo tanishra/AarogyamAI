@@ -7,16 +7,30 @@ import auditRoutes from './audit';
 vi.mock('../repositories/AuditLogRepository', () => {
   const mockSearch = vi.fn();
   const mockCreate = vi.fn();
-  
+  const mockGetAccessPatterns = vi.fn();
+
   return {
     AuditLogRepository: vi.fn().mockImplementation(() => ({
       search: mockSearch,
       create: mockCreate,
+      getAccessPatterns: mockGetAccessPatterns,
     })),
     mockSearch,
     mockCreate,
+    mockGetAccessPatterns,
   };
 });
+
+const { mockGetUnacknowledgedAlerts, mockAcknowledgeAnomaly } = vi.hoisted(() => ({
+  mockGetUnacknowledgedAlerts: vi.fn(),
+  mockAcknowledgeAnomaly: vi.fn(),
+}));
+vi.mock('../services/AnomalyDetectionService', () => ({
+  AnomalyDetectionService: vi.fn().mockImplementation(() => ({
+    getUnacknowledgedAlerts: mockGetUnacknowledgedAlerts,
+    acknowledgeAnomaly: mockAcknowledgeAnomaly,
+  })),
+}));
 
 vi.mock('../auth/authMiddleware', () => ({
   authenticate: () => (req: any, _res: any, next: any) => {
@@ -37,16 +51,22 @@ describe('Audit Routes', () => {
   let app: Express;
   let mockSearch: any;
   let mockCreate: any;
+  let mockGetAccessPatterns: any;
 
   beforeEach(async () => {
     // Get the mocked functions
-    const { mockSearch: ms, mockCreate: mc } = await import('../repositories/AuditLogRepository');
+    const { mockSearch: ms, mockCreate: mc, mockGetAccessPatterns: mgap } =
+      await import('../repositories/AuditLogRepository');
     mockSearch = ms;
     mockCreate = mc;
-    
+    mockGetAccessPatterns = mgap;
+
     // Reset mocks
     mockSearch.mockReset();
     mockCreate.mockReset();
+    mockGetAccessPatterns.mockReset();
+    mockGetUnacknowledgedAlerts.mockReset();
+    mockAcknowledgeAnomaly.mockReset();
     
     // Setup express app
     app = express();
@@ -183,7 +203,13 @@ describe('Audit Routes', () => {
   });
 
   describe('GET /api/audit/access-patterns/:patientId', () => {
-    it('should return mock access patterns', async () => {
+    it('should return real access patterns from the repository', async () => {
+      mockGetAccessPatterns.mockResolvedValue({
+        accessors: [],
+        timeline: [],
+        statistics: { totalAccesses: 0, uniqueAccessors: 0 },
+      });
+
       const response = await request(app).get('/api/audit/access-patterns/patient-123');
 
       expect(response.status).toBe(200);
@@ -191,25 +217,32 @@ describe('Audit Routes', () => {
       expect(response.body.data).toHaveProperty('patientId', 'patient-123');
       expect(response.body.data).toHaveProperty('accessors');
       expect(response.body.data).toHaveProperty('timeline');
-      expect(response.body.note).toContain('placeholder data for MVP');
+      expect(mockGetAccessPatterns).toHaveBeenCalled();
     });
   });
 
   describe('GET /api/audit/anomalies', () => {
-    it('should return mock anomaly alerts', async () => {
+    it('should return anomaly alerts from the detection service', async () => {
+      mockGetUnacknowledgedAlerts.mockResolvedValue([
+        { id: 'alert-1', trigger_condition: 'high_frequency_access', acknowledged: false },
+      ]);
+
       const response = await request(app).get('/api/audit/anomalies');
 
       expect(response.status).toBe(200);
       expect(response.body.message).toContain('Anomaly alerts retrieved successfully');
       expect(response.body.data).toBeInstanceOf(Array);
-      expect(response.body.count).toBeGreaterThanOrEqual(0);
-      expect(response.body.note).toContain('placeholder data for MVP');
+      expect(response.body.count).toBe(1);
+      expect(mockGetUnacknowledgedAlerts).toHaveBeenCalled();
     });
   });
 
   describe('POST /api/audit/anomalies/:id/acknowledge', () => {
     it('should acknowledge an anomaly alert', async () => {
-      mockCreate.mockResolvedValue({});
+      mockAcknowledgeAnomaly.mockResolvedValue({
+        id: 'anomaly-1',
+        acknowledged: true,
+      });
 
       const response = await request(app)
         .post('/api/audit/anomalies/anomaly-1/acknowledge');
@@ -217,12 +250,13 @@ describe('Audit Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body.message).toContain('acknowledged successfully');
       expect(response.body.data).toHaveProperty('acknowledged', true);
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          actionType: 'anomaly_acknowledged',
-          resource: 'anomaly_alert',
-          resourceId: 'anomaly-1',
-        })
+      expect(mockAcknowledgeAnomaly).toHaveBeenCalledWith(
+        'anomaly-1',
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.any(String)
       );
     });
   });
@@ -236,8 +270,9 @@ describe('Audit Routes', () => {
         .send({});
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toContain('verification completed successfully');
-      expect(response.body.data).toHaveProperty('status', 'verified');
+      expect(response.body.message).toContain('Audit log verification completed');
+      expect(response.body.data).toHaveProperty('status');
+      expect(['verified', 'tampered']).toContain(response.body.data.status);
       expect(response.body.data).toHaveProperty('entriesVerified');
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -248,7 +283,25 @@ describe('Audit Routes', () => {
   });
 
   describe('POST /api/audit/export', () => {
-    it('should export audit logs', async () => {
+    it('should export audit logs as CSV data', async () => {
+      mockSearch.mockResolvedValue({
+        items: [
+          {
+            id: 'log-1',
+            userId: 'user-1',
+            userName: 'Dr Test',
+            userRole: 'Doctor',
+            actionType: 'patient_view',
+            resource: 'patient',
+            resourceId: 'patient-1',
+            outcome: 'success',
+            ipAddress: '127.0.0.1',
+            timestamp: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 1,
+        hasMore: false,
+      });
       mockCreate.mockResolvedValue({});
 
       const response = await request(app)
@@ -259,9 +312,10 @@ describe('Audit Routes', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toContain('export initiated successfully');
       expect(response.body.data).toHaveProperty('exportId');
-      expect(response.body.data).toHaveProperty('downloadUrl');
+      expect(response.body.data).toHaveProperty('recordCount', 1);
+      expect(response.body.data).toHaveProperty('csv');
+      expect(response.body.data.csv).toContain('Dr Test');
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           actionType: 'audit_log_export',

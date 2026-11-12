@@ -466,7 +466,7 @@ describe('Consent Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body.message).toContain('Compliance report generated successfully');
       expect(response.body.data).toHaveProperty('reportId');
-      expect(response.body.data).toHaveProperty('downloadUrl');
+      expect(response.body.data).toHaveProperty('summary');
       expect(response.body.data.dateRange).toEqual({
         start: startDate,
         end: endDate,

@@ -6,6 +6,7 @@ import { createSession, invalidateSession } from '../auth/session';
 import { blacklistToken } from '../auth/session';
 import { authenticate } from '../auth/authMiddleware';
 import { randomBytes } from 'crypto';
+import speakeasy from 'speakeasy';
 
 import { getContainer } from '../composition';
 import { logger } from '../lib/logger';
@@ -14,8 +15,8 @@ const router = Router();
 const userRepo = getContainer().repositories.user;
 const auditRepo = getContainer().repositories.auditLog;
 
-// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
-const mockAuditLog = async (data: any) => {
+// Audit logging helper — writes hash-chained PostgreSQL record
+const writeAuditLog = async (data: any) => {
   await auditRepo.create(data);
 };
 
@@ -82,7 +83,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     });
 
     // Create audit log
-    await mockAuditLog({
+    await writeAuditLog({
       userId: user.id,
       userName: user.email,
       userRole: user.role,
@@ -164,7 +165,7 @@ router.post('/login', async (req: Request, res: Response) => {
     
     if (!user) {
       // Create audit log for failed login
-      await mockAuditLog({
+      await writeAuditLog({
         userId: 'anonymous',
         userName: email,
         userRole: 'Unknown',
@@ -188,7 +189,7 @@ router.post('/login', async (req: Request, res: Response) => {
     // Check if account is active
     if (!user.is_active) {
       // Create audit log for deactivated account login attempt
-      await mockAuditLog({
+      await writeAuditLog({
         userId: user.id,
         userName: user.email,
         userRole: user.role,
@@ -214,7 +215,7 @@ router.post('/login', async (req: Request, res: Response) => {
     
     if (!passwordValid) {
       // Create audit log for failed login
-      await mockAuditLog({
+      await writeAuditLog({
         userId: user.id,
         userName: user.email,
         userRole: user.role,
@@ -273,7 +274,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     // Create audit log for successful login
-    await mockAuditLog({
+    await writeAuditLog({
       userId: user.id,
       userName: user.email,
       userRole: user.role,
@@ -329,7 +330,7 @@ router.post('/logout', authenticate({}), async (req: Request, res: Response) => 
     }
 
     // Create audit log for logout
-    await mockAuditLog({
+    await writeAuditLog({
       userId: req.user!.userId,
       userName: req.user!.email,
       userRole: req.user!.role,
@@ -452,12 +453,25 @@ router.post('/mfa-verify', async (req: Request, res: Response) => {
       return;
     }
 
-    // Mock MFA verification (in production, verify TOTP or SMS code)
-    const isValidCode = code === '123456'; // Mock verification
+    // Real TOTP verification against the user's stored secret
+    if (!user.mfa_enabled || !user.mfa_secret) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'MFA is not enabled for this account',
+      });
+      return;
+    }
+
+    const isValidCode = speakeasy.totp.verify({
+      secret: user.mfa_secret,
+      encoding: 'base32',
+      token: code,
+      window: 1, // accept one 30s step either side for clock drift
+    });
     
     if (!isValidCode) {
       // Create audit log for failed MFA
-      await mockAuditLog({
+      await writeAuditLog({
         userId: user.id,
         userName: user.email,
         userRole: user.role,
@@ -507,7 +521,7 @@ router.post('/mfa-verify', async (req: Request, res: Response) => {
     });
 
     // Create audit log for successful MFA verification
-    await mockAuditLog({
+    await writeAuditLog({
       userId: user.id,
       userName: user.email,
       userRole: user.role,
@@ -585,7 +599,7 @@ router.post('/password-reset/request', async (req: Request, res: Response) => {
     await passwordResetService.initiatePasswordReset(user.email, user.id);
 
     // Create audit log
-    await mockAuditLog({
+    await writeAuditLog({
       userId: user.id,
       userName: user.email,
       userRole: user.role,
@@ -663,7 +677,7 @@ router.post('/password-reset/confirm', async (req: Request, res: Response) => {
 
     // Create audit log
     if (user) {
-      await mockAuditLog({
+      await writeAuditLog({
         userId: user.id,
         userName: user.email,
         userRole: user.role,

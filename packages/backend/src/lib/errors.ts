@@ -42,6 +42,24 @@ export class ConflictError extends AppError {
   }
 }
 
+/** Thrown when LLM output is blocked by the clinical safety filter — fail closed */
+export class LLMOutputBlockedError extends AppError {
+  readonly matchedCategories: string[];
+  constructor(matchedCategories: string[] = []) {
+    super('AI response was blocked by the clinical safety filter', 502);
+    this.name = 'LLMOutputBlockedError';
+    this.matchedCategories = matchedCategories;
+  }
+}
+
+/** Thrown when PII stripping fails — the caller must never send the raw text */
+export class PIIStripError extends AppError {
+  constructor(message = 'Failed to sanitize input for AI processing') {
+    super(message, 500);
+    this.name = 'PIIStripError';
+  }
+}
+
 /**
  * Wraps async route handlers so rejections reach the global error handler
  * instead of producing unhandled rejections / hung requests.

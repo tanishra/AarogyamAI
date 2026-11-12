@@ -362,6 +362,77 @@ export class WorkflowRepository {
     const rows = await query('SELECT id, name, email FROM users WHERE id = $1', [userId]);
     return rows[0] ?? null;
   }
+
+  /**
+   * Compliance aggregates across consent_records, withdrawal requests,
+   * grievances, and data access requests for the compliance report.
+   */
+  async getComplianceSummary(startDate?: string, endDate?: string): Promise<{
+    consentRecords: { total: number; active: number; withdrawn: number; expired: number };
+    withdrawalRequests: { total: number; processed: number; pending: number };
+    grievances: {
+      total: number;
+      pending: number;
+      investigating: number;
+      resolved: number;
+      escalated: number;
+    };
+    dataAccessRequests: { total: number; pending: number; fulfilled: number };
+  }> {
+    const range = (col: string) => {
+      const clauses: string[] = [];
+      if (startDate) clauses.push(`${col} >= '${startDate}'`);
+      if (endDate) clauses.push(`${col} <= '${endDate}'`);
+      return clauses.length ? ` AND ${clauses.join(' AND ')}` : '';
+    };
+
+    const [consent, withdrawals, grievanceRows, darRows] = await Promise.all([
+      query<any>(
+        `SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'active')::int AS active,
+          COUNT(*) FILTER (WHERE status = 'withdrawn')::int AS withdrawn,
+          COUNT(*) FILTER (WHERE status = 'expired')::int AS expired
+        FROM consent_records WHERE 1=1${range('granted_at')}`
+      ),
+      query<any>(
+        `SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'processed')::int AS processed,
+          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending
+        FROM consent_withdrawal_requests WHERE 1=1${range('requested_at')}`
+      ),
+      query<any>(
+        `SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+          COUNT(*) FILTER (WHERE status = 'investigating')::int AS investigating,
+          COUNT(*) FILTER (WHERE status = 'resolved')::int AS resolved,
+          COUNT(*) FILTER (WHERE status = 'escalated')::int AS escalated
+        FROM grievances WHERE 1=1${range('submitted_at')}`
+      ),
+      query<any>(
+        `SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+          COUNT(*) FILTER (WHERE status = 'fulfilled')::int AS fulfilled
+        FROM data_access_requests WHERE 1=1${range('submitted_at')}`
+      ),
+    ]);
+
+    return {
+      consentRecords: consent[0] ?? { total: 0, active: 0, withdrawn: 0, expired: 0 },
+      withdrawalRequests: withdrawals[0] ?? { total: 0, processed: 0, pending: 0 },
+      grievances: grievanceRows[0] ?? {
+        total: 0,
+        pending: 0,
+        investigating: 0,
+        resolved: 0,
+        escalated: 0,
+      },
+      dataAccessRequests: darRows[0] ?? { total: 0, pending: 0, fulfilled: 0 },
+    };
+  }
 }
 
 export const workflowRepository = new WorkflowRepository();

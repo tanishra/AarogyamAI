@@ -40,7 +40,7 @@ vi.mock('../auth/authorizationMiddleware', () => ({
 
 vi.mock('../config/database', () => ({
   query: (...args: any[]) => mockQuery(...args),
-  getDatabasePool: () => ({}),
+  getDatabasePool: () => ({ query: vi.fn().mockResolvedValue({ rows: [] }) }),
   createDatabasePool: () => ({}),
   closeDatabasePool: vi.fn(),
   checkDatabaseHealth: vi.fn(async () => true),

@@ -4,6 +4,7 @@ import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { invalidateUserSessions } from '../auth/session';
 import { User, RegistrationRequest } from '../repositories/types';
 import { randomBytes } from 'crypto';
+import bcrypt from 'bcrypt';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { EmailService } from './EmailService';
@@ -76,15 +77,18 @@ export class UserManagementService {
   private userRepo: UserRepository;
   private registrationRepo: RegistrationRequestRepository;
   private auditRepo: AuditLogRepository;
+  private emailService: EmailService;
 
   constructor(
     userRepo?: UserRepository,
     registrationRepo?: RegistrationRequestRepository,
-    auditRepo?: AuditLogRepository
+    auditRepo?: AuditLogRepository,
+    emailService?: EmailService
   ) {
     this.userRepo = userRepo ?? new UserRepository();
     this.registrationRepo = registrationRepo ?? new RegistrationRequestRepository();
     this.auditRepo = auditRepo ?? new AuditLogRepository();
+    this.emailService = emailService ?? new EmailService();
   }
 
   /**
@@ -104,9 +108,9 @@ export class UserManagementService {
       throw new Error(`Registration request already ${request.status}`);
     }
 
-    // Generate temporary password (in production, this would be sent via email)
+    // Generate temporary password and store a real bcrypt hash
     const tempPassword = randomBytes(16).toString('hex');
-    const password_hash = `$2b$10$${tempPassword}`; // Mock hash for MVP
+    const password_hash = await bcrypt.hash(tempPassword, 10);
 
     // Approve request and create user account (atomic transaction)
     const result = await this.registrationRepo.approve(
@@ -135,9 +139,16 @@ export class UserManagementService {
       hash: '', // Hash will be computed by audit service
     });
 
-    // Mock email notification (in production, send actual email)
-    logger.debug(`[MOCK EMAIL] Registration approved for ${result.user.email}`);
-    logger.debug(`[MOCK EMAIL] Temporary password: ${tempPassword}`);
+    // Notify the approved user with their temporary credentials
+    try {
+      await this.emailService.sendRegistrationApprovalEmail(
+        result.user.email,
+        result.user.name,
+        tempPassword
+      );
+    } catch (error) {
+      logger.error('Failed to send registration approval email:', { error });
+    }
 
     return result;
   }
@@ -182,9 +193,16 @@ export class UserManagementService {
       hash: '', // Hash will be computed by audit service
     });
 
-    // Mock email notification (in production, send actual email)
-    logger.debug(`[MOCK EMAIL] Registration rejected for ${rejectedRequest.email}`);
-    logger.debug(`[MOCK EMAIL] Reason: ${params.reason}`);
+    // Notify the rejected applicant
+    try {
+      await this.emailService.sendRegistrationRejectionEmail(
+        rejectedRequest.email,
+        rejectedRequest.applicant_name,
+        params.reason
+      );
+    } catch (error) {
+      logger.error('Failed to send registration rejection email:', { error });
+    }
 
     return rejectedRequest;
   }
@@ -376,8 +394,7 @@ export class UserManagementService {
     }
 
     // Send email notification
-    const emailService = new EmailService();
-    await emailService.sendMFAEnabledEmail(user.email, user.name);
+        await this.emailService.sendMFAEnabledEmail(user.email, user.name);
 
     // Create audit log entry
     await this.auditRepo.create({
@@ -425,8 +442,7 @@ export class UserManagementService {
     }
 
     // Send email notification
-    const emailService = new EmailService();
-    await emailService.sendMFADisabledEmail(user.email, user.name);
+        await this.emailService.sendMFADisabledEmail(user.email, user.name);
 
     // Create audit log entry
     await this.auditRepo.create({
@@ -475,8 +491,7 @@ export class UserManagementService {
     await invalidateUserSessions(params.userId);
 
     // Send email notification
-    const emailService = new EmailService();
-    await emailService.sendMFAReenrollmentEmail(user.email, user.name);
+        await this.emailService.sendMFAReenrollmentEmail(user.email, user.name);
 
     // Create audit log entry
     await this.auditRepo.create({

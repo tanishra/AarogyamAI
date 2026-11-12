@@ -65,8 +65,10 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
 - [x] Phase 2: backend layering — `src/composition.ts` container,
       `WorkflowRepository`/`ProfileRepository` own all route SQL,
       zod-validated config, winston logger, typed errors + `asyncHandler`
-- [ ] Phase 3: real audit writes, real TOTP MFA, AI pipeline
-      (PII→LLM→filter→fallback)
+- [x] Phase 3: real audit writes (PostgreSQL hash-chain + tamper-evident
+      `verifyIntegrity`), real TOTP MFA via speakeasy, real email
+      notifications, real metrics aggregation, AI pipeline
+      (PII→LLM→filter→fallback) enforced inside `LLMService.chat`
 - [ ] Phase 4: DB consolidation (`vitals`/`vital_signs`,
       `differentials`/`clinical_considerations`) + schema doc
 - [ ] Phase 5: frontend dedup + typed API layer
