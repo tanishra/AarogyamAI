@@ -72,6 +72,9 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
 - [x] Phase 4: DB consolidation — `vitals`→`vital_signs`,
       `clinical_considerations`→`differentials` (migration 019 +
       rollback); `docs/SCHEMA.md`
-- [ ] Phase 5: frontend dedup + typed API layer
+- [x] Phase 5: frontend dedup — `/audit`, `/metrics`, `/dpo` are the
+      canonical pages; deleted `/admin/audit` + `/admin/metrics` dupes
+      and 11 orphaned `components/admin/*` pair files; typed API
+      services (`lib/api/services/*`) already in use throughout
 - [ ] Phase 6: infra — compose, Dockerfiles, Terraform, CI
 - [ ] Phase 7: ADRs + final verification + `post-refactor` tag

@@ -12,12 +12,12 @@ export default function MobileMenu() {
 
   const menuItems = user?.role === 'Administrator' ? [
     { href: '/admin/users', label: 'User Management' },
-    { href: '/admin/metrics', label: 'Metrics Dashboard' },
-    { href: '/admin/audit', label: 'Audit Logs' },
+    { href: '/metrics', label: 'Metrics Dashboard' },
+    { href: '/audit', label: 'Audit Logs' },
     { href: '/admin/health', label: 'System Health' },
   ] : user?.role === 'DPO' ? [
     { href: '/admin/consent', label: 'Consent Management' },
-    { href: '/admin/audit', label: 'Audit Logs' },
+    { href: '/audit', label: 'Audit Logs' },
   ] : user?.role === 'Doctor' ? [
     { href: '/doctor/dashboard', label: 'Dashboard' },
   ] : user?.role === 'Nurse' ? [

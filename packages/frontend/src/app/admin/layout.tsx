@@ -15,8 +15,8 @@ export default function AdminLayout({
 
   const navItems = [
     { href: '/admin/users', label: 'User Management', icon: '👥' },
-    { href: '/admin/metrics', label: 'Metrics Dashboard', icon: '📊' },
-    { href: '/admin/audit', label: 'Audit Logs', icon: '📋' },
+    { href: '/metrics', label: 'Metrics Dashboard', icon: '📊' },
+    { href: '/audit', label: 'Audit Logs', icon: '📋' },
     { href: '/admin/consent', label: 'Consent & Grievance', icon: '📝' },
     { href: '/admin/health', label: 'System Health', icon: '💚' },
   ];
