@@ -1,41 +1,39 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Build stage — monorepo root context required
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy workspace manifests first for layer caching
+COPY package.json package-lock.json ./
+COPY packages/backend/package.json ./packages/backend/package.json
+COPY packages/frontend/package.json ./packages/frontend/package.json
 
-# Install dependencies
-RUN npm ci
+# Install workspace deps (hoisted to root node_modules)
+RUN npm ci --workspace=packages/backend --include-workspace-root=false
 
-# Copy source code
-COPY src ./src
-
-# Build TypeScript
-RUN npm run build
+# Copy backend source and build
+COPY packages/backend ./packages/backend
+RUN npm run build --workspace=packages/backend
 
 # Production stage
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Reinstall production deps only
+COPY package.json package-lock.json ./
+COPY packages/backend/package.json ./packages/backend/package.json
+RUN npm ci --omit=dev --workspace=packages/backend --include-workspace-root=false
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Copy built output
+COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
-
-# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 USER nodejs
 
+WORKDIR /app/packages/backend
 EXPOSE 3001
 
 CMD ["node", "dist/index.js"]

@@ -76,5 +76,8 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
       canonical pages; deleted `/admin/audit` + `/admin/metrics` dupes
       and 11 orphaned `components/admin/*` pair files; typed API
       services (`lib/api/services/*`) already in use throughout
-- [ ] Phase 6: infra — compose, Dockerfiles, Terraform, CI
+- [x] Phase 6: infra — monorepo-aware Dockerfiles (Node 20,
+      `--omit=dev`), CI on Node 20 with Postgres+Redis services for
+      backend tests + typecheck job; Terraform sanity-passed (secrets
+      via Secrets Manager/sensitive vars, no hardcoded creds)
 - [ ] Phase 7: ADRs + final verification + `post-refactor` tag
