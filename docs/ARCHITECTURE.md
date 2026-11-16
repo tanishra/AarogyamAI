@@ -80,4 +80,5 @@ Ported from the legacy implementation (`docs/PORT-NOTES.md`):
       `--omit=dev`), CI on Node 20 with Postgres+Redis services for
       backend tests + typecheck job; Terraform sanity-passed (secrets
       via Secrets Manager/sensitive vars, no hardcoded creds)
-- [ ] Phase 7: ADRs + final verification + `post-refactor` tag
+- [x] Phase 7: ADRs (`docs/adr/001`–`004`) + final verification +
+      `post-refactor` tag
