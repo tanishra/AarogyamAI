@@ -72,6 +72,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-test-jwt-secret-not-for-production
       JWT_REFRESH_SECRET: ci-test-refresh-secret-not-for-production
+      MFA_ENCRYPTION_KEY: ci-test-mfa-key-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -93,3 +94,18 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+
+  docker-build:
+    name: Docker Build (smoke)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -f packages/backend/Dockerfile -t aarogyamai-backend:ci .
+      - name: Build frontend image
+        run: docker build -f packages/frontend/Dockerfile -t aarogyamai-frontend:ci .
+      - name: Verify migration runner + SQL ship in image
+        run: >-
+          docker run --rm --entrypoint sh aarogyamai-backend:ci
+          -c "ls dist/migrations/run-migrations.js && ls dist/migrations/*.sql | head -3"

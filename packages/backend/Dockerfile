@@ -25,8 +25,9 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/package.json
 RUN npm ci --omit=dev --workspace=packages/backend --include-workspace-root=false
 
-# Copy built output
+# Copy built output + migration SQL files (runner reads *.sql next to itself)
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
+COPY --from=builder /app/packages/backend/src/migrations/*.sql ./packages/backend/dist/migrations/
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
