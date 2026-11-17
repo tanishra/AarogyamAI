@@ -114,25 +114,79 @@ export class AuditLogService {
     tamperedEntries: string[];
     message: string;
   }> {
-    let query = 'SELECT * FROM audit_logs WHERE 1=1';
-    const params: any[] = [];
+    // Keyset-batched scan — never loads the whole table into memory.
+    const BATCH = 1000;
+    const tamperedEntries: string[] = [];
+    let totalEntries = 0;
+    let lastTs: Date | null = null;
+    let lastId: string | null = null;
+    let previousHash: string | null = null;
+    let predecessorLoaded = false;
 
-    if (startDate) {
-      params.push(startDate);
-      query += ` AND timestamp >= $${params.length}`;
+    for (;;) {
+      const params: any[] = [];
+      let where = 'WHERE 1=1';
+      if (startDate) { params.push(startDate); where += ` AND timestamp >= $${params.length}`; }
+      if (endDate) { params.push(endDate); where += ` AND timestamp <= $${params.length}`; }
+      if (lastTs !== null) {
+        params.push(lastTs, lastId);
+        where += ` AND (timestamp, id) > ($${params.length - 1}, $${params.length})`;
+      }
+      params.push(BATCH);
+      const result = await this.pool.query(
+        `SELECT * FROM audit_logs ${where} ORDER BY timestamp ASC, id ASC LIMIT $${params.length}`,
+        params
+      );
+      const batch = result.rows;
+      if (batch.length === 0) break;
+
+      for (const entry of batch) {
+        if (!predecessorLoaded) {
+          // For a ranged verify, the first row's real predecessor may sit
+          // before startDate — fetch it so the chain link is checked, not
+          // assumed null (which would false-positive a valid chain).
+          const prev = await this.pool.query(
+            `SELECT hash FROM audit_logs
+             WHERE (timestamp, id) < ($1, $2)
+             ORDER BY timestamp DESC, id DESC LIMIT 1`,
+            [entry.timestamp, entry.id]
+          );
+          previousHash = prev.rows[0]?.hash ?? null;
+          predecessorLoaded = true;
+        }
+
+        const expectedHash = this.computeHash(
+          {
+            userId: entry.user_id,
+            userName: entry.user_name,
+            userRole: entry.user_role,
+            actionType: entry.action_type,
+            resource: entry.resource,
+            resourceId: entry.resource_id,
+            outcome: entry.outcome,
+            ipAddress: entry.ip_address,
+            userAgent: entry.user_agent,
+            requestId: entry.request_id,
+            errorDetails: entry.error_details,
+          },
+          previousHash
+        );
+
+        if (expectedHash !== entry.hash || entry.previous_hash !== previousHash) {
+          tamperedEntries.push(entry.id);
+        }
+
+        previousHash = entry.hash;
+        totalEntries++;
+      }
+
+      const last = batch[batch.length - 1];
+      lastTs = last.timestamp;
+      lastId = last.id;
+      if (batch.length < BATCH) break;
     }
 
-    if (endDate) {
-      params.push(endDate);
-      query += ` AND timestamp <= $${params.length}`;
-    }
-
-    query += ' ORDER BY timestamp ASC';
-
-    const result = await this.pool.query(query, params);
-    const entries = result.rows;
-
-    if (entries.length === 0) {
+    if (totalEntries === 0) {
       return {
         isValid: true,
         totalEntries: 0,
@@ -141,45 +195,9 @@ export class AuditLogService {
       };
     }
 
-    const tamperedEntries: string[] = [];
-
-    // Verify each entry's hash
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      const previousHash = i === 0 ? null : entries[i - 1].hash;
-
-      // Recompute hash
-      const expectedHash = this.computeHash(
-        {
-          userId: entry.user_id,
-          userName: entry.user_name,
-          userRole: entry.user_role,
-          actionType: entry.action_type,
-          resource: entry.resource,
-          resourceId: entry.resource_id,
-          outcome: entry.outcome,
-          ipAddress: entry.ip_address,
-          userAgent: entry.user_agent,
-          requestId: entry.request_id,
-          errorDetails: entry.error_details,
-        },
-        previousHash
-      );
-
-      // Check if hash matches
-      if (expectedHash !== entry.hash) {
-        tamperedEntries.push(entry.id);
-      }
-
-      // Check if previous hash link is correct
-      if (entry.previous_hash !== previousHash) {
-        tamperedEntries.push(entry.id);
-      }
-    }
-
     return {
       isValid: tamperedEntries.length === 0,
-      totalEntries: entries.length,
+      totalEntries,
       tamperedEntries: [...new Set(tamperedEntries)],
       message: tamperedEntries.length === 0
         ? 'All entries verified successfully'

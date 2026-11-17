@@ -104,10 +104,14 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Retry logic for network errors and 5xx errors
-    const shouldRetry = 
+    // Retry logic for network errors and 5xx errors — idempotent methods only.
+    // Retrying POST/PUT could duplicate clinical writes (vitals, considerations).
+    const method = (originalRequest.method || 'get').toLowerCase();
+    const isIdempotent = ['get', 'head', 'options'].includes(method);
+    const shouldRetry = isIdempotent && (
       !error.response || // Network error
-      (error.response.status >= 500 && error.response.status < 600); // Server error
+      (error.response.status >= 500 && error.response.status < 600) // Server error
+    );
 
     if (shouldRetry && originalRequest.retryConfig) {
       const { retryCount } = originalRequest.retryConfig;
