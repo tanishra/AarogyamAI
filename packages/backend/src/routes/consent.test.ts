@@ -246,7 +246,7 @@ describe('Consent Routes', () => {
       mockAuditCreate.mockResolvedValue({});
 
       const response = await request(app)
-        .post('/api/consent/withdrawal-requests/withdrawal-1/process');
+        .post('/api/consent/withdrawal-requests/11111111-1111-4111-8111-111111111111/process');
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Consent withdrawal processed successfully');
@@ -264,7 +264,7 @@ describe('Consent Routes', () => {
       mockProcessWithdrawalRequest.mockResolvedValue(null);
 
       const response = await request(app)
-        .post('/api/consent/withdrawal-requests/nonexistent/process');
+        .post('/api/consent/withdrawal-requests/22222222-2222-4222-8222-222222222222/process');
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Not Found');
@@ -321,7 +321,7 @@ describe('Consent Routes', () => {
       mockAuditCreate.mockResolvedValue({});
 
       const response = await request(app)
-        .put('/api/grievances/grievance-1')
+        .put('/api/grievances/33333333-3333-4333-8333-333333333333')
         .send({
           status: 'investigating',
           dpoNotes: 'Under investigation',
@@ -342,7 +342,7 @@ describe('Consent Routes', () => {
       mockGrievanceFindById.mockResolvedValue(null);
 
       const response = await request(app)
-        .put('/api/grievances/nonexistent')
+        .put('/api/grievances/44444444-4444-4444-8444-444444444444')
         .send({ status: 'investigating' });
 
       expect(response.status).toBe(404);
@@ -351,7 +351,7 @@ describe('Consent Routes', () => {
 
     it('should validate request data', async () => {
       const response = await request(app)
-        .put('/api/grievances/grievance-1')
+        .put('/api/grievances/33333333-3333-4333-8333-333333333333')
         .send({ status: 'invalid' });
 
       expect(response.status).toBe(400);
@@ -407,7 +407,7 @@ describe('Consent Routes', () => {
       mockAuditCreate.mockResolvedValue({});
 
       const response = await request(app)
-        .put('/api/data-access-requests/request-1/fulfill')
+        .put('/api/data-access-requests/55555555-5555-4555-8555-555555555555/fulfill')
         .send({
           responseDocumentUrl: 'https://example.com/document.pdf',
         });
@@ -427,7 +427,7 @@ describe('Consent Routes', () => {
       mockDataAccessFulfill.mockResolvedValue(null);
 
       const response = await request(app)
-        .put('/api/data-access-requests/nonexistent/fulfill')
+        .put('/api/data-access-requests/66666666-6666-4666-8666-666666666666/fulfill')
         .send({
           responseDocumentUrl: 'https://example.com/document.pdf',
         });
@@ -438,7 +438,7 @@ describe('Consent Routes', () => {
 
     it('should validate request data', async () => {
       const response = await request(app)
-        .put('/api/data-access-requests/request-1/fulfill')
+        .put('/api/data-access-requests/55555555-5555-4555-8555-555555555555/fulfill')
         .send({
           responseDocumentUrl: 'invalid-url',
         });

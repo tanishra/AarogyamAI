@@ -210,11 +210,11 @@ describe('Audit Routes', () => {
         statistics: { totalAccesses: 0, uniqueAccessors: 0 },
       });
 
-      const response = await request(app).get('/api/audit/access-patterns/patient-123');
+      const response = await request(app).get('/api/audit/access-patterns/77777777-7777-4777-8777-777777777777');
 
       expect(response.status).toBe(200);
       expect(response.body.message).toContain('Access patterns retrieved successfully');
-      expect(response.body.data).toHaveProperty('patientId', 'patient-123');
+      expect(response.body.data).toHaveProperty('patientId', '77777777-7777-4777-8777-777777777777');
       expect(response.body.data).toHaveProperty('accessors');
       expect(response.body.data).toHaveProperty('timeline');
       expect(mockGetAccessPatterns).toHaveBeenCalled();

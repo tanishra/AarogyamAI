@@ -18,8 +18,8 @@ export function createDatabasePool(): Pool {
     connectionString: config.database.url,
     min: config.database.poolMin,
     max: config.database.poolMax,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT_MS || '30000'),
+    connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONN_TIMEOUT_MS || '10000'),
   };
 
   // Enable SSL for RDS/production databases

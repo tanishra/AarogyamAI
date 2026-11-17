@@ -7,6 +7,8 @@ import { blacklistToken } from '../auth/session';
 import { authenticate } from '../auth/authMiddleware';
 import { randomBytes } from 'crypto';
 import speakeasy from 'speakeasy';
+import { decryptMfaSecret } from '../lib/mfaCrypto';
+import { rateLimit } from '../middleware/securityMiddleware';
 
 import { getContainer } from '../composition';
 import { logger } from '../lib/logger';
@@ -26,12 +28,17 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const passwordPolicy = z.string().min(12, 'Password must be at least 12 characters');
+
 const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordPolicy,
   role: z.enum(['Patient', 'Nurse', 'Doctor']),
 });
+
+// Strict per-IP limits on credential endpoints (in addition to the global limiter)
+const authRateLimit = rateLimit({ windowMs: 60 * 1000, maxRequests: 10 });
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
@@ -46,7 +53,7 @@ const mfaVerifySchema = z.object({
  * POST /api/auth/signup
  * Register new user (Patient, Nurse, Doctor)
  */
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', authRateLimit, async (req: Request, res: Response) => {
   try {
     const validation = signupSchema.safeParse(req.body);
     if (!validation.success) {
@@ -146,7 +153,7 @@ router.post('/signup', async (req: Request, res: Response) => {
  * POST /api/admin/auth/login
  * Authenticate user and create session
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authRateLimit, async (req: Request, res: Response) => {
   try {
     const validation = loginSchema.safeParse(req.body);
     if (!validation.success) {
@@ -359,7 +366,7 @@ router.post('/logout', authenticate({}), async (req: Request, res: Response) => 
  * POST /api/admin/auth/refresh
  * Refresh access token using refresh token
  */
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
   try {
     const validation = refreshSchema.safeParse(req.body);
     if (!validation.success) {
@@ -429,7 +436,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
  * POST /api/admin/auth/mfa-verify
  * Verify MFA code and complete authentication
  */
-router.post('/mfa-verify', async (req: Request, res: Response) => {
+router.post('/mfa-verify', authRateLimit, async (req: Request, res: Response) => {
   try {
     const validation = mfaVerifySchema.safeParse(req.body);
     if (!validation.success) {
@@ -463,7 +470,7 @@ router.post('/mfa-verify', async (req: Request, res: Response) => {
     }
 
     const isValidCode = speakeasy.totp.verify({
-      secret: user.mfa_secret,
+      secret: decryptMfaSecret(user.mfa_secret),
       encoding: 'base32',
       token: code,
       window: 1, // accept one 30s step either side for clock drift
@@ -563,7 +570,7 @@ export default router;
  * POST /api/auth/password-reset/request
  * Request password reset email
  */
-router.post('/password-reset/request', async (req: Request, res: Response) => {
+router.post('/password-reset/request', authRateLimit, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -628,7 +635,7 @@ router.post('/password-reset/request', async (req: Request, res: Response) => {
  * POST /api/auth/password-reset/confirm
  * Reset password with token
  */
-router.post('/password-reset/confirm', async (req: Request, res: Response) => {
+router.post('/password-reset/confirm', authRateLimit, async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
 
@@ -640,10 +647,10 @@ router.post('/password-reset/confirm', async (req: Request, res: Response) => {
       return;
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 12) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'Password must be at least 8 characters',
+        message: 'Password must be at least 12 characters',
       });
       return;
     }

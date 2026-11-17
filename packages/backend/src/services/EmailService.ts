@@ -7,6 +7,16 @@ interface MailPayload {
   text?: string;
 }
 
+/** Escape user-controlled values before HTML interpolation */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class EmailService {
   private async sendMail(payload: MailPayload): Promise<void> {
     // Fallback transport for environments where SMTP/nodemailer is unavailable.
@@ -46,10 +56,10 @@ class EmailService {
   async sendRegistrationApprovalEmail(email: string, name: string, temporaryPassword?: string): Promise<void> {
     const loginUrl = `${config.frontendUrl}/login`;
     const credentialsHtml = temporaryPassword
-      ? `<p><strong>Temporary password:</strong> ${temporaryPassword}</p><p>Please change your password after your first login.</p>`
+      ? `<p><strong>Temporary password:</strong> ${escapeHtml(temporaryPassword)}</p><p>Please change your password after your first login.</p>`
       : '';
     const credentialsText = temporaryPassword
-      ? `\n\nTemporary password: ${temporaryPassword}\n\nPlease change your password after your first login.`
+      ? `\n\nTemporary password: ${escapeHtml(temporaryPassword)}\n\nPlease change your password after your first login.`
       : '';
 
     await this.sendMail({
@@ -57,12 +67,12 @@ class EmailService {
       subject: 'Registration Approved - AarogyamAI',
       html: `
         <h2>Registration Approved</h2>
-        <p>Hello ${name},</p>
+        <p>Hello ${escapeHtml(name)},</p>
         <p>Your registration has been approved! You can now log in to AarogyamAI.</p>
         ${credentialsHtml}
         <p><a href="${loginUrl}">Login Here</a></p>
       `,
-      text: `Registration Approved\n\nHello ${name},\n\nYour registration has been approved! You can now log in to AarogyamAI.${credentialsText}\n\nLogin at: ${loginUrl}`,
+      text: `Registration Approved\n\nHello ${escapeHtml(name)},\n\nYour registration has been approved! You can now log in to AarogyamAI.${credentialsText}\n\nLogin at: ${loginUrl}`,
     });
   }
 
@@ -72,12 +82,12 @@ class EmailService {
       subject: 'Registration Status - AarogyamAI',
       html: `
         <h2>Registration Update</h2>
-        <p>Hello ${name},</p>
+        <p>Hello ${escapeHtml(name)},</p>
         <p>Unfortunately, your registration could not be approved at this time.</p>
-        <p><strong>Reason:</strong> ${reason}</p>
+        <p><strong>Reason:</strong> ${escapeHtml(reason)}</p>
         <p>If you have questions, please contact support.</p>
       `,
-      text: `Registration Update\n\nHello ${name},\n\nUnfortunately, your registration could not be approved at this time.\n\nReason: ${reason}\n\nIf you have questions, please contact support.`,
+      text: `Registration Update\n\nHello ${escapeHtml(name)},\n\nUnfortunately, your registration could not be approved at this time.\n\nReason: ${escapeHtml(reason)}\n\nIf you have questions, please contact support.`,
     });
   }
 
@@ -87,11 +97,11 @@ class EmailService {
       subject: 'MFA Settings Changed - AarogyamAI',
       html: `
         <h2>MFA Settings Changed</h2>
-        <p>Hello ${name},</p>
+        <p>Hello ${escapeHtml(name)},</p>
         <p>Your multi-factor authentication has been ${action}.</p>
         <p>If you didn't make this change, please contact support immediately.</p>
       `,
-      text: `MFA Settings Changed\n\nHello ${name},\n\nYour multi-factor authentication has been ${action}.\n\nIf you didn't make this change, please contact support immediately.`,
+      text: `MFA Settings Changed\n\nHello ${escapeHtml(name)},\n\nYour multi-factor authentication has been ${action}.\n\nIf you didn't make this change, please contact support immediately.`,
     });
   }
 
@@ -109,12 +119,12 @@ class EmailService {
       subject: 'MFA Re-enrollment Required - AarogyamAI',
       html: `
         <h2>MFA Re-enrollment Required</h2>
-        <p>Hello ${name},</p>
+        <p>Hello ${escapeHtml(name)},</p>
         <p>Your multi-factor authentication has been reset and requires re-enrollment.</p>
         <p>Please log in and set up MFA again.</p>
         <p>If you didn't request this, please contact support immediately.</p>
       `,
-      text: `MFA Re-enrollment Required\n\nHello ${name},\n\nYour multi-factor authentication has been reset and requires re-enrollment.\n\nPlease log in and set up MFA again.\n\nIf you didn't request this, please contact support immediately.`,
+      text: `MFA Re-enrollment Required\n\nHello ${escapeHtml(name)},\n\nYour multi-factor authentication has been reset and requires re-enrollment.\n\nPlease log in and set up MFA again.\n\nIf you didn't request this, please contact support immediately.`,
     });
   }
 }

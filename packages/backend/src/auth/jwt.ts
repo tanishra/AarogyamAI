@@ -20,6 +20,9 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+const JWT_ISSUER = 'aarogyamai';
+const JWT_AUDIENCE = 'aarogyamai-api';
+
 /**
  * Generate access token (8-hour expiration)
  */
@@ -31,6 +34,8 @@ export function generateAccessToken(payload: Omit<TokenPayload, 'type'>): string
 
   const options: jwt.SignOptions = {
     expiresIn: '8h', // 8 hours
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
   };
 
   return jwt.sign(tokenPayload, config.jwt.secret as jwt.Secret, options);
@@ -47,6 +52,8 @@ export function generateRefreshToken(payload: Omit<TokenPayload, 'type'>): strin
 
   const options: jwt.SignOptions = {
     expiresIn: '30d', // 30 days
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
   };
 
   return jwt.sign(tokenPayload, config.jwt.refreshSecret as jwt.Secret, options);
@@ -76,6 +83,8 @@ export function verifyAccessToken(token: string): TokenPayload {
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       algorithms: ['HS256'],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     }) as TokenPayload;
 
     if (decoded.type !== 'access') {
@@ -104,6 +113,8 @@ export function verifyRefreshToken(token: string): TokenPayload {
   try {
     const decoded = jwt.verify(token, config.jwt.refreshSecret, {
       algorithms: ['HS256'],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     }) as TokenPayload;
 
     if (decoded.type !== 'refresh') {

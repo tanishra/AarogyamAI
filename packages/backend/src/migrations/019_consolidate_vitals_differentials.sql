@@ -15,7 +15,14 @@ ALTER TABLE vital_signs ADD COLUMN IF NOT EXISTS flagged_abnormal BOOLEAN NOT NU
 -- Move legacy vitals rows across, preserving semantics.
 -- encounter_id gets the session id; rows without a session collapse onto
 -- the patient id (patient-level vitals record).
-INSERT INTO vital_signs (
+-- Guarded: fresh databases may never have had the legacy `vitals` table.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'vitals'
+  ) THEN
+    INSERT INTO vital_signs (
   patient_id, encounter_id, systolic_bp, diastolic_bp, heart_rate,
   respiratory_rate, temperature, temperature_unit, oxygen_saturation,
   height, height_unit, weight, weight_unit, bmi,
@@ -37,18 +44,20 @@ SELECT
   'kg',
   v.bmi,
   v.recorded_by,
-  v.recorded_at,
-  v.notes,
-  COALESCE(v.flagged_abnormal, FALSE),
-  v.created_at,
-  CURRENT_TIMESTAMP
-FROM vitals v
-WHERE NOT EXISTS (
-  SELECT 1 FROM vital_signs vs
-  WHERE vs.patient_id = v.patient_id
-    AND vs.recorded_by = v.recorded_by
-    AND vs.recorded_at = v.recorded_at
-);
+      v.recorded_at,
+      v.notes,
+      COALESCE(v.flagged_abnormal, FALSE),
+      v.created_at,
+      CURRENT_TIMESTAMP
+    FROM vitals v
+    WHERE NOT EXISTS (
+      SELECT 1 FROM vital_signs vs
+      WHERE vs.patient_id = v.patient_id
+        AND vs.recorded_by = v.recorded_by
+        AND vs.recorded_at = v.recorded_at
+    );
+  END IF;
+END $$;
 
 DROP TABLE IF EXISTS vitals;
 
@@ -87,7 +96,14 @@ UPDATE differentials SET status = 'accepted' WHERE source = 'physician' AND stat
 
 -- Move AI consideration rows across, preserving ids for referential
 -- stability (ai_explanations FK targets differentials.id).
-INSERT INTO differentials (
+-- Guarded: fresh databases may never have had the legacy table.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'clinical_considerations'
+  ) THEN
+    INSERT INTO differentials (
   id, patient_id, encounter_id, diagnosis_name, likelihood, urgency,
   supporting_evidence, clinical_reasoning, status, doctor_notes,
   reviewed_by, reviewed_at, source, added_by, priority,
@@ -109,12 +125,14 @@ SELECT
   'ai',
   NULL,
   1,
-  cc.generated_at,
-  cc.created_at,
-  cc.updated_at
-FROM clinical_considerations cc
-WHERE NOT EXISTS (SELECT 1 FROM differentials d WHERE d.id = cc.id)
-ON CONFLICT (id) DO NOTHING;
+      cc.generated_at,
+      cc.created_at,
+      cc.updated_at
+    FROM clinical_considerations cc
+    WHERE NOT EXISTS (SELECT 1 FROM differentials d WHERE d.id = cc.id)
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+END $$;
 
 DROP TABLE IF EXISTS clinical_considerations;
 

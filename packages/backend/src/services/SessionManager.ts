@@ -179,6 +179,16 @@ export class SessionManager {
   }
 
   /**
+   * Delete expired/terminated sessions — run periodically to bound table growth
+   */
+  async cleanupExpiredSessions(): Promise<number> {
+    const result = await this.pool.query(
+      `DELETE FROM sessions WHERE expires_at <= NOW() OR terminated_at IS NOT NULL`
+    );
+    return result.rowCount ?? 0;
+  }
+
+  /**
    * Get active sessions for a user
    */
   async getActiveSessions(userId: string): Promise<SessionData[]> {

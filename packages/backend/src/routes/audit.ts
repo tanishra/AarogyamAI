@@ -5,6 +5,7 @@ import { requireAdminOrDPO } from '../auth/authorizationMiddleware';
 
 import { getContainer } from '../composition';
 import { logger } from '../lib/logger';
+import { uuidParam } from '../lib/uuidParam';
 
 const router = Router();
 const auditRepo = getContainer().repositories.auditLog;
@@ -146,7 +147,9 @@ router.get('/logs/:id', async (req: Request, res: Response) => {
  */
 router.get('/access-patterns/:patientId', async (req: Request, res: Response) => {
   try {
-    const { patientId } = req.params;
+    const { patientId: rawPatientId } = req.params;
+    const patientId = uuidParam(rawPatientId, res);
+    if (!patientId) return;
     
     const validation = accessPatternSchema.safeParse(req.query);
     if (!validation.success) {

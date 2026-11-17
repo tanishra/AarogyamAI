@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { EmailService } from './EmailService';
+import { encryptMfaSecret } from '../lib/mfaCrypto';
 import { logger } from '../lib/logger';
 
 /**
@@ -386,7 +387,7 @@ export class UserManagementService {
     const updatedUser = await this.userRepo.update(params.userId, {
       mfa_enabled: true,
       mfa_method: 'totp',
-      mfa_secret: secret.base32,
+      mfa_secret: encryptMfaSecret(secret.base32),
     });
 
     if (!updatedUser) {

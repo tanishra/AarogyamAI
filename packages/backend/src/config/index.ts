@@ -26,12 +26,12 @@ if (!parsed.success) {
 
 // In production, secrets must not fall back to dev defaults.
 if (process.env.NODE_ENV === 'production') {
-  for (const key of ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET'] as const) {
+  for (const key of ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'MFA_ENCRYPTION_KEY'] as const) {
     if (!process.env[key]) {
       throw new Error(`Missing required environment variable: ${key}`);
     }
   }
-  for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET'] as const) {
+  for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'MFA_ENCRYPTION_KEY'] as const) {
     if ((process.env[key] || '').includes('change-in-production')) {
       throw new Error(`${key} still set to a development default`);
     }
@@ -81,6 +81,7 @@ export const config = {
     accessExpiration: process.env.JWT_ACCESS_EXPIRATION || '8h',
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '30d',
   },
+  mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY || 'dev-only-mfa-encryption-key-change-in-production',
   security: {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12'),
     sessionTTL: parseInt(process.env.SESSION_TTL || '28800'),

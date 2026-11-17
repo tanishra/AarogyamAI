@@ -117,8 +117,8 @@ export class AuditLogRepository {
         `INSERT INTO audit_logs (
           id, user_id, user_name, user_role, action_type, resource,
           resource_id, outcome, ip_address, user_agent, request_id,
-          error_details, hash, previous_hash, timestamp, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+          error_details, hash, previous_hash, timestamp
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           entry.id,
           entry.userId,
@@ -152,42 +152,31 @@ export class AuditLogRepository {
    * Tries DynamoDB first, falls back to PostgreSQL
    */
   async search(filters: SearchFilters): Promise<PaginatedResult<AuditLogEntry>> {
-    const limit = filters.limit || 50;
-    const page = filters.page || 1;
-
-    let items: AuditLogEntry[] = [];
-
-    // Try DynamoDB first if configured and healthy
-    if (this.useDynamoDB && this.dynamoDBHealthy) {
-      try {
-        items = await this.searchDynamoDB(filters);
-        logger.debug('[AuditLog] Successfully searched DynamoDB');
-      } catch (error) {
-        logger.warn('[AuditLog] DynamoDB search failed, falling back to PostgreSQL:', error);
-        this.dynamoDBHealthy = false;
-        items = await this.searchPostgreSQL(filters);
-      }
-    } else {
-      // Use PostgreSQL directly
-      items = await this.searchPostgreSQL(filters);
+    // PostgreSQL is authoritative and paginates in SQL — no row cap.
+    if (!this.useDynamoDB || !this.dynamoDBHealthy) {
+      return this.searchPostgreSQL(filters);
     }
 
-    // Sort by timestamp descending
-    items.sort((a, b) => b.timestamp - a.timestamp);
-
-    // Paginate results
-    const total = items.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedItems = items.slice(startIndex, endIndex);
-
-    return {
-      items: paginatedItems,
-      total,
-      page,
-      limit,
-      hasMore: endIndex < total,
-    };
+    // DynamoDB mirror path — query then paginate in memory
+    try {
+      const items = await this.searchDynamoDB(filters);
+      logger.debug('[AuditLog] Successfully searched DynamoDB');
+      items.sort((a, b) => b.timestamp - a.timestamp);
+      const limit = filters.limit || 50;
+      const page = filters.page || 1;
+      const startIndex = (page - 1) * limit;
+      return {
+        items: items.slice(startIndex, startIndex + limit),
+        total: items.length,
+        page,
+        limit,
+        hasMore: startIndex + limit < items.length,
+      };
+    } catch (error) {
+      logger.warn('[AuditLog] DynamoDB search failed, falling back to PostgreSQL:', error);
+      this.dynamoDBHealthy = false;
+      return this.searchPostgreSQL(filters);
+    }
   }
 
   /**
@@ -253,6 +242,13 @@ export class AuditLogRepository {
       ),
     ]);
 
+    const totalAccesses = totals[0]?.total ?? 0;
+    const uniqueAccessors = totals[0]?.unique_accessors ?? 0;
+
+    // Anomaly heuristic: an accessor holding >50% of accesses on a record
+    // with meaningful volume (>=10 total) is flagged for review.
+    const dominantThreshold = totalAccesses >= 10 ? totalAccesses * 0.5 : Infinity;
+
     return {
       accessors: accessors.map((row: any) => ({
         userId: row.user_id,
@@ -260,15 +256,15 @@ export class AuditLogRepository {
         role: row.user_role,
         accessCount: row.access_count,
         lastAccess: row.last_access,
-        isAnomalous: false,
+        isAnomalous: row.access_count > dominantThreshold,
       })),
       timeline: timeline.map((row: any) => ({
         date: row.day,
         count: row.count,
       })),
       statistics: {
-        totalAccesses: totals[0]?.total ?? 0,
-        uniqueAccessors: totals[0]?.unique_accessors ?? 0,
+        totalAccesses,
+        uniqueAccessors,
       },
     };
   }
@@ -293,41 +289,51 @@ export class AuditLogRepository {
   /**
    * Search in PostgreSQL (fallback)
    */
-  private async searchPostgreSQL(filters: SearchFilters): Promise<AuditLogEntry[]> {
-    let queryText = 'SELECT * FROM audit_logs WHERE 1=1';
+  private async searchPostgreSQL(filters: SearchFilters): Promise<PaginatedResult<AuditLogEntry>> {
+    let whereClause = 'WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
     if (filters.userId) {
       params.push(filters.userId);
-      queryText += ` AND user_id = $${paramIndex++}`;
+      whereClause += ` AND user_id = $${paramIndex++}`;
     }
 
     if (filters.actionType) {
       params.push(filters.actionType);
-      queryText += ` AND action_type = $${paramIndex++}`;
+      whereClause += ` AND action_type = $${paramIndex++}`;
     }
 
     if (filters.resource) {
       params.push(filters.resource);
-      queryText += ` AND resource = $${paramIndex++}`;
+      whereClause += ` AND resource = $${paramIndex++}`;
     }
 
     if (filters.startDate) {
-      params.push(filters.startDate.getTime());
-      queryText += ` AND timestamp >= $${paramIndex++}`;
+      params.push(filters.startDate);
+      whereClause += ` AND timestamp >= $${paramIndex++}`;
     }
 
     if (filters.endDate) {
-      params.push(filters.endDate.getTime());
-      queryText += ` AND timestamp <= $${paramIndex++}`;
+      params.push(filters.endDate);
+      whereClause += ` AND timestamp <= $${paramIndex++}`;
     }
 
-    queryText += ' ORDER BY timestamp DESC LIMIT 1000';
+    const limit = filters.limit || 50;
+    const page = filters.page || 1;
 
-    const result = await pgQuery(queryText, params);
-    
-    return result.map((row: any) => ({
+    const [countResult, rows] = await Promise.all([
+      pgQuery<any>(`SELECT COUNT(*)::int AS total FROM audit_logs ${whereClause}`, params),
+      pgQuery<any>(
+        `SELECT * FROM audit_logs ${whereClause}
+         ORDER BY timestamp DESC, id DESC
+         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        [...params, limit, (page - 1) * limit]
+      ),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
+    const items = rows.map((row: any) => ({
       id: row.id,
       userId: row.user_id,
       userName: row.user_name,
@@ -339,9 +345,19 @@ export class AuditLogRepository {
       ipAddress: row.ip_address,
       userAgent: row.user_agent,
       requestId: row.request_id,
+      errorDetails: row.error_details,
       hash: row.hash,
-      timestamp: row.timestamp,
-    }));
+      previousHash: row.previous_hash,
+      timestamp: row.timestamp instanceof Date ? row.timestamp.getTime() : row.timestamp,
+    })) as AuditLogEntry[];
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    };
   }
 
   /**
