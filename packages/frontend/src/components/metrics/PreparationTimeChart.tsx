@@ -51,7 +51,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip 
-                formatter={(value: number) => [value, 'Consultations']}
+                formatter={(value: any) => [value, 'Consultations']}
               />
               <Legend />
               <Bar 
@@ -87,7 +87,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <Tooltip 
                 labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                formatter={(value: number) => [`${Math.round(value / 60)} min`, 'Avg Time']}
+                formatter={(value: any) => [`${Math.round(value / 60)} min`, 'Avg Time']}
               />
               <Line 
                 type="monotone" 

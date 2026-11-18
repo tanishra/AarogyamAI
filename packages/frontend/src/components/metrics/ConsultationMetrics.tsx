@@ -58,7 +58,7 @@ export default function ConsultationMetrics({ data, period }: ConsultationMetric
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip 
               labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              formatter={(value: number) => [value, 'Consultations']}
+              formatter={(value: any) => [value, 'Consultations']}
             />
             <Legend />
             <Line 

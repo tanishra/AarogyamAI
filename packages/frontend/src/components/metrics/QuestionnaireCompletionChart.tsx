@@ -97,7 +97,7 @@ export default function QuestionnaireCompletionChart({ data }: QuestionnaireComp
                 tickFormatter={(value) => `${value}%`}
               />
               <Tooltip 
-                formatter={(value: number) => [`${value.toFixed(1)}%`, 'Abandonment Rate']}
+                formatter={(value: any) => [`${value.toFixed(1)}%`, 'Abandonment Rate']}
               />
               <Legend />
               <Bar 

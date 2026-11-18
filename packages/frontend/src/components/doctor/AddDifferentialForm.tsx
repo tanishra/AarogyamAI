@@ -33,7 +33,7 @@ export function AddDifferentialForm({
   const [clinicalReasoning, setClinicalReasoning] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     if (searchQuery.length < 2) {
