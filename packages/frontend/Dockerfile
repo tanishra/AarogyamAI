@@ -30,7 +30,7 @@ RUN npm ci --omit=dev --workspace=packages/frontend --include-workspace-root=fal
 # Copy built output
 COPY --from=builder /app/packages/frontend/.next ./packages/frontend/.next
 COPY --from=builder /app/packages/frontend/public ./packages/frontend/public
-COPY --from=builder /app/packages/frontend/next.config.ts ./packages/frontend/next.config.ts
+COPY --from=builder /app/packages/frontend/next.config.js ./packages/frontend/next.config.js
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001

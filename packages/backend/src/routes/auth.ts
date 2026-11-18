@@ -3,7 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../auth/jwt';
 import { createSession, invalidateSession } from '../auth/session';
-import { blacklistToken } from '../auth/session';
+import { blacklistToken, isTokenBlacklisted } from '../auth/session';
 import { authenticate } from '../auth/authMiddleware';
 import { randomBytes } from 'crypto';
 import speakeasy from 'speakeasy';
@@ -380,6 +380,25 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
 
     const { refreshToken } = validation.data;
 
+    // Reject already-rotated tokens
+    try {
+      if (await isTokenBlacklisted(refreshToken)) {
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Refresh token has already been used',
+        });
+        return;
+      }
+    } catch (error) {
+      // Redis unavailable — fail closed
+      logger.error('Blacklist check failed:', { error });
+      res.status(503).json({
+        error: 'Service Unavailable',
+        message: 'Authentication service temporarily unavailable',
+      });
+      return;
+    }
+
     // Verify refresh token
     let payload;
     try {
@@ -415,6 +434,18 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
     });
+
+    // Revoke the used refresh token — rotation without revocation leaves the
+    // old token valid until natural expiry (replay window).
+    try {
+      const expSec = (payload as any).exp
+        ? Math.max(0, (payload as any).exp - Math.floor(Date.now() / 1000))
+        : 30 * 24 * 60 * 60;
+      await blacklistToken(refreshToken, expSec);
+    } catch (error) {
+      // New tokens already generated; log and continue rather than 500 the refresh.
+      logger.error('Failed to blacklist rotated refresh token:', { error });
+    }
 
     res.status(200).json({
       message: 'Token refreshed successfully',

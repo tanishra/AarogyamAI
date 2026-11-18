@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger';
 import { config } from '../config';
+import nodemailer, { Transporter } from 'nodemailer';
 interface MailPayload {
   to: string;
   subject: string;
@@ -18,20 +19,54 @@ function escapeHtml(value: string): string {
 }
 
 class EmailService {
+  private transporter: Transporter | null | undefined;
+
+  /** Lazy-build nodemailer transport when SMTP_HOST is configured. */
+  private getTransporter(): Transporter | null {
+    if (this.transporter !== undefined) return this.transporter;
+    if (!config.smtp.host) {
+      this.transporter = null;
+      return null;
+    }
+    this.transporter = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      auth: config.smtp.user
+        ? { user: config.smtp.user, pass: config.smtp.password }
+        : undefined,
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
+    });
+    return this.transporter;
+  }
+
   private async sendMail(payload: MailPayload): Promise<void> {
-    // Fallback transport for environments where SMTP/nodemailer is unavailable.
-    logger.debug('[MOCK EMAIL SEND]', {
+    const transport = this.getTransporter();
+    if (!transport) {
+      // No SMTP configured — dev/test fallback: log instead of sending.
+      logger.debug('[EMAIL not sent — SMTP_HOST unset]', {
+        to: payload.to,
+        subject: payload.subject,
+        preview: payload.text?.slice(0, 120) || '',
+      });
+      return;
+    }
+    await transport.sendMail({
+      from: config.smtp.from,
       to: payload.to,
       subject: payload.subject,
-      preview: payload.text?.slice(0, 120) || '',
+      html: payload.html,
+      text: payload.text,
     });
+    logger.debug('[EMAIL sent]', { to: payload.to, subject: payload.subject });
   }
 
   async sendNotificationEmail(email: string, subject: string, text: string): Promise<void> {
     await this.sendMail({
       to: email,
       subject,
-      html: `<p>${text}</p>`,
+      html: `<p>${escapeHtml(text)}</p>`,
       text,
     });
   }

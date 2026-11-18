@@ -20,17 +20,25 @@ import {
   isMigrationApplied,
 } from './migrate';
 
-// Database configuration from environment variables
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'admin_panel',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  ssl: process.env.DB_SSL === 'true' || process.env.DB_HOST?.includes('rds.amazonaws.com') ? {
-    rejectUnauthorized: false
-  } : undefined
-});
+// Database configuration: DATABASE_URL takes precedence, else discrete vars
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        database: process.env.DB_NAME || 'admin_panel',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        ssl:
+          process.env.DB_SSL === 'true' || process.env.DB_HOST?.includes('rds.amazonaws.com')
+            ? { rejectUnauthorized: false }
+            : undefined,
+      }
+);
 
 const MIGRATIONS: string[] = fs
   .readdirSync(__dirname)

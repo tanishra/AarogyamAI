@@ -97,6 +97,14 @@ export const config = {
     model: process.env.AI_MODEL || 'gpt-4-turbo-preview',
     enabled: process.env.AI_ENABLED !== 'false',
   },
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    password: process.env.SMTP_PASSWORD || '',
+    from: process.env.SMTP_FROM || 'noreply@aarogyamai.local',
+  },
 };
 
 export type AppConfig = typeof config;

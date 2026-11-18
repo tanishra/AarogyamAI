@@ -30,7 +30,9 @@ COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=builder /app/packages/backend/src/migrations/*.sql ./packages/backend/dist/migrations/
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    mkdir -p /app/packages/backend/storage/reports && \
+    chown -R nodejs:nodejs /app/packages/backend/storage
 
 USER nodejs
 

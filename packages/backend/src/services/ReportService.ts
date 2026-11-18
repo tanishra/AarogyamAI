@@ -29,7 +29,8 @@ export class ReportService {
     this.bucketName = config.aws.s3.reportsBucket || 'aarogyam-reports';
     this.useS3 = false;
     this.s3Healthy = true;
-    this.localStoragePath = path.join(process.cwd(), 'storage', 'reports');
+    this.localStoragePath =
+      process.env.REPORTS_STORAGE_DIR || path.join(process.cwd(), 'storage', 'reports');
 
     // Initialize S3 client if credentials available
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
