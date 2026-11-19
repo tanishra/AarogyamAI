@@ -47,24 +47,24 @@ vi.mock('../config/database', () => ({
 }));
 
 vi.mock('../repositories/AuditLogRepository', () => ({
-  AuditLogRepository: vi.fn().mockImplementation(() => ({
+  AuditLogRepository: vi.fn().mockImplementation(function () { return ({
     search: vi.fn().mockResolvedValue({ items: [], total: 0, hasMore: false }),
     create: vi.fn().mockResolvedValue({}),
-  })),
+  });}),
 }));
 
 vi.mock('../repositories/UserRepository', () => ({
-  UserRepository: vi.fn().mockImplementation(() => ({
+  UserRepository: vi.fn().mockImplementation(function () { return ({
     findByEmail: vi.fn().mockResolvedValue(null),
     findById: vi.fn().mockResolvedValue(null),
-  })),
+  });}),
 }));
 
 vi.mock('../repositories/ConsentRepository', () => ({
-  ConsentRepository: vi.fn().mockImplementation(() => ({
+  ConsentRepository: vi.fn().mockImplementation(function () { return ({
     findByUserId: vi.fn().mockResolvedValue([]),
     findAll: vi.fn().mockResolvedValue([]),
-  })),
+  });}),
 }));
 
 vi.mock('../repositories/ChatRepository', () => ({
@@ -100,29 +100,29 @@ vi.mock('../services/LLMService', () => ({
 }));
 
 vi.mock('../services/VitalsService', () => ({
-  VitalsService: vi.fn().mockImplementation(() => ({
+  VitalsService: vi.fn().mockImplementation(function () { return ({
     recordVitals: vi.fn(),
     getVitalsHistory: vi.fn().mockResolvedValue([]),
-  })),
+  });}),
 }));
 
 vi.mock('../services/CriticalAlertingService', () => ({
-  CriticalAlertingService: vi.fn().mockImplementation(() => ({
+  CriticalAlertingService: vi.fn().mockImplementation(function () { return ({
     getActiveAlerts: vi.fn().mockResolvedValue([]),
     acknowledgeAlert: vi.fn(),
-  })),
+  });}),
 }));
 
 vi.mock('../services/DifferentialManager', () => ({
-  DifferentialManager: vi.fn().mockImplementation(() => ({})),
+  DifferentialManager: vi.fn().mockImplementation(function () { return ({});}),
 }));
 
 vi.mock('../services/QuestionnaireSessionManager', () => ({
-  QuestionnaireSessionManager: vi.fn().mockImplementation(() => ({
+  QuestionnaireSessionManager: vi.fn().mockImplementation(function () { return ({
     saveSession: vi.fn().mockResolvedValue('session-id'),
     loadSession: vi.fn().mockResolvedValue(null),
     canResumeSession: vi.fn().mockResolvedValue({ canResume: false }),
-  })),
+  });}),
 }));
 
 vi.mock('../auth/session', () => ({

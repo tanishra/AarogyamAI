@@ -129,7 +129,7 @@ export default function AccessPatternViewer() {
                       />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip
-                        labelFormatter={(value) => new Date(value).toLocaleString()}
+                        labelFormatter={(value) => new Date(String(value)).toLocaleString()}
                         formatter={(value: any) => [value, 'Accesses']}
                       />
                       <Legend />

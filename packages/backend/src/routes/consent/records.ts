@@ -1,3 +1,4 @@
+import { maskEmail } from '../../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
@@ -30,7 +31,7 @@ router.get('/consent/records', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -120,7 +121,7 @@ router.post('/consent/withdrawal-requests/:id/process', async (req: Request, res
     // Create audit log entry
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: 'consent_withdrawal_processed',
       resource: 'consent_record',

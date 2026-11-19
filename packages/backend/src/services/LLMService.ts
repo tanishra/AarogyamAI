@@ -25,10 +25,22 @@ interface LLMResponse {
   };
 }
 
+export class LLMUnavailableError extends Error {
+  constructor() {
+    super('LLM provider temporarily unavailable (circuit open)');
+    this.name = 'LLMUnavailableError';
+  }
+}
+
+const CIRCUIT_THRESHOLD = 3;
+const CIRCUIT_COOLDOWN_MS = 60_000;
+
 export class LLMService {
   private openai: OpenAI | null = null;
   private bedrock: BedrockRuntimeClient | null = null;
   private provider: 'openai' | 'bedrock' | 'hybrid';
+  private consecutiveFailures = 0;
+  private circuitOpenUntil = 0;
 
   constructor() {
     // Read directly from process.env to avoid config caching issues
@@ -79,7 +91,27 @@ export class LLMService {
     // If stripping fails we must NOT send the raw text: abort (fail closed).
     const sanitizedMessages = this.sanitizeMessages(messages);
 
-    const response = await this.dispatch(sanitizedMessages, options);
+    // Circuit breaker — during an outage, fail fast instead of piling
+    // requests onto a dead provider; a single probe passes after cooldown.
+    if (Date.now() < this.circuitOpenUntil) {
+      throw new LLMUnavailableError();
+    }
+
+    let response: LLMResponse;
+    try {
+      response = await this.dispatch(sanitizedMessages, options);
+      this.consecutiveFailures = 0;
+    } catch (err) {
+      this.consecutiveFailures++;
+      if (this.consecutiveFailures >= CIRCUIT_THRESHOLD) {
+        this.circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+        logger.error('[LLMService] provider circuit opened', {
+          failures: this.consecutiveFailures,
+          cooldownMs: CIRCUIT_COOLDOWN_MS,
+        });
+      }
+      throw err;
+    }
 
     // Safety gate 2 — filter all LLM output before it leaves this service.
     // Blocked output never reaches callers or dashboards.
@@ -93,6 +125,11 @@ export class LLMService {
     }
 
     return { ...response, content: filtered.text };
+  }
+
+  /** True while the provider circuit is open (LLM calls fail fast). */
+  isDegraded(): boolean {
+    return Date.now() < this.circuitOpenUntil;
   }
 
   /**

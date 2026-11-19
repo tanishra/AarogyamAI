@@ -1,3 +1,4 @@
+import { maskEmail } from '../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../auth/authMiddleware';
@@ -53,7 +54,7 @@ router.get('/logs', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -156,7 +157,7 @@ router.get('/access-patterns/:patientId', async (req: Request, res: Response) =>
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -248,7 +249,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -275,7 +276,7 @@ router.post('/verify', async (req: Request, res: Response) => {
 
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: 'audit_log_verification',
       resource: 'audit_logs',
@@ -310,7 +311,7 @@ router.post('/export', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -358,7 +359,7 @@ router.post('/export', async (req: Request, res: Response) => {
 
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: 'audit_log_export',
       resource: 'audit_logs',

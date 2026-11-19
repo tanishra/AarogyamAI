@@ -8,6 +8,20 @@ vi.mock('@/lib/auth', () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock('@/lib/i18n', () => ({
+  useI18n: () => ({
+    locale: 'en',
+    setLocale: vi.fn(),
+    t: (key: string, vars?: Record<string, string>) => {
+      const dict: Record<string, string> = {
+        'session.expiring': `Your session will expire in ${vars?.time ?? ''}`,
+        'session.extend': 'Extend Session',
+      };
+      return dict[key] ?? key;
+    },
+  }),
+}));
+
 describe('SessionManager', () => {
   const mockRefreshAccessToken = vi.fn();
   const mockLogout = vi.fn();

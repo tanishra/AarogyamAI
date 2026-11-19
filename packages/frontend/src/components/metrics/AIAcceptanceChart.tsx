@@ -82,7 +82,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
               tickFormatter={(value) => `${value}%`}
             />
             <Tooltip 
-              labelFormatter={(value) => new Date(value).toLocaleDateString()}
+              labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
               formatter={(value: any) => [`${value.toFixed(1)}%`, 'Acceptance Rate']}
             />
             <Legend />

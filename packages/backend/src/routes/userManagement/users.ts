@@ -33,7 +33,7 @@ router.get('/users', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid pagination parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -106,7 +106,7 @@ router.get('/users/:id/activity', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

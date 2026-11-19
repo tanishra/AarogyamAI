@@ -5,7 +5,6 @@ import { RegistrationQueue } from '@/components/admin/RegistrationQueue';
 import { UserList } from '@/components/admin/UserList';
 import { UserDetail } from '@/components/admin/UserDetail';
 import { Navigation } from '@/components/Navigation';
-import { SessionManager } from '@/components/SessionManager';
 import { AuthGuard } from '@/lib/auth';
 import type { UserAccount } from '@/lib/api/types';
 import { AppShell, PanelTabs } from '@/components/common';
@@ -19,8 +18,7 @@ function UsersPageContent() {
   return (
     <>
       <Navigation />
-      <SessionManager />
-      <AppShell>
+            <AppShell>
         <div className="mb-6 overflow-hidden rounded-[22px] border border-fuchsia-300/45 bg-gradient-to-r from-fuchsia-700 via-violet-700 to-blue-700 px-6 py-6 text-white shadow-2xl shadow-violet-900/30">
           <p className="ui-chip border-white/30 bg-white/10 text-violet-100">Admin Workspace</p>
           <h1 className="mt-3 text-3xl font-bold">User Management</h1>

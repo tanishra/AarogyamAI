@@ -1,7 +1,6 @@
 'use client';
 
 import { Navigation } from '@/components/Navigation';
-import { SessionManager } from '@/components/SessionManager';
 import { AuthGuard } from '@/lib/auth';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -24,8 +23,7 @@ export default function AdminLayout({
   return (
     <AuthGuard>
       <Navigation />
-      <SessionManager />
-      <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-gray-50">
         <div className="flex">
           {/* Sidebar */}
           <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">

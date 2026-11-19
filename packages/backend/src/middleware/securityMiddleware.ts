@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { z } from 'zod';
+import { getRedisClient } from '../config/redis';
 
 /**
  * Security headers middleware using Helmet
@@ -93,38 +94,60 @@ export function sanitizeInput(req: Request, _res: Response, next: NextFunction):
 }
 
 /**
- * Rate limiting middleware (simple in-memory implementation)
- * For production, use Redis-backed rate limiting
+ * Rate limiting middleware — Redis-backed fixed window (shared across
+ * instances). Falls back to a local in-memory window if Redis is
+ * unreachable so a Redis outage cannot disable limiting entirely.
  */
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 
-export function rateLimit(options: { windowMs: number; maxRequests: number }) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const identifier = req.ip || 'unknown';
+export function rateLimit(options: {
+  windowMs: number;
+  maxRequests: number;
+  bucket?: string;
+}) {
+  const bucket = options.bucket || `w${options.windowMs}m${options.maxRequests}`;
+
+  const memoryFallback = (identifier: string): { count: number; resetTime: number } => {
     const now = Date.now();
-    
-    const record = requestCounts.get(identifier);
-    
+    const key = `${bucket}:${identifier}`;
+    let record = requestCounts.get(key);
     if (!record || now > record.resetTime) {
-      // New window
-      requestCounts.set(identifier, {
-        count: 1,
-        resetTime: now + options.windowMs,
-      });
-      next();
-      return;
+      record = { count: 0, resetTime: now + options.windowMs };
+      requestCounts.set(key, record);
     }
-    
-    if (record.count >= options.maxRequests) {
+    record.count++;
+    return record;
+  };
+
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const identifier = req.ip || 'unknown';
+
+    let count: number;
+    let retryAfter: number;
+    try {
+      const client = getRedisClient();
+      const key = `rl:${bucket}:${identifier}`;
+      count = await client.incr(key);
+      if (count === 1) {
+        await client.pexpire(key, options.windowMs);
+      }
+      const ttlMs = await client.pttl(key);
+      retryAfter = Math.ceil((ttlMs > 0 ? ttlMs : options.windowMs) / 1000);
+    } catch {
+      const record = memoryFallback(identifier);
+      count = record.count;
+      retryAfter = Math.ceil((record.resetTime - Date.now()) / 1000);
+    }
+
+    if (count > options.maxRequests) {
       res.status(429).json({
         error: 'Too Many Requests',
         message: 'Rate limit exceeded. Please try again later.',
-        retryAfter: Math.ceil((record.resetTime - now) / 1000),
+        retryAfter,
       });
       return;
     }
-    
-    record.count++;
+
     next();
   };
 }

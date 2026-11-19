@@ -31,7 +31,7 @@ router.get('/consultations', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -89,7 +89,7 @@ router.get('/ai-acceptance', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -124,7 +124,7 @@ router.get('/preparation-time', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -159,7 +159,7 @@ router.get('/questionnaire-completion', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid query parameters',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

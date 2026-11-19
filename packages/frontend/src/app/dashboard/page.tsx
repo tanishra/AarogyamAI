@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { AuthGuard } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { SessionManager } from '@/components/SessionManager';
 import { AppShell } from '@/components/common';
 
 function DashboardContent() {
@@ -28,8 +27,7 @@ function DashboardContent() {
   return (
     <>
       <Navigation />
-      <SessionManager />
-      <AppShell>
+            <AppShell>
         <div className="mb-6 overflow-hidden rounded-[22px] border border-blue-300/50 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 px-6 py-6 text-white shadow-2xl shadow-blue-900/30">
           <p className="ui-chip border-white/30 bg-white/10 text-cyan-100">Admin Control Center</p>
           <h1 className="mt-3 text-3xl font-bold">Welcome, {user?.name || 'User'}</h1>

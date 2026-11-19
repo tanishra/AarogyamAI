@@ -11,12 +11,12 @@ vi.mock('../repositories/ConsentRepository', () => {
   const mockWithdraw = vi.fn();
   
   return {
-    ConsentRepository: vi.fn().mockImplementation(() => ({
+    ConsentRepository: vi.fn().mockImplementation(function () { return ({
       findAll: mockFindAll,
       getPendingWithdrawals: mockGetPendingWithdrawals,
       processWithdrawalRequest: mockProcessWithdrawalRequest,
       withdraw: mockWithdraw,
-    })),
+    });}),
     mockFindAll,
     mockGetPendingWithdrawals,
     mockProcessWithdrawalRequest,
@@ -30,11 +30,11 @@ vi.mock('../repositories/GrievanceRepository', () => {
   const mockUpdateStatus = vi.fn();
   
   return {
-    GrievanceRepository: vi.fn().mockImplementation(() => ({
+    GrievanceRepository: vi.fn().mockImplementation(function () { return ({
       findAll: mockFindAll,
       findById: mockFindById,
       updateStatus: mockUpdateStatus,
-    })),
+    });}),
     mockFindAll,
     mockFindById,
     mockUpdateStatus,
@@ -46,10 +46,10 @@ vi.mock('../repositories/DataAccessRequestRepository', () => {
   const mockFulfill = vi.fn();
   
   return {
-    DataAccessRequestRepository: vi.fn().mockImplementation(() => ({
+    DataAccessRequestRepository: vi.fn().mockImplementation(function () { return ({
       findAll: mockFindAll,
       fulfill: mockFulfill,
-    })),
+    });}),
     mockFindAll,
     mockFulfill,
   };
@@ -59,9 +59,9 @@ vi.mock('../repositories/AuditLogRepository', () => {
   const mockCreate = vi.fn();
   
   return {
-    AuditLogRepository: vi.fn().mockImplementation(() => ({
+    AuditLogRepository: vi.fn().mockImplementation(function () { return ({
       create: mockCreate,
-    })),
+    });}),
     mockCreate,
   };
 });

@@ -15,7 +15,7 @@ const updateMedicalHistorySchema = z.object({
   currentMedications: z.array(z.string()).optional(),
   allergies: z.array(z.string()).optional(),
   familyHistory: z.array(z.string()).optional(),
-  socialHistory: z.record(z.any()).optional(),
+  socialHistory: z.record(z.string(), z.any()).optional(),
 });
 
 const updateConsentSchema = z.object({
@@ -33,8 +33,8 @@ const saveQuestionnaireProgressSchema = z.object({
   patientId: z.string().uuid(),
   currentStep: z.number().int().min(0),
   totalSteps: z.number().int().min(1),
-  responses: z.record(z.any()),
-  metadata: z.record(z.any()).optional(),
+  responses: z.record(z.string(), z.any()),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 function canAccessPatientData(req: Request, patientId: string) {
@@ -204,7 +204,7 @@ router.put('/medical-history', authenticate({}), async (req: Request, res: Respo
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid medical history payload',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -312,7 +312,7 @@ router.post('/consent/withdraw', authenticate({}), async (req: Request, res: Res
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid withdrawal request',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -367,7 +367,7 @@ router.put('/consent/:id', authenticate({}), async (req: Request, res: Response)
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid consent update payload',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -419,7 +419,7 @@ router.post('/questionnaire/sessions/:sessionId/progress', authenticate({}), asy
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid questionnaire progress data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

@@ -37,7 +37,7 @@ router.post('/encounters/:encounterId/differentials', authenticate({}), async (r
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid differential data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -170,7 +170,7 @@ router.put('/encounters/:encounterId/differentials/order', authenticate({}), asy
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid reorder data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

@@ -86,7 +86,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
                 tickFormatter={(value) => `${Math.round(value / 60)}m`}
               />
               <Tooltip 
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
                 formatter={(value: any) => [`${Math.round(value / 60)} min`, 'Avg Time']}
               />
               <Line 

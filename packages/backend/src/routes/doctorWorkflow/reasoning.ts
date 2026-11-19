@@ -29,7 +29,7 @@ router.post('/patient/:patientId/reasoning', authenticate({}), async (req: Reque
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

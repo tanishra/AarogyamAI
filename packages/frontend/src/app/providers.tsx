@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConnectivityProvider } from '@/components/ConnectivityAlert';
 import { ToastProvider } from '@/lib/notifications/toast';
+import { I18nProvider } from '@/lib/i18n';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -29,7 +30,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ConnectivityProvider>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <I18nProvider>
+                                {children}
+              </I18nProvider>
+            </AuthProvider>
           </ToastProvider>
         </ConnectivityProvider>
       </QueryClientProvider>

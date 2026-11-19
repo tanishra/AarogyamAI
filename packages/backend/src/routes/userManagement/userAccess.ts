@@ -1,3 +1,4 @@
+import { maskEmail } from '../../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
@@ -52,7 +53,7 @@ router.put('/users/:id/role', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid role',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -115,7 +116,7 @@ router.put('/users/:id/status', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -205,7 +206,7 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid user ID',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -234,7 +235,7 @@ router.post('/users/:id/password-reset', async (req: Request, res: Response) => 
     // Create audit log entry
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: 'password_reset_initiated',
       resource: 'user',
@@ -280,7 +281,7 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid MFA settings',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -311,7 +312,7 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
     // Create audit log entry
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: enabled ? 'mfa_enabled' : 'mfa_disabled',
       resource: 'user',

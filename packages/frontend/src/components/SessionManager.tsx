@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 
 const WARNING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 export function SessionManager() {
   const { sessionExpiresAt, refreshAccessToken, logout } = useAuth();
+  const { t } = useI18n();
   const [showWarning, setShowWarning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
 
@@ -76,14 +78,14 @@ export function SessionManager() {
             />
           </svg>
           <span className="text-sm font-medium text-yellow-800">
-            Your session will expire in {timeRemaining}
+            {t('session.expiring', { time: timeRemaining })}
           </span>
         </div>
         <button
           onClick={handleExtendSession}
           className="bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-700"
         >
-          Extend Session
+          {t('session.extend')}
         </button>
       </div>
     </div>

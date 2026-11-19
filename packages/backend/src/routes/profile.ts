@@ -86,7 +86,7 @@ router.put('/me', authenticate({}), async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid profile payload',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

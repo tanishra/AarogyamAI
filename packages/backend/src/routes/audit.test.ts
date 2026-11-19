@@ -10,11 +10,11 @@ vi.mock('../repositories/AuditLogRepository', () => {
   const mockGetAccessPatterns = vi.fn();
 
   return {
-    AuditLogRepository: vi.fn().mockImplementation(() => ({
+    AuditLogRepository: vi.fn().mockImplementation(function () { return ({
       search: mockSearch,
       create: mockCreate,
       getAccessPatterns: mockGetAccessPatterns,
-    })),
+    });}),
     mockSearch,
     mockCreate,
     mockGetAccessPatterns,
@@ -26,10 +26,10 @@ const { mockGetUnacknowledgedAlerts, mockAcknowledgeAnomaly } = vi.hoisted(() =>
   mockAcknowledgeAnomaly: vi.fn(),
 }));
 vi.mock('../services/AnomalyDetectionService', () => ({
-  AnomalyDetectionService: vi.fn().mockImplementation(() => ({
+  AnomalyDetectionService: vi.fn().mockImplementation(function () { return ({
     getUnacknowledgedAlerts: mockGetUnacknowledgedAlerts,
     acknowledgeAnomaly: mockAcknowledgeAnomaly,
-  })),
+  });}),
 }));
 
 vi.mock('../auth/authMiddleware', () => ({

@@ -26,10 +26,19 @@ const PATTERNS: Array<[string, RegExp]> = [
   ['pan', /\b[A-Z]{5}\d{4}[A-Z]\b/g],
   // DOB — common Indian formats dd/mm/yyyy, dd-mm-yy
   ['dob', /\b(0?[1-9]|[12]\d|3[01])[/-](0?[1-9]|1[0-2])[/-](\d{4}|\d{2})\b/g],
-  // Name prefixes — Dr./Mr./Mrs./Ms./Prof. followed by capitalized names
-  ['name_prefix', /\b(Dr|Mr|Mrs|Ms|Prof)\.?\s+[A-Z][a-z]+(\s+[A-Z][a-z]+){0,2}\b/g],
-  // Address — door/flat number patterns
+  // Name prefixes — Dr./Mr./Mrs./Ms./Prof./Shri/Smt./Kum. followed by capitalized names
+  ['name_prefix', /\b(Dr|Mr|Mrs|Ms|Prof|Shri|Smt|Kum|Master|Baby)\.?\s+[A-Z][a-z]+(\s+[A-Z][a-z]+){0,2}\b/g],
+  // Bare-name contexts — "patient named X", "my name is X", "I am X Y"
+  ['name_context', /\b(patient|name[d]?\s+is|named|mr\.|i am|i'm|myself|s\/o|d\/o|w\/o)\s+(?:mr\.?\s+|ms\.?\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b/gi],
+  // Address — door/flat number patterns and street/locality words
   ['address', /\b(flat|house|door|plot|no\.|#)\s*[\w\d-/]+/gi],
+  ['street_address', /\b\d{1,4}[\w/-]*\s+[A-Z][a-z]+\s+(street|st\.|road|rd\.|lane|avenue|ave\.|marg|nagar|colony|sector|block|vihar|enclave|layout|extension|extn\.)\b/gi],
+  // Indian PIN code — 6 digits, first digit 1-9
+  ['pincode', /\b[1-9]\d{5}\b/g],
+  // Spoken age — "45-year-old", "aged 60", "60 years old"
+  ['age', /\b(aged?\s+\d{1,3}|\d{1,3}\s*[- ]\s*(year|yr)s?\s*[- ]?old)\b/gi],
+  // Medical record / patient identifiers
+  ['mrn', /\b(mrn|uhid|patient\s*id|reg(?:istration)?\.?\s*(?:no|number|id)?)\.?\s*[:#]?\s*[A-Z0-9-]{4,}\b/gi],
 ];
 
 const PLACEHOLDER = '[REDACTED]';

@@ -27,7 +27,7 @@ export const AuditLogSchema = z.object({
   actionType: z.string().min(1).describe('Type of action performed (GSI partition key)'),
   resource: z.string().min(1).describe('Resource affected by the action (GSI partition key)'),
   outcome: z.enum(['success', 'failure']).describe('Outcome of the action'),
-  ipAddress: z.string().ip().describe('IP address of the user'),
+  ipAddress: z.union([z.ipv4(), z.ipv6()]).describe('IP address of the user'),
   userAgent: z.string().min(1).describe('User agent string from the request'),
   requestId: z.string().uuid().describe('Unique request identifier for tracing'),
   hash: z.string().length(64).describe('SHA-256 hash for tamper detection'),

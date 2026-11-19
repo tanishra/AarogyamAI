@@ -33,7 +33,7 @@ router.post('/patient/:patientId/considerations', authenticate({}), async (req: 
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -117,7 +117,7 @@ router.put('/consideration/:considerationId', authenticate({}), async (req: Requ
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

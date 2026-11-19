@@ -150,11 +150,11 @@ router.post('/patient/:patientId/vitals', authenticate({}), async (req: Request,
     const validation = addVitalsSchema.safeParse(req.body);
 
     if (!validation.success) {
-      logger.debug('[Add Vitals] Validation failed:', { value: validation.error.errors });
+      logger.debug('[Add Vitals] Validation failed:', { value: validation.error.issues });
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid vitals data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -448,7 +448,7 @@ router.post('/alerts/:alertId/acknowledge', authenticate({}), async (req: Reques
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid acknowledgment data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

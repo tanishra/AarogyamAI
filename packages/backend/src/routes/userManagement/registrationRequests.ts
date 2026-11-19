@@ -33,7 +33,7 @@ router.post('/registration-requests/:id/approve', async (req: Request, res: Resp
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid registration request ID',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -101,7 +101,7 @@ router.post('/registration-requests/:id/reject', async (req: Request, res: Respo
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }

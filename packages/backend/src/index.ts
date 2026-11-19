@@ -61,7 +61,14 @@ app.get('/readyz', async (_req, res) => {
   } catch {
     checks.redis = 'fail';
   }
-  const ready = Object.values(checks).every((v) => v === 'ok');
+  try {
+    const { getContainer } = await import('./composition');
+    const llm = getContainer().services.llm;
+    checks.llm = llm.isDegraded() ? 'degraded' : 'ok';
+  } catch {
+    checks.llm = 'unknown';
+  }
+  const ready = Object.values(checks).every((v) => v === 'ok' || v === 'degraded');
   res.status(ready ? 200 : 503).json({ ready, checks });
 });
 

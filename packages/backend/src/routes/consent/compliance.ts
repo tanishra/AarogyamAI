@@ -1,3 +1,4 @@
+import { maskEmail } from '../../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
@@ -26,7 +27,7 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
       res.status(400).json({
         error: 'Bad Request',
         message: 'Invalid request data',
-        details: validation.error.errors,
+        details: validation.error.issues,
       });
       return;
     }
@@ -56,7 +57,7 @@ router.post('/compliance/reports', async (req: Request, res: Response) => {
     // Create audit log entry
     await writeAuditLog({
       userId: req.user!.userId,
-      userName: req.user!.email,
+      userName: maskEmail(req.user!.email),
       userRole: req.user!.role,
       actionType: 'compliance_report_generated',
       resource: 'compliance_report',

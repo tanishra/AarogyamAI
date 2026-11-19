@@ -36,6 +36,28 @@ const BLOCKED_PATTERNS: Array<[string, RegExp]> = [
     'direct_medical_advice',
     /\b(you (must|need to|should) (see|visit|consult) a? ?(doctor|specialist|hospital) immediately)\b/i,
   ],
+  [
+    // Dosage given as an instruction — verb+dose or dose+frequency.
+    // Bare dose mentions (history echo: "patient reports metformin 500mg")
+    // stay allowed; the advisory gate blocks only prescriptive framing.
+    'dosage_instruction',
+    /(?<!(reports?|reported|history of|already|currently|on|was) )\b(take|taking|start|starting|administer|give|prescribe|dose|dosage|increase|reduce)\b[^.]{0,40}\b\d+(\.\d+)?\s?(mg|mcg|ml|iu|tablets?|capsules?|drops?|puffs?)\b|\b\d+(\.\d+)?\s?(mg|mcg|ml|tablets?|capsules?)\s+(once|twice|thrice|daily|every|od|bd|tds|qid|hs|sos)\b/i,
+  ],
+  [
+    // Confident-diagnosis paraphrases
+    'confident_diagnosis',
+    /\b(is suffering from|suffers from|confirms? (the |a |an )?(presence|diagnosis|condition)|indicates? (that |the )?(patient |a |an )?(has|is)|most likely (diagnosis|condition|cause) is|classic (case|signs?|presentation) of|consistent with a diagnosis of|diagnostic of)\b/i,
+  ],
+  [
+    // "recommend/suggest/advise ... take/start/medication/dose"
+    'medication_recommendation',
+    /\b(recommend|suggest|advise|recommendation is)\b[^.]{0,60}\b(take|taking|start|starting|medication|medicine|drug|dose|dosage|course of|prescription)\b/i,
+  ],
+  [
+    // Prescribing verbs with object — "start the patient on X", "begin X"
+    'prescribing_verb',
+    /\b(start|begin|initiate|put|place)\s+(the\s+)?(patient\s+)?(on\s+)?[a-z-]{3,}\s*(therapy|treatment|regimen|antibiotics?)\b/i,
+  ],
 ];
 
 export function filterLLMOutput(text: string): OutputFilterResult {
