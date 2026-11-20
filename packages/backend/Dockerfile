@@ -1,5 +1,5 @@
 # Build stage — monorepo root context required
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -9,21 +9,21 @@ COPY packages/backend/package.json ./packages/backend/package.json
 COPY packages/frontend/package.json ./packages/frontend/package.json
 
 # Install workspace deps (hoisted to root node_modules)
-RUN npm ci --workspace=packages/backend --include-workspace-root=false
+RUN npm ci --fetch-retries=5 --fetch-retry-mintimeout=15000 --fetch-retry-maxtimeout=120000 --workspace=packages/backend --include-workspace-root=false
 
 # Copy backend source and build
 COPY packages/backend ./packages/backend
 RUN npm run build --workspace=packages/backend
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
 # Reinstall production deps only
 COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/package.json
-RUN npm ci --omit=dev --workspace=packages/backend --include-workspace-root=false
+RUN npm ci --fetch-retries=5 --fetch-retry-mintimeout=15000 --fetch-retry-maxtimeout=120000 --omit=dev --workspace=packages/backend --include-workspace-root=false
 
 # Copy built output + migration SQL files (runner reads *.sql next to itself)
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist

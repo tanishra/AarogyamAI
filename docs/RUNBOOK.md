@@ -12,6 +12,29 @@ docker compose -f docker-compose.prod.yml exec backend curl -sf localhost:3001/r
 
 Migrations are idempotent; always run `migrate` before app containers on upgrade.
 
+The prod stack runs under compose project `aarogyam-prod` — fully separate
+containers/volumes from the dev stack (default project `aarogyamai`). The
+names intentionally differ so the two can never stomp each other's postgres
+or redis.
+
+## Monitoring
+
+```bash
+docker compose -f docker-compose.prod.yml --profile monitoring up -d
+```
+
+- `GET /metrics` — Prometheus exposition (request rate/latency by
+  method+route+status, db pool gauges, llm circuit, lockouts, rl rejections).
+  Route labels are normalized patterns — raw paths never leak into labels.
+- Prometheus scrapes `backend:3001/metrics` over the edge network; no host
+  port. Check targets: `docker exec aarogyam-prod-prometheus-1
+  wget -qO- localhost:9090/api/v1/targets`.
+- Grafana on `127.0.0.1:3002` (localhost-only — SSH tunnel in prod),
+  `GRAFANA_ADMIN_PASSWORD` in env. Datasource + "AarogyamAI — Backend"
+  dashboard auto-provisioned from `./docker/grafana/provisioning/`.
+- `SENTRY_DSN` optional — unset = zero-cost no-op; set = errors captured via
+  the global error handler with request-id tags. Never blocks startup.
+
 ## Health
 
 - `GET /health` — liveness (always 200 when process up)
@@ -58,7 +81,7 @@ docker compose -f docker-compose.prod.yml --profile backup up -d backup
 ## Known ops notes
 
 - Backend tests need `TZ=UTC`, Postgres + Redis containers up.
-- `npm run migrate` requires subcommand (`up`); bare call exits 1.
+- `npm run migrate` defaults to `up`; `down` needs the `.sql` suffix.
 - Dev DB volume init creds are set once — changing POSTGRES_* envs on an
   existing volume has no effect (`docker compose down -v` to re-init).
 - Residual audit findings: `qs` (moderate, DoS-only via express — mitigated by

@@ -5,6 +5,7 @@ import { logger } from '../lib/logger';
 import { stripPII } from './ai/piiStripper';
 import { filterLLMOutput } from './ai/outputFilter';
 import { LLMOutputBlockedError, PIIStripError } from '../lib/errors';
+import { llmCallsTotal } from '../lib/metrics';
 
 /**
  * LLM Service for AI interactions
@@ -101,8 +102,10 @@ export class LLMService {
     try {
       response = await this.dispatch(sanitizedMessages, options);
       this.consecutiveFailures = 0;
+      llmCallsTotal.inc({ outcome: 'success' });
     } catch (err) {
       this.consecutiveFailures++;
+      llmCallsTotal.inc({ outcome: 'failure' });
       if (this.consecutiveFailures >= CIRCUIT_THRESHOLD) {
         this.circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
         logger.error('[LLMService] provider circuit opened', {
@@ -121,6 +124,7 @@ export class LLMService {
         matchedCategories: filtered.matchedCategories,
         outputHash: filtered.outputHash,
       });
+      llmCallsTotal.inc({ outcome: 'blocked' });
       throw new LLMOutputBlockedError(filtered.matchedCategories);
     }
 

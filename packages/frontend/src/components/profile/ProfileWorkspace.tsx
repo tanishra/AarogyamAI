@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { AnimatedButton, EmptyState, Skeleton } from '@/components/common';
+import { SessionsSection } from './SessionsSection';
 
 type ProfileRole = 'Patient' | 'Nurse' | 'Doctor';
 
@@ -355,6 +356,8 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
             </p>
           </div>
         </div>
+
+        <SessionsSection />
 
         <div className="ui-surface ui-surface-hover p-5">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">My Activity</h3>

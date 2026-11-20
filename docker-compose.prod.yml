@@ -1,5 +1,11 @@
 # Production deployment — single host via Docker Compose.
 #
+# Project name is pinned to aarogyam-prod so this stack NEVER collides with
+# the dev compose project (default name: aarogyamai). Without this, `up -d`
+# here recreates the dev aarogyam-postgres/aarogyam-redis containers and
+# wipes dev credentials.
+name: aarogyam-prod
+#
 # Usage:
 #   1. cp .env.production.example .env.production   # fill in secrets
 #   2. docker compose -f docker-compose.prod.yml --env-file .env.production up -d
@@ -159,6 +165,34 @@ services:
         condition: service_healthy
     networks: [internal]
 
+  # Optional observability stack — enable with: --profile monitoring
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    networks: [edge]
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3002:3000"   # localhost-only; access via SSH tunnel in prod
+    depends_on: [prometheus]
+    networks: [edge]
+
 networks:
   internal:
     internal: true   # postgres/redis/backend-db traffic never leaves host
@@ -169,3 +203,5 @@ volumes:
   pgdata:
   redisdata:
   reports:
+  promdata:
+  grafanadata:

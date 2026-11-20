@@ -1,5 +1,5 @@
 # Build stage — monorepo root context required
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY packages/backend/package.json ./packages/backend/package.json
 COPY packages/frontend/package.json ./packages/frontend/package.json
 
 # Install workspace deps
-RUN npm ci --workspace=packages/frontend --include-workspace-root=false
+RUN npm ci --fetch-retries=5 --fetch-retry-mintimeout=15000 --fetch-retry-maxtimeout=120000 --workspace=packages/frontend --include-workspace-root=false
 
 # Copy frontend source and build
 COPY packages/frontend ./packages/frontend
@@ -17,7 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace=packages/frontend
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/package.json
 COPY packages/frontend/package.json ./packages/frontend/package.json
-RUN npm ci --omit=dev --workspace=packages/frontend --include-workspace-root=false
+RUN npm ci --fetch-retries=5 --fetch-retry-mintimeout=15000 --fetch-retry-maxtimeout=120000 --omit=dev --workspace=packages/frontend --include-workspace-root=false
 
 # Copy built output
 COPY --from=builder /app/packages/frontend/.next ./packages/frontend/.next

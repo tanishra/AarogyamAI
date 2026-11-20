@@ -1,5 +1,6 @@
 import { getRedisClient } from '../config/redis';
 import { logger } from './logger';
+import { lockoutsTotal } from './metrics';
 
 /**
  * Account lockout — after MAX_FAILED_ATTEMPTS consecutive failed logins for
@@ -36,6 +37,7 @@ export async function recordFailedAttempt(email: string): Promise<number> {
     if (count >= LOCKOUT_MAX_ATTEMPTS) {
       await client.set(lockKey(email), '1', 'EX', LOCKOUT_SECONDS);
       await client.del(counterKey(email));
+      lockoutsTotal.inc();
       logger.warn('Account locked after failed logins', { email });
       return LOCKOUT_SECONDS;
     }

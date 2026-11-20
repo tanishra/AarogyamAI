@@ -130,6 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('token', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem('user', JSON.stringify(data.user));
+    if (data.sessionId) {
+      localStorage.setItem('sessionId', data.sessionId);
+    }
 
     setAuthState({
       user: data.user,
@@ -154,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authState.token}`,
+            'x-session-id': localStorage.getItem('sessionId') || '',
           },
         });
       }
@@ -165,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('sessionId');
 
     setAuthState({
       user: null,

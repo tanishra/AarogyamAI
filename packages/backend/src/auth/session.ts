@@ -8,6 +8,7 @@ import { config } from '../config';
  */
 
 export interface SessionData {
+  sessionId?: string;
   userId: string;
   role: 'Patient' | 'Nurse' | 'Doctor' | 'Administrator' | 'DPO';
   email: string;
@@ -222,7 +223,7 @@ export async function getUserSessions(userId: string): Promise<SessionData[]> {
   for (const sessionId of sessionIds) {
     const sessionData = await getSession(sessionId);
     if (sessionData) {
-      sessions.push(sessionData);
+      sessions.push({ ...sessionData, sessionId });
     }
   }
 

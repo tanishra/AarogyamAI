@@ -43,7 +43,12 @@ apiClient.interceptors.request.use(
     } else {
       console.log('[API Client] No token available');
     }
-    
+
+    const sessionId = typeof window !== 'undefined' ? localStorage.getItem('sessionId') : null;
+    if (sessionId) {
+      config.headers['x-session-id'] = sessionId;
+    }
+
     // Initialize retry count and start time
     if (!config.headers['x-retry-count']) {
       (config as InternalAxiosRequestConfig & { retryConfig?: RetryConfig }).retryConfig = { 
@@ -98,7 +103,7 @@ apiClient.interceptors.response.use(
           
           return apiClient(originalRequest);
         }
-      } catch (refreshError) {
+      } catch {
         // If refresh fails, reject with original error
         return Promise.reject(error);
       }

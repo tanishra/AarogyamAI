@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { z } from 'zod';
 import { getRedisClient } from '../config/redis';
+import { rateLimitRejections } from '../lib/metrics';
 
 /**
  * Security headers middleware using Helmet
@@ -140,6 +141,7 @@ export function rateLimit(options: {
     }
 
     if (count > options.maxRequests) {
+      rateLimitRejections.inc({ bucket });
       res.status(429).json({
         error: 'Too Many Requests',
         message: 'Rate limit exceeded. Please try again later.',

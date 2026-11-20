@@ -39,6 +39,13 @@ export const errorHandler = (
     message = err.message;
   }
 
+  // Report unexpected 5xx errors to Sentry when configured
+  if (statusCode >= 500 && process.env.SENTRY_DSN) {
+    import('@sentry/node')
+      .then((Sentry) => Sentry.captureException(err))
+      .catch(() => {});
+  }
+
   logger.error('request failed', {
     requestId: (req as any).id,
     method: req.method,

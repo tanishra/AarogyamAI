@@ -9,12 +9,28 @@ import cors from 'cors';
 import routes from './routes';
 import { securityHeaders, sanitizeInput, rateLimit } from './middleware/securityMiddleware';
 import { requestLogger, responseTimeTracker } from './middleware/requestLogger';
+import { metricsMiddleware, metricsHandler } from './lib/metrics';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { config } from './config';
 import { logger } from './lib/logger';
 
 const app = express();
 const PORT = config.port;
+
+// Optional error tracking — zero-cost no-op unless SENTRY_DSN is set.
+if (process.env.SENTRY_DSN) {
+  import('@sentry/node')
+    .then((Sentry) => {
+      Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: config.nodeEnv,
+        // No PII in events — audit/user data stays out of error reports.
+        sendDefaultPii: false,
+      });
+      logger.info('Sentry initialized');
+    })
+    .catch((err) => logger.warn('Sentry init failed (continuing without):', err));
+}
 
 // Request ID: honor inbound X-Request-Id, else generate; echo back on response
 app.use((req, res, next) => {
@@ -28,6 +44,7 @@ app.use((req, res, next) => {
 // Request tracking middleware
 app.use(requestLogger);
 app.use(responseTimeTracker);
+app.use(metricsMiddleware);
 
 // Security middleware
 app.use(securityHeaders);
@@ -40,6 +57,9 @@ app.use(sanitizeInput);
 
 // Rate limiting: 2000 requests per 5 minutes per IP
 app.use(rateLimit({ windowMs: 5 * 60 * 1000, maxRequests: 2000 }));
+
+// Prometheus scrape endpoint — bind internal/edge only in production.
+app.get('/metrics', metricsHandler);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
