@@ -10,7 +10,11 @@
  */
 
 import fs from 'fs';
+import dotenv from 'dotenv';
 import { Pool } from 'pg';
+
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 import {
   createMigrationsTable,
   runMigration,
@@ -133,6 +137,9 @@ async function main() {
         break;
       case 'status':
         await showStatus();
+        break;
+      case undefined:
+        await runUp();
         break;
       default:
         console.log('Usage:');

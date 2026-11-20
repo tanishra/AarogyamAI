@@ -30,13 +30,19 @@ cd packages/backend && npm run migrate down <NNN_name>.sql   # .sql suffix requi
 ## Backup / restore
 
 ```bash
-# backup (profile: backup writes pg_dump to ./backups, 14-day retention)
-docker compose -f docker-compose.prod.yml --profile backup run --rm backup
+# Daily pg_dump loop (enable once): writes to ./backups, 14-day retention
+docker compose -f docker-compose.prod.yml --profile backup up -d backup
 
-# restore drill
-docker exec aarogyam-postgres pg_dump -U postgres admin_panel > dump.sql
-docker exec -i aarogyam-postgres psql -U postgres -d admin_panel < dump.sql
+# Restore drill (dump → scratch DB → verify) — run periodically:
+./scripts/restore-verify.sh <container> aarogyam aarogyam
 ```
+
+## Edge (nginx)
+
+- Only 80/443 published; backend/frontend have no host ports.
+- Self-signed cert auto-generated on first boot — replace with real certs in
+  `./docker/nginx/certs/` (server.crt / server.key) for production.
+- Edge limits: api 10r/s, web 30r/s per IP → 429 on excess.
 
 ## Incident quick reference
 
@@ -55,3 +61,7 @@ docker exec -i aarogyam-postgres psql -U postgres -d admin_panel < dump.sql
 - `npm run migrate` requires subcommand (`up`); bare call exits 1.
 - Dev DB volume init creds are set once — changing POSTGRES_* envs on an
   existing volume has no effect (`docker compose down -v` to re-init).
+- Residual audit findings: `qs` (moderate, DoS-only via express — mitigated by
+  2m body cap), minimatch/typescript-eslint (dev-toolchain only).
+- Dev compose uses non-standard ports (5433/6380/8001) to avoid colliding
+  with other projects' containers on this host.

@@ -81,3 +81,6 @@ lambda_*.zip
 .turbo
 .vercel
 .kiro
+# TLS material (nginx edge) — never commit
+docker/nginx/certs/*.crt
+docker/nginx/certs/*.key

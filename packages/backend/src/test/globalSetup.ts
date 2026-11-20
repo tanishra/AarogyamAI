@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import dotenv from 'dotenv';
 import {
   createMigrationsTable,
   runMigration,
@@ -7,9 +8,15 @@ import {
 import { readdirSync } from 'fs';
 import { join } from 'path';
 
+dotenv.config({ path: '.env.test' });
+
+const TEST_DB_PORT = process.env.TEST_DB_PORT || '5432';
+const TEST_DB_USER = process.env.TEST_DB_USER || 'postgres';
+const TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'postgres';
+const TEST_DB_HOST = process.env.TEST_DB_HOST || 'localhost';
 const ADMIN_URL =
   process.env.TEST_DB_ADMIN_URL ||
-  'postgresql://postgres:postgres@localhost:5432/postgres';
+  `postgresql://${TEST_DB_USER}:${TEST_DB_PASSWORD}@${TEST_DB_HOST}:${TEST_DB_PORT}/postgres`;
 const TEST_DB_NAME = process.env.TEST_DB_NAME || 'admin_panel_test';
 
 /**
