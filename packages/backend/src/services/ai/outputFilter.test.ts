@@ -58,6 +58,6 @@ describe('filterLLMOutput', () => {
   });
 
   it('exposes the checked pattern count', () => {
-    expect(PATTERNS_CHECKED).toBe(9);
+    expect(PATTERNS_CHECKED).toBe(14);
   });
 });

@@ -46,7 +46,7 @@ describe('LLMService safety pipeline', () => {
 
   it('never sends the original unstripped text to the provider', async () => {
     const service = makeService();
-    const strip = vi.spyOn(piiStripper, 'stripPII');
+    const strip = vi.spyOn(piiStripper, 'stripPIIAsync');
     const dispatch = stubDispatch(service);
     const original = 'call me at 9876543210';
 
@@ -60,7 +60,7 @@ describe('LLMService safety pipeline', () => {
   it('fails closed when PII stripping throws', async () => {
     const service = makeService();
     const dispatch = stubDispatch(service);
-    vi.spyOn(piiStripper, 'stripPII').mockImplementation(() => {
+    vi.spyOn(piiStripper, 'stripPIIAsync').mockImplementation(() => {
       throw new Error('strip failure');
     });
 

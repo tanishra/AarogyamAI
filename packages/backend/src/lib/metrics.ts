@@ -52,6 +52,13 @@ export const llmCallsTotal = new Counter({
   registers: [registry],
 });
 
+export const llmFallbackTotal = new Counter({
+  name: 'llm_fallback_total',
+  help: 'Fixed safe-fallback responses served (patientChat degraded)',
+  labelNames: ['caller'],
+  registers: [registry],
+});
+
 export const lockoutsTotal = new Counter({
   name: 'account_lockouts_total',
   help: 'Accounts locked after failed logins',

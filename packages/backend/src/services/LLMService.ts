@@ -2,10 +2,12 @@ import OpenAI from 'openai';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { config } from '../config';
 import { logger } from '../lib/logger';
-import { stripPII } from './ai/piiStripper';
+import { stripPIIAsync } from './ai/piiStripper';
 import { filterLLMOutput } from './ai/outputFilter';
 import { LLMOutputBlockedError, PIIStripError } from '../lib/errors';
-import { llmCallsTotal } from '../lib/metrics';
+import { llmCallsTotal, llmFallbackTotal } from '../lib/metrics';
+import { logLlmCall } from '../lib/llmAudit';
+import { createHash } from 'crypto';
 
 /**
  * LLM Service for AI interactions
@@ -42,6 +44,7 @@ export class LLMService {
   private provider: 'openai' | 'bedrock' | 'hybrid';
   private consecutiveFailures = 0;
   private circuitOpenUntil = 0;
+  private lastUsedProvider: string | undefined;
 
   constructor() {
     // Read directly from process.env to avoid config caching issues
@@ -83,29 +86,51 @@ export class LLMService {
     temperature?: number;
     maxTokens?: number;
     model?: string;
+    caller?: string;
   }): Promise<LLMResponse> {
+    const caller = options?.caller ?? 'chat';
     logger.debug('[LLMService.chat] Provider:', this.provider);
     logger.debug('[LLMService.chat] Bedrock client exists:', !!this.bedrock);
     logger.debug('[LLMService.chat] OpenAI client exists:', !!this.openai);
 
     // Safety gate 1 — strip PII from every message before any provider call.
     // If stripping fails we must NOT send the raw text: abort (fail closed).
-    const sanitizedMessages = this.sanitizeMessages(messages);
+    let sanitized: Awaited<ReturnType<LLMService['sanitizeMessages']>>;
+    try {
+      sanitized = await this.sanitizeMessages(messages);
+    } catch (err) {
+      logLlmCall({
+        caller, outcome: 'failed',
+        errorKind: err instanceof Error ? err.name : 'PIIStripError',
+      });
+      throw err;
+    }
 
     // Circuit breaker — during an outage, fail fast instead of piling
     // requests onto a dead provider; a single probe passes after cooldown.
     if (Date.now() < this.circuitOpenUntil) {
+      logLlmCall({
+        caller, outcome: 'failed', errorKind: 'LLMUnavailableError',
+        inputHash: sanitized.inputHash, piiCategories: sanitized.piiCategories,
+      });
       throw new LLMUnavailableError();
     }
 
+    const started = Date.now();
     let response: LLMResponse;
     try {
-      response = await this.dispatch(sanitizedMessages, options);
+      response = await this.dispatch(sanitized.messages, options);
       this.consecutiveFailures = 0;
       llmCallsTotal.inc({ outcome: 'success' });
     } catch (err) {
       this.consecutiveFailures++;
       llmCallsTotal.inc({ outcome: 'failure' });
+      logLlmCall({
+        caller, provider: this.lastUsedProvider, outcome: 'failed',
+        errorKind: err instanceof Error ? err.name : 'unknown',
+        latencyMs: Date.now() - started,
+        inputHash: sanitized.inputHash, piiCategories: sanitized.piiCategories,
+      });
       if (this.consecutiveFailures >= CIRCUIT_THRESHOLD) {
         this.circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
         logger.error('[LLMService] provider circuit opened', {
@@ -125,15 +150,47 @@ export class LLMService {
         outputHash: filtered.outputHash,
       });
       llmCallsTotal.inc({ outcome: 'blocked' });
+      logLlmCall({
+        caller, provider: this.lastUsedProvider, outcome: 'blocked',
+        latencyMs: Date.now() - started,
+        inputHash: sanitized.inputHash, outputHash: filtered.outputHash,
+        piiCategories: sanitized.piiCategories,
+        filterCategories: filtered.matchedCategories,
+      });
       throw new LLMOutputBlockedError(filtered.matchedCategories);
     }
 
+    logLlmCall({
+      caller, provider: this.lastUsedProvider, outcome: 'success',
+      latencyMs: Date.now() - started,
+      inputHash: sanitized.inputHash,
+      piiCategories: sanitized.piiCategories,
+      outputHash: createHash('sha256').update(filtered.text).digest('hex'),
+    });
     return { ...response, content: filtered.text };
   }
 
   /** True while the provider circuit is open (LLM calls fail fast). */
   isDegraded(): boolean {
     return Date.now() < this.circuitOpenUntil;
+  }
+
+  /**
+   * Fallback storm detection — individual fallbacks are warn-level, but a
+   * sustained burst means the provider (or the filter) is effectively down
+   * for patient chat: alert at error level past a rolling threshold.
+   */
+  private fallbackTimestamps: number[] = [];
+  private noteFallback(): void {
+    const now = Date.now();
+    this.fallbackTimestamps.push(now);
+    this.fallbackTimestamps = this.fallbackTimestamps.filter((t) => now - t < 60_000);
+    if (this.fallbackTimestamps.length === 10) {
+      logger.error('[LLMService] fallback storm: 10+ fixed responses in 60s', {
+        windowSeconds: 60,
+        count: this.fallbackTimestamps.length,
+      });
+    }
   }
 
   /**
@@ -184,13 +241,18 @@ export class LLMService {
    * aborts the call — unstripped text must never reach an LLM provider.
    * Only input hashes and category names are logged, never raw content.
    */
-  private sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
-    return messages.map((message) => {
+  private async sanitizeMessages(messages: ChatMessage[]): Promise<{
+    messages: ChatMessage[];
+    piiCategories: string[];
+    inputHash: string;
+  }> {
+    const piiCategories = new Set<string>();
+    const sanitized = await Promise.all(messages.map(async (message) => {
       if (!message.content) {
         return message;
       }
       try {
-        const result = stripPII(message.content);
+        const result = await stripPIIAsync(message.content);
         if (result.wasModified) {
           logger.info('[LLMService] PII stripped from LLM input', {
             role: message.role,
@@ -198,7 +260,8 @@ export class LLMService {
             inputHash: result.inputHash,
           });
         }
-        return { ...message, content: result.strippedText };
+        result.categoriesFound.forEach((c) => piiCategories.add(c));
+        return { ...message, content: result.strippedText, _inputHash: result.inputHash };
       } catch (error) {
         logger.error('[LLMService] PII stripping failed — aborting LLM call', {
           role: message.role,
@@ -206,7 +269,26 @@ export class LLMService {
         });
         throw new PIIStripError();
       }
-    });
+    }));
+
+    // Combined input hash — proves which inputs the provider saw without
+    // persisting any raw text.
+    const inputHash = createHash('sha256')
+      .update(
+        sanitized
+          .map((m) => (m as ChatMessage & { _inputHash?: string })._inputHash ?? '')
+          .join('|'),
+      )
+      .digest('hex');
+
+    return {
+      messages: sanitized.map((m) => {
+        const { _inputHash: _drop, ...rest } = m as ChatMessage & { _inputHash?: string };
+        return rest;
+      }),
+      piiCategories: [...piiCategories],
+      inputHash,
+    };
   }
 
   /**
@@ -234,6 +316,7 @@ export class LLMService {
         max_tokens: maxTokens,
       });
 
+      this.lastUsedProvider = 'openai';
       return {
         content: completion.choices[0]?.message?.content || '',
         usage: {
@@ -309,6 +392,7 @@ export class LLMService {
       const response = await this.bedrock.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
+      this.lastUsedProvider = 'bedrock';
       return {
         content: responseBody.content[0]?.text || '',
         usage: {
@@ -380,15 +464,19 @@ Remember: You are gathering information for the doctor, not providing medical ad
       const response = await this.chat(messages, {
         temperature: 0.8,
         maxTokens: 300,
+        caller: 'patientChat',
       });
       return response.content;
     } catch (error) {
       // Safe fallback (text_llm → fixed chain): a blocked or failed LLM call
       // degrades to a fixed safe message rather than surfacing unsafe output
       // or a hard failure mid-conversation.
+      const reason = error instanceof Error ? error.name : 'unknown';
       logger.warn('[LLMService.patientChat] Falling back to fixed safe response', {
-        reason: error instanceof Error ? error.name : 'unknown',
+        reason,
       });
+      llmFallbackTotal.inc({ caller: 'patientChat' });
+      this.noteFallback();
       return "Thank you for sharing that. I'm noting it down for the doctor to review. Could you tell me more about your symptoms?";
     }
   }
@@ -435,6 +523,7 @@ If information not mentioned, use null or empty array. Be accurate and don't inf
     const response = await this.chat(messages, {
       temperature: 0.3,
       maxTokens: 800,
+      caller: 'extractPatientSummary',
     });
 
     try {
@@ -516,6 +605,7 @@ Generate clinical considerations for the physician to review.
     const response = await this.chat(messages, {
       temperature: 0.5,
       maxTokens: 1500,
+      caller: 'generateClinicalConsiderations',
     });
 
     try {
@@ -568,6 +658,7 @@ Generate a clinical reasoning template for the physician to review and edit.
     const response = await this.chat(messages, {
       temperature: 0.6,
       maxTokens: 800,
+      caller: 'assistClinicalReasoning',
     });
 
     return response.content;
