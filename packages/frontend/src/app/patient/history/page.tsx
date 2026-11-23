@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { AppShell, PageHeader, AnimatedButton, EmptyState, Skeleton, StatTile } from '@/components/common';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 
 interface MedicalHistoryPayload {
   sessionId: string | null;
@@ -29,6 +30,7 @@ function parseLines(value: string): string[] {
 
 function PatientHistoryContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState<'profile' | 'encounters'>('profile');
   const [formState, setFormState] = useState({
@@ -136,7 +138,7 @@ function PatientHistoryContent() {
             <Link href="/patient/dashboard">
               <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
             </Link>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -236,7 +238,7 @@ function PatientHistoryContent() {
                       <div className="mt-4 space-y-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Chief Complaint
+                            {t('queue.complaint')}
                           </p>
                           <p className="mt-1 text-sm text-slate-800">
                             {encounter.summary.chiefComplaint}
@@ -366,7 +368,7 @@ function PatientHistoryContent() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">Clinical Summary</h2>
               {!isEditing ? (
-                <AnimatedButton onClick={startEditing}>Edit</AnimatedButton>
+                <AnimatedButton onClick={startEditing}>{t('common.edit')}</AnimatedButton>
               ) : (
                 <div className="flex items-center gap-2">
                   <AnimatedButton
@@ -374,13 +376,13 @@ function PatientHistoryContent() {
                     onClick={() => setIsEditing(false)}
                     disabled={updateMutation.isPending}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </AnimatedButton>
                   <AnimatedButton
                     onClick={() => updateMutation.mutate()}
                     disabled={updateMutation.isPending}
                   >
-                    {updateMutation.isPending ? 'Saving...' : 'Save'}
+                    {updateMutation.isPending ? t('common.loading') : t('common.save')}
                   </AnimatedButton>
                 </div>
               )}

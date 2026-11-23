@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AIConsiderationsPanel } from '@/components/doctor/AIConsiderationsPanel';
 import { ClinicalReasoningForm } from '@/components/doctor/ClinicalReasoningForm';
 import { AnimatedButton, AppShell, EmptyState, PageHeader, Skeleton } from '@/components/common';
@@ -41,6 +42,7 @@ interface ContextPayload {
 
 function DoctorPatientReviewContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const patientId = params.id;
@@ -172,7 +174,7 @@ function DoctorPatientReviewContent() {
             <Link href="/doctor/dashboard">
               <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
             </Link>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -205,7 +207,7 @@ function DoctorPatientReviewContent() {
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                 <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || 'Not captured'}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
@@ -277,7 +279,7 @@ function DoctorPatientReviewContent() {
                     saveReasoningMutation.error ||
                     approveReasoningMutation.error
                   ) as Error).message
-                : 'Something went wrong'}
+                : t('common.error')}
             </p>
           ) : null}
         </div>

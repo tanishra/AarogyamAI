@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, EmptyState, Skeleton } from '@/components/common';
 import { apiClient } from '@/lib/api';
 
@@ -16,6 +17,7 @@ const QUICK_PROMPTS = ['Chest pain', 'Shortness of breath', 'Headache', 'Fever',
 
 export function PatientChat() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -232,7 +234,7 @@ export function PatientChat() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-white via-blue-50/50 to-cyan-50/50 px-5 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-900">AI Nursing Intake</p>
+              <p className="text-sm font-semibold text-slate-900">{t('chat.title')}</p>
               <p className="mt-1 text-xs text-slate-500">Active session for pre-consultation preparation and triage context</p>
             </div>
             <AnimatedButton 
@@ -292,7 +294,7 @@ export function PatientChat() {
               {isTyping ? (
                 <div className="flex justify-start">
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
-                    AI Nurse is typing...
+                    {t('chat.thinking')}
                   </div>
                 </div>
               ) : null}
@@ -324,15 +326,16 @@ export function PatientChat() {
                   void sendMessage();
                 }
               }}
-              placeholder="Describe your symptoms..."
+              placeholder={t('chat.placeholder')}
               disabled={sessionComplete || isTyping}
               rows={2}
               className="ui-focus-ring w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
             />
             <AnimatedButton onClick={sendMessage} disabled={!canSend} className="mb-0.5">
-              Send
+              {t('chat.send')}
             </AnimatedButton>
           </div>
+          <p className="mt-2 text-[11px] text-slate-400">{t('chat.disclaimer')}</p>
         </div>
       </div>
 

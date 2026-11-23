@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { EmptyState, Skeleton } from '@/components/common';
 
 interface ChatSession {
@@ -19,6 +20,7 @@ interface ChatSession {
 
 export function MedicalHistory() {
   const { user, token } = useAuth();
+  const { t } = useI18n();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [sessionDetails, setSessionDetails] = useState<any>(null);
@@ -155,9 +157,9 @@ export function MedicalHistory() {
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.status')}</p>
                   <p className="mt-1 text-sm text-slate-800">
-                    {selected?.status === 'completed' ? '✓ Completed' : selected?.status || 'Unknown'}
+                    {selected?.status === 'completed' ? `✓ ${t('dash.completed')}` : selected?.status || 'Unknown'}
                   </p>
                 </div>
                 <div>
@@ -169,7 +171,7 @@ export function MedicalHistory() {
                 {sessionDetails?.summary && (
                   <>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                       <p className="mt-1 text-sm text-slate-800">
                         {sessionDetails.summary.chief_complaint || sessionDetails.summary.chiefComplaint || 'Not captured'}
                       </p>

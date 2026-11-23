@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'next/navigation';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, AppShell, EmptyState, PageHeader, Skeleton } from '@/components/common';
 import { VitalsEntryForm, VitalsData } from '@/components/nurse/VitalsEntryForm';
 import { CriticalAlertBanner } from '@/components/nurse/CriticalAlertBanner';
@@ -21,6 +22,7 @@ interface SummaryData {
 
 function NurseVitalsEntryContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const params = useParams<{ patientId: string }>();
   const searchParams = useSearchParams();
@@ -160,7 +162,7 @@ function NurseVitalsEntryContent() {
   return (
     <AppShell tone="nurse">
       <PageHeader
-        title="Vitals Entry"
+        title={t('vitals.title')}
         subtitle="Capture structured vitals with real-time outlier highlighting"
         badge="Nurse"
         actions={
@@ -168,7 +170,7 @@ function NurseVitalsEntryContent() {
             <Link href="/nurse/dashboard">
               <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
             </Link>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -205,12 +207,12 @@ function NurseVitalsEntryContent() {
 
             <div className="mt-4 space-y-3">
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs text-slate-500">Patient</p>
+                <p className="text-xs text-slate-500">{t('queue.patient')}</p>
                 <p className="text-sm font-semibold text-slate-900">{data?.patient?.name || 'Patient'}</p>
                 <p className="text-xs text-slate-500">{data?.patient?.email || ''}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                 <p className="mt-1 text-sm text-slate-800">{data?.summary?.chiefComplaint || 'Not captured'}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
@@ -231,7 +233,7 @@ function NurseVitalsEntryContent() {
 
           {/* Vitals Form */}
           <section className="lg:col-span-8 ui-surface ui-surface-hover p-5 animate-fade-up delay-1">
-            <h2 className="text-lg font-bold text-slate-900">Vitals Form</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('vitals.title')}</h2>
             <p className="mt-1 text-sm text-slate-500 mb-4">Enter patient vitals. Critical values will trigger alerts.</p>
 
             <VitalsEntryForm

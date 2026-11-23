@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, AppShell, EmptyState, PageHeader, Skeleton, StatTile } from '@/components/common';
 
 interface NurseHistoryResponse {
@@ -40,6 +41,7 @@ interface VitalsHistoryItem {
 
 function NursePatientHistoryContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const patientId = params.id;
 
@@ -88,7 +90,7 @@ function NursePatientHistoryContent() {
             <Link href="/nurse/dashboard">
               <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
             </Link>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -123,7 +125,7 @@ function NursePatientHistoryContent() {
 
               <div className="mt-4 space-y-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                   <p className="mt-1 text-sm text-slate-800">{history.summary?.chief_complaint || 'Not captured'}</p>
                 </div>
                 <div>

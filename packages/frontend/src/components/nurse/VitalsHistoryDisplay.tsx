@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n';
+
 interface VitalsRecord {
   id: string;
   bloodPressureSystolic?: number;
@@ -21,11 +23,12 @@ interface VitalsHistoryDisplayProps {
 }
 
 export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistoryDisplayProps) {
+  const { t } = useI18n();
   if (isLoading) {
     return (
       <div className="py-8 text-center">
         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-cyan-600" />
-        <p className="mt-2 text-sm text-slate-500">Loading vitals history...</p>
+        <p className="mt-2 text-sm text-slate-500">{t('common.loading')}</p>
       </div>
     );
   }
@@ -116,7 +119,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.heightCm && (
                 <div className="text-sm">
-                  <span className="text-slate-500">Height:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.height')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.heightCm}</span>
                   <span className="text-xs text-slate-400 ml-1">cm</span>
                 </div>
@@ -124,7 +127,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.weightKg && (
                 <div className="text-sm">
-                  <span className="text-slate-500">Weight:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.weight')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.weightKg}</span>
                   <span className="text-xs text-slate-400 ml-1">kg</span>
                 </div>

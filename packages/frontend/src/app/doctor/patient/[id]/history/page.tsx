@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { AuthGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import {
   AnimatedButton,
   AppShell,
@@ -13,6 +14,7 @@ import {
 
 function PatientHistoryContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const params = useParams();
   const patientId = params.id as string;
@@ -40,10 +42,10 @@ function PatientHistoryContent() {
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => router.back()}>
-              Back
+              {t('common.back')}
             </AnimatedButton>
             <AnimatedButton variant="secondary" onClick={logout}>
-              Logout
+              {t('nav.logout')}
             </AnimatedButton>
           </div>
         }
@@ -104,7 +106,7 @@ function PatientHistoryContent() {
                         <div className="mt-4 space-y-3">
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Chief Complaint
+                              {t('queue.complaint')}
                             </p>
                             <p className="mt-1 text-sm text-slate-800">
                               {encounter.summary.chiefComplaint}
@@ -179,7 +181,7 @@ function PatientHistoryContent() {
                           {encounter.clinicalReasoning.finalNotes && (
                             <div className="mt-3">
                               <p className="text-xs font-semibold text-slate-700">
-                                Clinical Notes
+                                {t('review.notes')}
                               </p>
                               <p className="mt-1 text-sm text-slate-800">
                                 {encounter.clinicalReasoning.finalNotes}

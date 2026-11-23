@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import {
   AnimatedButton,
   AppShell,
@@ -44,6 +45,7 @@ type DashboardTab = 'workflow' | 'profile';
 
 function NurseDashboardContent() {
   const { token, user, logout } = useAuth();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
 
   const [selectedPatient, setSelectedPatient] = useState<QueuePatient | null>(null);
@@ -167,7 +169,7 @@ function NurseDashboardContent() {
   };
 
   const tabs = [
-    { id: 'vitals' as NurseTab, label: 'Vitals Entry' },
+    { id: 'vitals' as NurseTab, label: t('vitals.title') },
     { id: 'history' as NurseTab, label: 'Previous Vitals' },
   ];
 
@@ -180,9 +182,9 @@ function NurseDashboardContent() {
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => queryClient.invalidateQueries({ queryKey: ['nurseQueue'] })}>
-              Refresh
+              {t('common.refresh')}
             </AnimatedButton>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -223,10 +225,10 @@ function NurseDashboardContent() {
         <aside className="lg:col-span-4">
           <div className="ui-surface overflow-hidden">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Patient Queue</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('dash.queue')}</h2>
               <div className="mt-2 flex flex-wrap gap-2">
                 {[
-                  ['all', 'All'],
+                  ['all', t('common.all')],
                   ['emergency', 'Emergency'],
                   ['urgent', 'Urgent'],
                   ['routine', 'Routine'],
@@ -255,7 +257,7 @@ function NurseDashboardContent() {
                 </div>
               ) : filteredPatients.length === 0 ? (
                 <div className="p-4">
-                  <EmptyState title="No patients in this filter" description="Try a different filter or refresh the queue." />
+                  <EmptyState title={t('dash.queueEmpty')} description="Try a different filter or refresh the queue." />
                 </div>
               ) : (
                 filteredPatients.map((patient) => (
@@ -278,10 +280,10 @@ function NurseDashboardContent() {
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      Waiting {Math.max(1, Math.floor((Date.now() - new Date(patient.chat_completed_at).getTime()) / 60000))} min
+                      {t('queue.waiting')} {Math.max(1, Math.floor((Date.now() - new Date(patient.chat_completed_at).getTime()) / 60000))} min
                     </p>
                     <p className="mt-1 text-[11px] font-medium text-slate-500">
-                      Status: {patient.status}
+                      {t('queue.status')}: {patient.status}
                       {patient.emergency_detected ? ' • Emergency signal detected' : ''}
                     </p>
                   </button>
@@ -318,7 +320,7 @@ function NurseDashboardContent() {
                 {summary ? (
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                       <p className="mt-1 text-sm text-slate-800">{summary.chiefComplaint || 'Not captured'}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
@@ -337,17 +339,17 @@ function NurseDashboardContent() {
 
               {activeTab === 'vitals' && (
                 <div className="ui-surface ui-surface-hover p-5">
-                  <h3 className="mb-4 text-lg font-semibold text-slate-900">Record Vitals</h3>
+                  <h3 className="mb-4 text-lg font-semibold text-slate-900">{t('vitals.title')}</h3>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {[
                       ['bloodPressureSystolic', 'Systolic BP (mmHg)'],
                       ['bloodPressureDiastolic', 'Diastolic BP (mmHg)'],
-                      ['heartRate', 'Heart Rate (bpm)'],
-                      ['temperatureFahrenheit', 'Temperature (°F)'],
-                      ['oxygenSaturation', 'SpO2 (%)'],
+                      ['heartRate', `${t('vitals.hr')} (bpm)`],
+                      ['temperatureFahrenheit', `${t('vitals.temp')} (°F)`],
+                      ['oxygenSaturation', `${t('vitals.spo2')} (%)`],
                       ['respiratoryRate', 'Respiratory Rate'],
-                      ['weightKg', 'Weight (kg)'],
-                      ['heightCm', 'Height (cm)'],
+                      ['weightKg', `${t('vitals.weight')} (kg)`],
+                      ['heightCm', `${t('vitals.height')} (cm)`],
                     ].map(([key, label]) => (
                       <div key={key}>
                         <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
@@ -362,7 +364,7 @@ function NurseDashboardContent() {
                   </div>
 
                   <div className="mt-4">
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Clinical Note</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">{t('review.notes')}</label>
                     <textarea
                       value={vitals.notes}
                       onChange={(e) => setVitals((prev) => ({ ...prev, notes: e.target.value }))}
@@ -378,7 +380,7 @@ function NurseDashboardContent() {
                       onClick={() => addVitalsMutation.mutate()}
                       disabled={addVitalsMutation.isPending}
                     >
-                      {addVitalsMutation.isPending ? 'Saving...' : 'Save Vitals'}
+                      {addVitalsMutation.isPending ? t('common.loading') : t('vitals.save')}
                     </AnimatedButton>
                     <AnimatedButton onClick={() => markReadyMutation.mutate()} disabled={markReadyMutation.isPending}>
                       {markReadyMutation.isPending ? 'Marking...' : 'Mark Ready for Doctor'}

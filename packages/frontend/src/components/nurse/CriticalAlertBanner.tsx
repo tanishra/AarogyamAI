@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface CriticalAlert {
   id: string;
@@ -20,6 +21,7 @@ interface CriticalAlertBannerProps {
 }
 
 export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBannerProps) {
+  const { t } = useI18n();
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -94,7 +96,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
                 </p>
                 {alert.patient_name && (
                   <p>
-                    <span className="font-semibold">Patient:</span> {alert.patient_name}
+                    <span className="font-semibold">{t('queue.patient')}:</span> {alert.patient_name}
                   </p>
                 )}
               </div>

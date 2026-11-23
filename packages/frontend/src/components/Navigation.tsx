@@ -4,25 +4,39 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useI18n, type Locale } from '@/lib/i18n';
 
 export function Navigation() {
   const { user, role, logout } = useAuth();
+  const { t, locale, setLocale } = useI18n();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const localeSelect = (
+    <select
+      value={locale}
+      onChange={(e) => setLocale(e.target.value as Locale)}
+      aria-label={t('nav.language')}
+      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+    >
+      <option value="en">EN</option>
+      <option value="hi">हिंदी</option>
+    </select>
+  );
+
   const adminMenuItems = [
-    { href: '/dashboard', label: 'Overview' },
-    { href: '/admin/users', label: 'Users' },
-    { href: '/metrics', label: 'Metrics' },
-    { href: '/audit', label: 'Audit' },
-    { href: '/admin/consent', label: 'Consent' },
+    { href: '/dashboard', label: t('nav.overview') },
+    { href: '/admin/users', label: t('nav.users') },
+    { href: '/metrics', label: t('nav.metrics') },
+    { href: '/audit', label: t('nav.audit') },
+    { href: '/admin/consent', label: t('nav.consent') },
   ];
 
   const dpoMenuItems = [
-    { href: '/dashboard', label: 'Overview' },
-    { href: '/dpo', label: 'DPO Hub' },
-    { href: '/audit', label: 'Audit' },
-    { href: '/admin/consent', label: 'Consent' },
+    { href: '/dashboard', label: t('nav.overview') },
+    { href: '/dpo', label: t('nav.dpo') },
+    { href: '/audit', label: t('nav.audit') },
+    { href: '/admin/consent', label: t('nav.consent') },
   ];
 
   const menuItems = role === 'Administrator' ? adminMenuItems : dpoMenuItems;
@@ -59,6 +73,7 @@ export function Navigation() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          {localeSelect}
           <div className="text-right">
             <p className="text-sm font-semibold text-slate-900">{user?.name || 'User'}</p>
             <p className="text-xs text-slate-500">{role}</p>
@@ -67,7 +82,7 @@ export function Navigation() {
             onClick={() => void logout()}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
           >
-            Logout
+            {t('nav.logout')}
           </button>
         </div>
 
@@ -75,7 +90,7 @@ export function Navigation() {
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           className="inline-flex rounded-lg p-2 text-slate-700 hover:bg-slate-100 md:hidden"
         >
-          <span className="sr-only">Toggle menu</span>
+          <span className="sr-only">{t('nav.toggleMenu')}</span>
           {isMobileMenuOpen ? (
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -104,11 +119,12 @@ export function Navigation() {
               </Link>
             ))}
           </div>
+          <div className="mt-3">{localeSelect}</div>
           <button
             onClick={() => void logout()}
             className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100"
           >
-            Logout
+            {t('nav.logout')}
           </button>
         </div>
       ) : null}

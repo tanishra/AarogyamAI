@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface Consideration {
   id: string;
@@ -26,6 +27,7 @@ export function AIConsiderationsPanel({
   onUpdateStatus,
   isGenerating,
 }: AIConsiderationsPanelProps) {
+  const { t } = useI18n();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const getLikelihoodColor = (likelihood: string) => {
@@ -58,11 +60,11 @@ export function AIConsiderationsPanel({
     <div className="ui-surface overflow-hidden p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">AI Clinical Considerations</h3>
+          <h3 className="text-lg font-semibold text-slate-900">{t('review.aiSuggestions')}</h3>
           <p className="mt-1 text-sm text-slate-600">Decision-support suggestions for physician review and adjudication.</p>
         </div>
         <AnimatedButton onClick={onGenerate} disabled={isGenerating}>
-          {isGenerating ? 'Generating...' : 'Generate Considerations'}
+          {isGenerating ? t('common.loading') : 'Generate Considerations'}
         </AnimatedButton>
       </div>
 
@@ -142,13 +144,13 @@ export function AIConsiderationsPanel({
 
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <AnimatedButton size="sm" onClick={() => onUpdateStatus(consideration.id, 'accepted')}>
-                      Accept
+                      {t('review.approve')}
                     </AnimatedButton>
                     <AnimatedButton size="sm" variant="secondary" onClick={() => onUpdateStatus(consideration.id, 'modified')}>
-                      Modify
+                      {t('review.modify')}
                     </AnimatedButton>
                     <AnimatedButton size="sm" variant="danger" onClick={() => onUpdateStatus(consideration.id, 'rejected')}>
-                      Reject
+                      {t('review.reject')}
                     </AnimatedButton>
                   </div>
                 </div>
@@ -159,7 +161,7 @@ export function AIConsiderationsPanel({
       )}
 
       <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-800">
-        AI output is advisory only. Final diagnosis and treatment decisions remain with the attending physician.
+        {t('review.aiNotice')} — AI output is advisory only. Final diagnosis and treatment decisions remain with the attending physician.
       </div>
     </div>
   );

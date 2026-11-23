@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, AppShell, EmptyState, PageHeader, Skeleton, StatTile } from '@/components/common';
 
 interface ConsentRecord {
@@ -19,6 +20,7 @@ interface ConsentRecord {
 
 function PatientConsentContent() {
   const { token, logout } = useAuth();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -74,7 +76,7 @@ function PatientConsentContent() {
   return (
     <AppShell tone="patient">
       <PageHeader
-        title="Consent Management"
+        title={t('consent.title')}
         subtitle="Manage permissions for clinical data processing and AI-assisted workflows"
         badge="Patient"
         actions={
@@ -82,7 +84,7 @@ function PatientConsentContent() {
             <Link href="/patient/dashboard">
               <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
             </Link>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -125,7 +127,7 @@ function PatientConsentContent() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    Granted {new Date(record.granted_at).toLocaleString()}
+                    {t('consent.granted')} {new Date(record.granted_at).toLocaleString()}
                     {record.expires_at ? ` • Expires ${new Date(record.expires_at).toLocaleDateString()}` : ''}
                   </p>
                 </div>
@@ -138,7 +140,7 @@ function PatientConsentContent() {
                     onClick={() => withdrawMutation.mutate(record.id)}
                     disabled={record.status !== 'active' || withdrawMutation.isPending}
                   >
-                    {withdrawMutation.isPending ? 'Submitting...' : 'Withdraw'}
+                    {withdrawMutation.isPending ? t('common.loading') : t('consent.withdraw')}
                   </AnimatedButton>
                 </div>
               </div>
@@ -174,7 +176,7 @@ function PatientConsentContent() {
 
               {record.withdrawn_at ? (
                 <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
-                  Withdrawn on {new Date(record.withdrawn_at).toLocaleString()}
+                  {t('consent.withdrawn')}: {new Date(record.withdrawn_at).toLocaleString()}
                 </p>
               ) : null}
             </article>

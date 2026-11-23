@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface VitalsEntryFormProps {
   patientId: string;
@@ -41,6 +42,7 @@ export function VitalsEntryForm({
   isSubmitting = false,
   previousVitals 
 }: VitalsEntryFormProps) {
+  const { t } = useI18n();
   const [vitals, setVitals] = useState<VitalsData>({
     bloodPressureSystolic: undefined,
     bloodPressureDiastolic: undefined,
@@ -112,7 +114,7 @@ export function VitalsEntryForm({
         {/* Blood Pressure */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Blood Pressure (mmHg)
+            {t('vitals.bp')} (mmHg)
           </label>
           <div className="flex gap-2">
             <input
@@ -142,7 +144,7 @@ export function VitalsEntryForm({
         {/* Heart Rate */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Heart Rate (bpm)
+            {t('vitals.hr')} (bpm)
           </label>
           <input
             type="number"
@@ -159,7 +161,7 @@ export function VitalsEntryForm({
         {/* Temperature */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Temperature (°F)
+            {t('vitals.temp')} (°F)
           </label>
           <input
             type="number"
@@ -177,7 +179,7 @@ export function VitalsEntryForm({
         {/* Oxygen Saturation */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            O2 Saturation (%)
+            {t('vitals.spo2')} (%)
           </label>
           <input
             type="number"
@@ -211,7 +213,7 @@ export function VitalsEntryForm({
         {/* Height */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Height (cm)
+            {t('vitals.height')} (cm)
           </label>
           <input
             type="number"
@@ -228,7 +230,7 @@ export function VitalsEntryForm({
         {/* Weight */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Weight (kg)
+            {t('vitals.weight')} (kg)
           </label>
           <input
             type="number"
@@ -259,7 +261,7 @@ export function VitalsEntryForm({
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          Clinical Notes (optional)
+          {t('review.notes')} (optional)
         </label>
         <textarea
           rows={3}
@@ -276,7 +278,7 @@ export function VitalsEntryForm({
           type="submit"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Saving Vitals...' : 'Save Vitals'}
+          {isSubmitting ? t('common.loading') : t('vitals.save')}
         </AnimatedButton>
       </div>
     </form>

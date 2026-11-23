@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import {
   AnimatedButton,
   AppShell,
@@ -47,6 +48,7 @@ type DashboardTab = 'workflow' | 'history' | 'profile';
 
 function DoctorDashboardContent() {
   const { token, user, logout } = useAuth();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
 
   const [selectedPatient, setSelectedPatient] = useState<QueuePatient | null>(null);
@@ -259,9 +261,9 @@ function DoctorDashboardContent() {
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => queryClient.invalidateQueries({ queryKey: ['doctorQueue'] })}>
-              Refresh
+              {t('common.refresh')}
             </AnimatedButton>
-            <AnimatedButton variant="secondary" onClick={logout}>Logout</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
         }
       />
@@ -374,7 +376,7 @@ function DoctorDashboardContent() {
         <aside className="lg:col-span-4">
           <div className="ui-surface overflow-hidden">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Patient Queue</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('dash.queue')}</h2>
             </div>
             <div className="max-h-[72vh] divide-y divide-slate-200 overflow-y-auto">
               {isLoading ? (
@@ -385,7 +387,7 @@ function DoctorDashboardContent() {
                 </div>
               ) : patients.length === 0 ? (
                 <div className="p-4">
-                  <EmptyState title="No pending patients" description="Queue is clear for now." />
+                  <EmptyState title={t('dash.queueEmpty')} description="Queue is clear for now." />
                 </div>
               ) : (
                 patients.map((patient) => (
@@ -440,13 +442,13 @@ function DoctorDashboardContent() {
                     Nurse: {selectedPatient.nurse_name || 'Unassigned'}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-                    Queue status: {selectedPatient.status}
+                    {t('queue.status')}: {selectedPatient.status}
                   </span>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chief Complaint</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
                     <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || 'Not captured yet'}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">

@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { RoleGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, AppShell, PageHeader } from '@/components/common';
 import { PatientChat } from '@/components/patient/PatientChat';
 
 function PatientChatContent() {
   const { logout } = useAuth();
+  const { t } = useI18n();
 
   return (
     <AppShell tone="patient">
@@ -17,10 +19,10 @@ function PatientChatContent() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/patient/dashboard">
-              <AnimatedButton variant="secondary">Dashboard</AnimatedButton>
+              <AnimatedButton variant="secondary">{t('nav.dashboard')}</AnimatedButton>
             </Link>
             <AnimatedButton variant="secondary" onClick={logout}>
-              Logout
+              {t('nav.logout')}
             </AnimatedButton>
           </div>
         }

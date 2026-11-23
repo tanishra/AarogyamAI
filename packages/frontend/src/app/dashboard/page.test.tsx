@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DashboardPage from './page';
 import { useAuth } from '@/lib/auth';
+import { I18nProvider } from '@/lib/i18n';
 
 // Mock the auth module
 vi.mock('@/lib/auth', () => ({
@@ -39,6 +40,13 @@ const dpoAuth = {
 };
 
 describe('DashboardPage', () => {
+  const renderPage = () =>
+    render(
+      <I18nProvider>
+        <DashboardPage />
+      </I18nProvider>,
+    );
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -46,7 +54,7 @@ describe('DashboardPage', () => {
   it('should display welcome message with user name', () => {
     (useAuth as any).mockReturnValue(adminAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByText(/Welcome, John Doe/i)).toBeInTheDocument();
   });
@@ -54,7 +62,7 @@ describe('DashboardPage', () => {
   it('should display user role badge', () => {
     (useAuth as any).mockReturnValue(adminAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getAllByText('Administrator').length).toBeGreaterThan(0);
   });
@@ -62,7 +70,7 @@ describe('DashboardPage', () => {
   it('should display Administrator quick action cards', () => {
     (useAuth as any).mockReturnValue(adminAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByText('User Management')).toBeInTheDocument();
     expect(screen.getByText('Metrics Dashboard')).toBeInTheDocument();
@@ -74,7 +82,7 @@ describe('DashboardPage', () => {
   it('should display DPO quick action cards', () => {
     (useAuth as any).mockReturnValue(dpoAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     const dpoHubLinks = screen.getAllByText('DPO Hub');
     expect(dpoHubLinks.length).toBeGreaterThan(0);
@@ -86,7 +94,7 @@ describe('DashboardPage', () => {
   it('should link to user management page for Administrator', () => {
     (useAuth as any).mockReturnValue(adminAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     const userManagementLink = screen.getByText('User Management').closest('a');
     expect(userManagementLink).toHaveAttribute('href', '/admin/users');
@@ -95,7 +103,7 @@ describe('DashboardPage', () => {
   it('should display the operational snapshot section', () => {
     (useAuth as any).mockReturnValue(adminAuth);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByText('Operational Snapshot')).toBeInTheDocument();
   });

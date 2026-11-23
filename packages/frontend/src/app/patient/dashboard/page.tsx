@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { AuthGuard, useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { PatientChat } from '@/components/patient/PatientChat';
 import { MedicalHistory } from '@/components/patient/MedicalHistory';
 import { PatientProfile } from '@/components/patient/PatientProfile';
@@ -11,15 +12,16 @@ type TabId = 'chat' | 'history' | 'profile';
 
 function PatientDashboardContent() {
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>('chat');
 
   const tabs = useMemo(
     () => [
       { id: 'chat' as TabId, label: 'AI Nurse Intake' },
       { id: 'history' as TabId, label: 'Consultation History' },
-      { id: 'profile' as TabId, label: 'My Profile' },
+      { id: 'profile' as TabId, label: t('nav.profile') },
     ],
-    []
+    [t]
   );
 
   return (
@@ -35,7 +37,7 @@ function PatientDashboardContent() {
               <p className="text-sm font-semibold text-slate-900">{user?.name || 'Patient'}</p>
             </div>
             <AnimatedButton variant="secondary" onClick={logout}>
-              Logout
+              {t('nav.logout')}
             </AnimatedButton>
           </div>
         }

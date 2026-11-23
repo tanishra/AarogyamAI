@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSessions, revokeOtherSessions, revokeSession } from '@/lib/api/services/sessions';
+import { useI18n } from '@/lib/i18n';
 
 /**
  * Active-sessions management — list own sessions, revoke any of them.
@@ -9,6 +10,7 @@ import { getSessions, revokeOtherSessions, revokeSession } from '@/lib/api/servi
  */
 export function SessionsSection() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const { data: sessions, isLoading } = useQuery({
     queryKey: ['sessions'],
     queryFn: getSessions,
@@ -29,14 +31,14 @@ export function SessionsSection() {
   return (
     <div className="ui-surface ui-surface-hover p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Active Sessions</h3>
+        <h3 className="text-sm font-semibold text-slate-900">{t('session.active')}</h3>
         {otherCount > 0 && (
           <button
             onClick={() => revokeOthers.mutate()}
             disabled={revokeOthers.isPending}
             className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
           >
-            Sign out other devices ({otherCount})
+            {t('session.revokeOthers', { count: otherCount })}
           </button>
         )}
       </div>
@@ -45,9 +47,9 @@ export function SessionsSection() {
       </p>
       <div className="mt-3 space-y-2">
         {isLoading ? (
-          <p className="text-xs text-slate-500">Loading…</p>
+          <p className="text-xs text-slate-500">{t('common.loading')}</p>
         ) : !sessions?.length ? (
-          <p className="text-xs text-slate-500">No active sessions.</p>
+          <p className="text-xs text-slate-500">{t('session.none')}</p>
         ) : (
           sessions.map((s) => (
             <div
@@ -59,12 +61,12 @@ export function SessionsSection() {
                   {s.userAgent || 'Unknown device'}
                   {s.current && (
                     <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                      This device
+                      {t('session.thisDevice')}
                     </span>
                   )}
                 </p>
                 <p className="text-slate-500">
-                  {s.ipAddress} · since {new Date(s.createdAt).toLocaleString()}
+                  {s.ipAddress} · {t('session.since', { time: new Date(s.createdAt).toLocaleString() })}
                 </p>
               </div>
               {!s.current && (
@@ -73,7 +75,7 @@ export function SessionsSection() {
                   disabled={revoke.isPending}
                   className="ml-3 shrink-0 rounded-md border border-red-200 px-2 py-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
-                  Revoke
+                  {t('session.revoke')}
                 </button>
               )}
             </div>
