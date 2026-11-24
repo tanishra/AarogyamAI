@@ -1,6 +1,6 @@
 /**
  * PII helpers for the audit log. The hash chain is append-only and
- * replicated (exports, DynamoDB mirror), so entries carry masked
+ * exported for compliance review, so entries carry masked
  * identifiers instead of raw PII. Full identity stays resolvable via
  * user_id against the users table.
  */

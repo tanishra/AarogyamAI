@@ -1,15 +1,10 @@
 import { z } from 'zod';
 
 /**
- * DynamoDB Audit Log Item Schema
- * 
- * Table: audit_logs
- * Partition Key: userId (String)
- * Sort Key: timestamp (Number - Unix timestamp in milliseconds)
- * 
- * Global Secondary Indexes:
- * - actionType-timestamp-index: Partition Key: actionType, Sort Key: timestamp
- * - resource-timestamp-index: Partition Key: resource, Sort Key: timestamp
+ * Audit Log entry schema
+ *
+ * Backing store: PostgreSQL `audit_logs` table (hash-chained for
+ * tamper-evidence — see AuditLogRepository / verifyIntegrity).
  */
 
 /**
@@ -36,7 +31,6 @@ export const AuditLogSchema = z.object({
   resourceId: z.string().optional().describe('Specific resource identifier if applicable'),
   errorDetails: z.string().optional().describe('Error details if outcome is failure'),
   previousHash: z.string().length(64).optional().describe('Hash of previous entry for chain verification'),
-  ttl: z.number().int().positive().optional().describe('TTL timestamp for automatic deletion'),
 });
 
 /**
@@ -50,33 +44,7 @@ export type AuditLogItem = z.infer<typeof AuditLogSchema>;
 export type CreateAuditLogInput = Omit<AuditLogItem, 'id' | 'timestamp' | 'hash' | 'previousHash'> & {
   resourceId?: string;
   errorDetails?: string;
-  ttl?: number;
 };
-
-/**
- * DynamoDB table configuration constants
- */
-export const AUDIT_LOG_TABLE_CONFIG = {
-  tableName: (environment: string) => `aarogyamai-audit-logs-${environment}`,
-  partitionKey: 'userId',
-  sortKey: 'timestamp',
-  gsi: {
-    actionTypeIndex: {
-      name: 'actionType-timestamp-index',
-      partitionKey: 'actionType',
-      sortKey: 'timestamp',
-    },
-    resourceIndex: {
-      name: 'resource-timestamp-index',
-      partitionKey: 'resource',
-      sortKey: 'timestamp',
-    },
-  },
-  ttl: {
-    attributeName: 'ttl',
-    enabled: true,
-  },
-} as const;
 
 /**
  * Common action types for audit logging

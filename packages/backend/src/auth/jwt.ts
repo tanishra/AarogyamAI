@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { config } from '../config';
 
 /**
@@ -12,6 +13,7 @@ export interface TokenPayload {
   email: string;
   role: 'Patient' | 'Nurse' | 'Doctor' | 'Administrator' | 'DPO';
   type: 'access' | 'refresh';
+  jti: string;
 }
 
 export interface TokenPair {
@@ -26,10 +28,11 @@ const JWT_AUDIENCE = 'aarogyamai-api';
 /**
  * Generate access token (8-hour expiration)
  */
-export function generateAccessToken(payload: Omit<TokenPayload, 'type'>): string {
+export function generateAccessToken(payload: Omit<TokenPayload, 'type' | 'jti'>): string {
   const tokenPayload: TokenPayload = {
     ...payload,
     type: 'access',
+    jti: randomUUID(),
   };
 
   const options: jwt.SignOptions = {
@@ -44,10 +47,11 @@ export function generateAccessToken(payload: Omit<TokenPayload, 'type'>): string
 /**
  * Generate refresh token (30-day expiration)
  */
-export function generateRefreshToken(payload: Omit<TokenPayload, 'type'>): string {
+export function generateRefreshToken(payload: Omit<TokenPayload, 'type' | 'jti'>): string {
   const tokenPayload: TokenPayload = {
     ...payload,
     type: 'refresh',
+    jti: randomUUID(),
   };
 
   const options: jwt.SignOptions = {
@@ -62,7 +66,7 @@ export function generateRefreshToken(payload: Omit<TokenPayload, 'type'>): strin
 /**
  * Generate both access and refresh tokens
  */
-export function generateTokenPair(payload: Omit<TokenPayload, 'type'>): TokenPair {
+export function generateTokenPair(payload: Omit<TokenPayload, 'type' | 'jti'>): TokenPair {
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 

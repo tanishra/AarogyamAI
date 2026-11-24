@@ -64,7 +64,12 @@ export function VitalsEntryForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(vitals);
+    try {
+      await onSubmit(vitals);
+    } catch {
+      // Submit errors surface via the parent's mutation state/UI — swallow
+      // here so the form event doesn't produce an unhandled rejection.
+    }
   };
 
   const bmi = calculateBMI();

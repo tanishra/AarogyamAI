@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AuditLogSchema, AuditActionTypes, AuditResourceTypes, AUDIT_LOG_TABLE_CONFIG } from './audit-log';
+import { AuditLogSchema, AuditActionTypes, AuditResourceTypes } from './audit-log';
 import type { AuditLogItem } from './audit-log';
 
 describe('AuditLogSchema', () => {
@@ -65,7 +65,6 @@ describe('AuditLogSchema', () => {
       ...validAuditLog,
       errorDetails: 'Some error occurred',
       previousHash: 'b'.repeat(64),
-      ttl: Math.floor(Date.now() / 1000) + 86400,
     };
     const result = AuditLogSchema.safeParse(withOptional);
     expect(result.success).toBe(true);
@@ -87,33 +86,6 @@ describe('AuditLogSchema', () => {
     const withIPv6 = { ...validAuditLog, ipAddress: '2001:0db8:85a3:0000:0000:8a2e:0370:7334' };
     const result = AuditLogSchema.safeParse(withIPv6);
     expect(result.success).toBe(true);
-  });
-});
-
-describe('AUDIT_LOG_TABLE_CONFIG', () => {
-  it('should generate correct table name for environment', () => {
-    expect(AUDIT_LOG_TABLE_CONFIG.tableName('dev')).toBe('aarogyamai-audit-logs-dev');
-    expect(AUDIT_LOG_TABLE_CONFIG.tableName('prod')).toBe('aarogyamai-audit-logs-prod');
-  });
-
-  it('should have correct partition and sort keys', () => {
-    expect(AUDIT_LOG_TABLE_CONFIG.partitionKey).toBe('userId');
-    expect(AUDIT_LOG_TABLE_CONFIG.sortKey).toBe('timestamp');
-  });
-
-  it('should have correct GSI configuration', () => {
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.actionTypeIndex.name).toBe('actionType-timestamp-index');
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.actionTypeIndex.partitionKey).toBe('actionType');
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.actionTypeIndex.sortKey).toBe('timestamp');
-
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.resourceIndex.name).toBe('resource-timestamp-index');
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.resourceIndex.partitionKey).toBe('resource');
-    expect(AUDIT_LOG_TABLE_CONFIG.gsi.resourceIndex.sortKey).toBe('timestamp');
-  });
-
-  it('should have TTL enabled', () => {
-    expect(AUDIT_LOG_TABLE_CONFIG.ttl.enabled).toBe(true);
-    expect(AUDIT_LOG_TABLE_CONFIG.ttl.attributeName).toBe('ttl');
   });
 });
 

@@ -56,19 +56,9 @@ export const config = {
   },
   aws: {
     region: process.env.AWS_REGION || 'us-east-1',
-    dynamodb: {
-      auditTable: process.env.DYNAMODB_AUDIT_TABLE || 'audit_logs',
-      endpoint: process.env.DYNAMODB_ENDPOINT,
-    },
     s3: {
       reportsBucket: process.env.S3_REPORTS_BUCKET || '',
       endpoint: process.env.S3_ENDPOINT,
-    },
-    sqs: {
-      reportQueueUrl: process.env.SQS_REPORT_QUEUE_URL || '',
-    },
-    sns: {
-      notificationTopicArn: process.env.SNS_NOTIFICATION_TOPIC_ARN || '',
     },
     bedrock: {
       region: process.env.AWS_BEDROCK_REGION || process.env.AWS_REGION || 'us-east-1',
@@ -112,4 +102,3 @@ export type AppConfig = typeof config;
 // Export connection utilities
 export * from './database';
 export * from './redis';
-export * from './dynamodb';

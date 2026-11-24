@@ -67,7 +67,6 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-gpt-4-turbo-preview}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      DYNAMODB_AUDIT_TABLE: ${DYNAMODB_AUDIT_TABLE:-}
       S3_REPORTS_BUCKET: ${S3_REPORTS_BUCKET:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DB_POOL_MAX: ${DB_POOL_MAX:-10}

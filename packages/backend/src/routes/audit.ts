@@ -13,7 +13,7 @@ const auditRepo = getContainer().repositories.auditLog;
 const auditLogService = getContainer().services.auditLog;
 const anomalyService = getContainer().services.anomalyDetection;
 
-// Audit logging helper (repository no-ops persistence when DynamoDB is disabled)
+// Audit logging helper (failures are logged inside the repository, never thrown)
 const writeAuditLog = async (data: any) => {
   await auditRepo.create(data);
 };
@@ -69,9 +69,9 @@ router.get('/logs', async (req: Request, res: Response) => {
     if (startDate) filter.startDate = new Date(startDate);
     if (endDate) filter.endDate = new Date(endDate);
 
-    // Search audit logs (fallback to empty if DynamoDB not configured)
+    // Search audit logs (degrade to empty page rather than 500)
     const result = await auditRepo.search(filter).catch((err) => {
-      logger.debug('Audit logs not available (DynamoDB not configured for MVP):', err.message);
+      logger.debug('Audit log search failed:', err.message);
       return {
         items: [],
         total: 0,

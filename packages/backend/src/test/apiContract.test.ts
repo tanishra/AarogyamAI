@@ -22,6 +22,7 @@ const mockQuery = vi.fn();
 vi.mock('../auth/authMiddleware', () => ({
   authenticate: () => (req: any, _res: any, next: any) => {
     req.user = mockUser;
+    if (req.headers['x-session-id']) req.sessionId = req.headers['x-session-id'];
     next();
   },
   optionalAuthenticate: () => (req: any, _res: any, next: any) => {
@@ -125,11 +126,15 @@ vi.mock('../services/QuestionnaireSessionManager', () => ({
   });}),
 }));
 
+const mockGetUserSessions = vi.fn();
+
 vi.mock('../auth/session', () => ({
   createSession: vi.fn().mockResolvedValue('session-id'),
   invalidateSession: vi.fn().mockResolvedValue(undefined),
   blacklistToken: vi.fn().mockResolvedValue(undefined),
+  isTokenBlacklisted: vi.fn().mockResolvedValue(false),
   getSession: vi.fn().mockResolvedValue(null),
+  getUserSessions: (...args: any[]) => mockGetUserSessions(...args),
 }));
 
 import authRoutes from '../routes/auth';
@@ -261,5 +266,74 @@ describe('API Contracts', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ status: 'verified' });
     expect(res.body.data.entriesVerified).toBeDefined();
+  });
+
+  it('GET /api/auth/sessions returns 200 envelope with sessions + count', async () => {
+    mockGetUserSessions.mockResolvedValue([
+      {
+        sessionId: 'sess-1',
+        ipAddress: '10.0.0.1',
+        userAgent: 'vitest',
+        createdAt: '2026-01-01T00:00:00Z',
+        expiresAt: '2026-01-01T08:00:00Z',
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/auth/sessions')
+      .set('x-session-id', 'sess-1');
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.count).toBe(1);
+    expect(res.body.data[0]).toMatchObject({
+      sessionId: 'sess-1',
+      ipAddress: '10.0.0.1',
+      current: true,
+    });
+    expect(res.body.data[0].userId).toBeUndefined();
+  });
+
+  it('DELETE /api/auth/sessions/others requires x-session-id', async () => {
+    const res = await request(app).delete('/api/auth/sessions/others');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('DELETE /api/auth/sessions/others returns 200 with revoked count', async () => {
+    mockGetUserSessions.mockResolvedValue([
+      { sessionId: 'sess-1', ipAddress: '10.0.0.1', userAgent: 'a', createdAt: '', expiresAt: '' },
+      { sessionId: 'sess-2', ipAddress: '10.0.0.2', userAgent: 'b', createdAt: '', expiresAt: '' },
+    ]);
+
+    const res = await request(app)
+      .delete('/api/auth/sessions/others')
+      .set('x-session-id', 'sess-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.revoked).toBe(1);
+  });
+
+  it('DELETE /api/auth/sessions/:id returns 404 for foreign session id', async () => {
+    mockGetUserSessions.mockResolvedValue([
+      { sessionId: 'sess-1', ipAddress: '10.0.0.1', userAgent: 'a', createdAt: '', expiresAt: '' },
+    ]);
+
+    const res = await request(app).delete('/api/auth/sessions/someone-elses');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('GET /metrics returns 200 with Prometheus exposition format', async () => {
+    const { metricsHandler } = await import('../lib/metrics');
+    const metricsApp = express();
+    metricsApp.get('/metrics', metricsHandler);
+
+    const res = await request(metricsApp).get('/metrics');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('# HELP');
+    expect(res.text).toContain('http_requests_total');
   });
 });

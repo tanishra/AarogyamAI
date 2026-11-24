@@ -1,11 +1,3 @@
-import { getDynamoDBClient } from '../config/dynamodb';
-import { config } from '../config';
-import {
-  PutCommand,
-  QueryCommand,
-  ScanCommand,
-  QueryCommandInput,
-} from '@aws-sdk/lib-dynamodb';
 import { AuditLogEntry, SearchFilters, PaginatedResult } from './types';
 import { randomUUID } from 'crypto';
 import { query as pgQuery, getDatabasePool } from '../config/database';
@@ -14,36 +6,18 @@ import { computeAuditHash } from '../lib/auditHash';
 
 /**
  * Audit Log Repository
- * 
- * Handles audit log operations in DynamoDB with PostgreSQL fallback
- * - Tries DynamoDB first
- * - Falls back to PostgreSQL if DynamoDB fails
- * - Logs errors but never breaks the application flow
+ *
+ * PostgreSQL is the sole authoritative store — every entry is hash-chained
+ * (previous_hash → sha256(entry + previousHash)) for tamper-evidence.
+ * Audit failures are logged but never break the application flow.
  */
 export class AuditLogRepository {
-  private tableName: string;
-  private client;
-  private persistenceEnabled: boolean;
-  private useDynamoDB: boolean;
-  private dynamoDBHealthy: boolean;
-
-  constructor() {
-    this.tableName = config.aws.dynamodb.auditTable;
-    this.client = getDynamoDBClient();
-    this.persistenceEnabled =
-      process.env.ENABLE_DYNAMODB_AUDIT === 'true' ||
-      config.nodeEnv === 'production';
-    this.useDynamoDB = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
-    this.dynamoDBHealthy = true; // Assume healthy initially
-  }
-
   /**
    * Create a new audit log entry.
    *
-   * PostgreSQL is the authoritative store — every entry is hash-chained
-   * (previous_hash → sha256(entry + previousHash)) for tamper-evidence.
-   * DynamoDB, when configured, is a best-effort mirror for query performance.
-   * Audit failures are logged but never break the request flow.
+   * Every entry is hash-chained (previous_hash → sha256(entry + previousHash))
+   * for tamper-evidence. Audit failures are logged but never break the
+   * request flow.
    */
   async create(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): Promise<AuditLogEntry> {
     const logEntry: AuditLogEntry = {
@@ -52,29 +26,12 @@ export class AuditLogRepository {
       timestamp: Date.now(),
     };
 
-    // Authoritative write: hash-chained PostgreSQL record
     try {
       const { hash, previousHash } = await this.saveToPostgreSQL(logEntry);
       logEntry.hash = hash;
       logEntry.previousHash = previousHash;
     } catch (pgError) {
       logger.error('[AuditLog] PostgreSQL write failed:', pgError);
-    }
-
-    // Best-effort mirror to DynamoDB when configured
-    if (this.persistenceEnabled && this.useDynamoDB && this.dynamoDBHealthy) {
-      try {
-        await this.client.send(
-          new PutCommand({
-            TableName: this.tableName,
-            Item: logEntry,
-          })
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        logger.warn('[AuditLog] DynamoDB mirror write failed:', message);
-        this.dynamoDBHealthy = false;
-      }
     }
 
     return logEntry;
@@ -148,35 +105,77 @@ export class AuditLogRepository {
   }
 
   /**
-   * Search audit logs with filters and pagination
-   * Tries DynamoDB first, falls back to PostgreSQL
+   * Search audit logs with filters and SQL-side pagination.
    */
   async search(filters: SearchFilters): Promise<PaginatedResult<AuditLogEntry>> {
-    // PostgreSQL is authoritative and paginates in SQL — no row cap.
-    if (!this.useDynamoDB || !this.dynamoDBHealthy) {
-      return this.searchPostgreSQL(filters);
+    let whereClause = 'WHERE 1=1';
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (filters.userId) {
+      params.push(filters.userId);
+      whereClause += ` AND user_id = $${paramIndex++}`;
     }
 
-    // DynamoDB mirror path — query then paginate in memory
-    try {
-      const items = await this.searchDynamoDB(filters);
-      logger.debug('[AuditLog] Successfully searched DynamoDB');
-      items.sort((a, b) => b.timestamp - a.timestamp);
-      const limit = filters.limit || 50;
-      const page = filters.page || 1;
-      const startIndex = (page - 1) * limit;
-      return {
-        items: items.slice(startIndex, startIndex + limit),
-        total: items.length,
-        page,
-        limit,
-        hasMore: startIndex + limit < items.length,
-      };
-    } catch (error) {
-      logger.warn('[AuditLog] DynamoDB search failed, falling back to PostgreSQL:', error);
-      this.dynamoDBHealthy = false;
-      return this.searchPostgreSQL(filters);
+    if (filters.actionType) {
+      params.push(filters.actionType);
+      whereClause += ` AND action_type = $${paramIndex++}`;
     }
+
+    if (filters.resource) {
+      params.push(filters.resource);
+      whereClause += ` AND resource = $${paramIndex++}`;
+    }
+
+    if (filters.startDate) {
+      params.push(filters.startDate);
+      whereClause += ` AND timestamp >= $${paramIndex++}`;
+    }
+
+    if (filters.endDate) {
+      params.push(filters.endDate);
+      whereClause += ` AND timestamp <= $${paramIndex++}`;
+    }
+
+    const limit = filters.limit || 50;
+    const page = filters.page || 1;
+
+    const [countResult, rows] = await Promise.all([
+      pgQuery<any>(`SELECT COUNT(*)::int AS total FROM audit_logs ${whereClause}`, params),
+      pgQuery<any>(
+        `SELECT * FROM audit_logs ${whereClause}
+         ORDER BY timestamp DESC, id DESC
+         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        [...params, limit, (page - 1) * limit]
+      ),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
+    const items = rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name,
+      userRole: row.user_role,
+      actionType: row.action_type,
+      resource: row.resource,
+      resourceId: row.resource_id,
+      outcome: row.outcome,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      requestId: row.request_id,
+      errorDetails: row.error_details,
+      hash: row.hash,
+      previousHash: row.previous_hash,
+      timestamp: row.timestamp instanceof Date ? row.timestamp.getTime() : row.timestamp,
+    })) as AuditLogEntry[];
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    };
   }
 
   /**
@@ -267,248 +266,5 @@ export class AuditLogRepository {
         uniqueAccessors,
       },
     };
-  }
-
-  /**
-   * Search in DynamoDB
-   */
-  private async searchDynamoDB(filters: SearchFilters): Promise<AuditLogEntry[]> {
-    // Use GSI if filtering by actionType or resource
-    if (filters.actionType) {
-      return await this.queryByActionType(filters.actionType, filters.startDate, filters.endDate);
-    } else if (filters.resource) {
-      return await this.queryByResource(filters.resource, filters.startDate, filters.endDate);
-    } else if (filters.userId) {
-      return await this.queryByUserId(filters.userId, filters.startDate, filters.endDate);
-    } else {
-      // Scan all items (expensive, should be avoided in production)
-      return await this.scanAll();
-    }
-  }
-
-  /**
-   * Search in PostgreSQL (fallback)
-   */
-  private async searchPostgreSQL(filters: SearchFilters): Promise<PaginatedResult<AuditLogEntry>> {
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
-    let paramIndex = 1;
-
-    if (filters.userId) {
-      params.push(filters.userId);
-      whereClause += ` AND user_id = $${paramIndex++}`;
-    }
-
-    if (filters.actionType) {
-      params.push(filters.actionType);
-      whereClause += ` AND action_type = $${paramIndex++}`;
-    }
-
-    if (filters.resource) {
-      params.push(filters.resource);
-      whereClause += ` AND resource = $${paramIndex++}`;
-    }
-
-    if (filters.startDate) {
-      params.push(filters.startDate);
-      whereClause += ` AND timestamp >= $${paramIndex++}`;
-    }
-
-    if (filters.endDate) {
-      params.push(filters.endDate);
-      whereClause += ` AND timestamp <= $${paramIndex++}`;
-    }
-
-    const limit = filters.limit || 50;
-    const page = filters.page || 1;
-
-    const [countResult, rows] = await Promise.all([
-      pgQuery<any>(`SELECT COUNT(*)::int AS total FROM audit_logs ${whereClause}`, params),
-      pgQuery<any>(
-        `SELECT * FROM audit_logs ${whereClause}
-         ORDER BY timestamp DESC, id DESC
-         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, limit, (page - 1) * limit]
-      ),
-    ]);
-
-    const total = countResult[0]?.total ?? 0;
-    const items = rows.map((row: any) => ({
-      id: row.id,
-      userId: row.user_id,
-      userName: row.user_name,
-      userRole: row.user_role,
-      actionType: row.action_type,
-      resource: row.resource,
-      resourceId: row.resource_id,
-      outcome: row.outcome,
-      ipAddress: row.ip_address,
-      userAgent: row.user_agent,
-      requestId: row.request_id,
-      errorDetails: row.error_details,
-      hash: row.hash,
-      previousHash: row.previous_hash,
-      timestamp: row.timestamp instanceof Date ? row.timestamp.getTime() : row.timestamp,
-    })) as AuditLogEntry[];
-
-    return {
-      items,
-      total,
-      page,
-      limit,
-      hasMore: page * limit < total,
-    };
-  }
-
-  /**
-   * Find audit logs by user ID
-   */
-  async findByUser(userId: string, limit: number = 100): Promise<AuditLogEntry[]> {
-    return this.queryByUserId(userId, undefined, undefined, limit);
-  }
-
-  /**
-   * Find audit logs by resource
-   */
-  async findByResource(resource: string, limit: number = 100): Promise<AuditLogEntry[]> {
-    return this.queryByResource(resource, undefined, undefined, limit);
-  }
-
-  /**
-   * Query by userId (partition key)
-   */
-  private async queryByUserId(
-    userId: string,
-    startDate?: Date,
-    endDate?: Date,
-    limit: number = 1000
-  ): Promise<AuditLogEntry[]> {
-    const params: QueryCommandInput = {
-      TableName: this.tableName,
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-      },
-      Limit: limit,
-      ScanIndexForward: false, // Sort descending
-    };
-
-    // Add timestamp range if provided
-    if (startDate || endDate) {
-      if (startDate && endDate) {
-        params.KeyConditionExpression += ' AND #ts BETWEEN :start AND :end';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      } else if (startDate) {
-        params.KeyConditionExpression += ' AND #ts >= :start';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-      } else if (endDate) {
-        params.KeyConditionExpression += ' AND #ts <= :end';
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      }
-      params.ExpressionAttributeNames = { '#ts': 'timestamp' };
-    }
-
-    const result = await this.client.send(new QueryCommand(params));
-    return (result.Items || []) as AuditLogEntry[];
-  }
-
-  /**
-   * Query by actionType using GSI
-   */
-  private async queryByActionType(
-    actionType: string,
-    startDate?: Date,
-    endDate?: Date,
-    limit: number = 1000
-  ): Promise<AuditLogEntry[]> {
-    const params: QueryCommandInput = {
-      TableName: this.tableName,
-      IndexName: 'actionType-timestamp-index',
-      KeyConditionExpression: 'actionType = :actionType',
-      ExpressionAttributeValues: {
-        ':actionType': actionType,
-      },
-      Limit: limit,
-      ScanIndexForward: false,
-    };
-
-    if (startDate || endDate) {
-      if (startDate && endDate) {
-        params.KeyConditionExpression += ' AND #ts BETWEEN :start AND :end';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      } else if (startDate) {
-        params.KeyConditionExpression += ' AND #ts >= :start';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-      } else if (endDate) {
-        params.KeyConditionExpression += ' AND #ts <= :end';
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      }
-      params.ExpressionAttributeNames = { '#ts': 'timestamp' };
-    }
-
-    const result = await this.client.send(new QueryCommand(params));
-    return (result.Items || []) as AuditLogEntry[];
-  }
-
-  /**
-   * Query by resource using GSI
-   */
-  private async queryByResource(
-    resource: string,
-    startDate?: Date,
-    endDate?: Date,
-    limit: number = 1000
-  ): Promise<AuditLogEntry[]> {
-    const params: QueryCommandInput = {
-      TableName: this.tableName,
-      IndexName: 'resource-timestamp-index',
-      KeyConditionExpression: 'resource = :resource',
-      ExpressionAttributeValues: {
-        ':resource': resource,
-      },
-      Limit: limit,
-      ScanIndexForward: false,
-    };
-
-    if (startDate || endDate) {
-      if (startDate && endDate) {
-        params.KeyConditionExpression += ' AND #ts BETWEEN :start AND :end';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      } else if (startDate) {
-        params.KeyConditionExpression += ' AND #ts >= :start';
-        params.ExpressionAttributeValues![':start'] = startDate.getTime();
-      } else if (endDate) {
-        params.KeyConditionExpression += ' AND #ts <= :end';
-        params.ExpressionAttributeValues![':end'] = endDate.getTime();
-      }
-      params.ExpressionAttributeNames = { '#ts': 'timestamp' };
-    }
-
-    const result = await this.client.send(new QueryCommand(params));
-    return (result.Items || []) as AuditLogEntry[];
-  }
-
-  /**
-   * Scan all items (expensive operation, use with caution)
-   */
-  private async scanAll(): Promise<AuditLogEntry[]> {
-    const items: AuditLogEntry[] = [];
-    let lastEvaluatedKey: any = undefined;
-
-    do {
-      const params: any = {
-        TableName: this.tableName,
-        ExclusiveStartKey: lastEvaluatedKey,
-      };
-
-      const result = await this.client.send(new ScanCommand(params));
-      items.push(...((result.Items || []) as AuditLogEntry[]));
-      lastEvaluatedKey = result.LastEvaluatedKey;
-    } while (lastEvaluatedKey);
-
-    return items;
   }
 }
