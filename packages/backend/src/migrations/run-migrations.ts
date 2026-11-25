@@ -141,6 +141,14 @@ async function main() {
       case undefined:
         await runUp();
         break;
+      case '--help':
+      case '-h':
+      case 'help':
+        console.log('Usage:');
+        console.log('  npm run migrate                 - Run all pending migrations (same as up)');
+        console.log('  npm run migrate down <name>     - Rollback a specific migration');
+        console.log('  npm run migrate status          - Show migration status');
+        break;
       default:
         console.log('Usage:');
         console.log('  npm run migrate up              - Run all pending migrations');

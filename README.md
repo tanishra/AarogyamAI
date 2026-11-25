@@ -26,10 +26,10 @@ review and nothing enters the record without doctor sign-off.
 ```
 packages/
   backend/    Express + TypeScript API (port 3001)
-  frontend/   Next.js 14 + TypeScript web app (port 3000)
+  frontend/   Next.js 16 + TypeScript web app (port 3000, React 19)
 docs/         PORT-NOTES.md — behaviors ported from the legacy codebase
-docker/      initdb scripts for local Postgres
-infrastructure/ Terraform (see Phase 6 status in docs)
+docs/         RUNBOOK.md — deployment + operations runbook
+docker/       initdb, nginx edge, prometheus/grafana provisioning
 design.md / requirements.md — product spec
 ```
 
@@ -40,18 +40,20 @@ safety-critical components were ported — see `docs/PORT-NOTES.md`.
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 (App Router), React, TypeScript |
-| Backend | Express, TypeScript |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript |
+| Backend | Express, TypeScript, Node 22 |
 | Database | PostgreSQL 15 (migrations in `packages/backend/src/migrations/`) |
-| Cache/session | Redis 7 |
-| Audit | DynamoDB hash-chained records (PostgreSQL fallback) |
+| Cache/session | Redis 7 (sessions, rate limits, lockouts, token blacklist) |
+| Audit | PostgreSQL hash-chained records (tamper-evident) |
 | AI | AWS Bedrock (Claude) primary, OpenAI fallback |
 | Storage | AWS S3 for exports/reports |
+| Monitoring | Prometheus + Grafana (`monitoring` compose profile), optional Sentry |
+| Edge | nginx TLS edge (prod compose) |
 | Tests | Vitest (backend), Vitest + Testing Library (frontend) |
 
 ## Getting started
 
-Prerequisites: Node 20+, Docker (for Postgres + Redis).
+Prerequisites: Node 22+, Docker (for Postgres + Redis).
 
 ```bash
 # Start Postgres (admin_panel + admin_panel_test DBs) and Redis
@@ -87,6 +89,7 @@ npm run migrate:status
 
 ## Verification status
 
-See `docs/ARCHITECTURE.md` for the target architecture and refactor progress.
-The `pre-refactor-baseline` tag marks the green baseline: backend 385 tests,
-frontend 102 tests, 0 lint errors, clean builds, 10 API contract tests.
+See `docs/ARCHITECTURE.md` for the target architecture and `docs/RUNBOOK.md`
+for deployment + operations. Production deploy: `docker compose -f
+docker-compose.prod.yml --env-file .env.production up -d` (see RUNBOOK for
+env vars, monitoring/backup profiles, TLS, and the restore drill).

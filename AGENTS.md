@@ -10,13 +10,18 @@ AI-generated to reach the medical record.
 ## Layout
 
 - `packages/backend` — Express API (port 3001): `routes/ → services/ →
-  repositories/`, migrations `000`–`018` in `src/migrations/`
-- `packages/frontend` — Next.js 14 App Router app (port 3000)
+  repositories/`, migrations `000`–`022` in `src/migrations/`
+- `packages/frontend` — Next.js 16 App Router app (port 3000, React 19)
 - `docs/ARCHITECTURE.md` — architecture + refactor phase status
+- `docs/RUNBOOK.md` — deploy/rollback/backup/monitoring/incident ops
 - `docs/PORT-NOTES.md` — behavior contracts ported from the deleted legacy
   codebase (read before touching `src/services/ai/`)
 - `docker-compose.yml` — local Postgres (`admin_panel`, `admin_panel_test`)
-  + Redis
+  + Redis on non-standard ports (5433/6380)
+- `docker-compose.prod.yml` — single-host prod stack (project `aarogyam-prod`):
+  nginx TLS edge → frontend + backend (internal-only) → Postgres + Redis;
+  optional `monitoring` (Prometheus + Grafana, Grafana on 127.0.0.1:3002)
+  and `backup` (daily pg_dump) profiles
 
 ## Commands
 
@@ -32,6 +37,7 @@ cd packages/frontend && npx next build
 
 Backend tests need Postgres + Redis running; `src/test/globalSetup.ts`
 recreates `admin_panel_test` automatically. Tests run with `TZ=UTC`.
+Docker images run Node 22 (vitest 5 engine floor); local dev needs Node 20+.
 
 ## Rules for changes
 
@@ -46,7 +52,10 @@ recreates `admin_panel_test` automatically. Tests run with `TZ=UTC`.
 - **Tests**: fix tests to match real behavior changes; do not weaken
   assertions to force a pass.
 - **No new top-level implementations.** `packages/` is the only codebase.
-- Keep route modules under ~150 lines as layering lands (Phase 2 target).
+- Keep route modules under ~250 lines (150 preferred); split into
+  domain sub-routers + `shared.ts` like `routes/auth/` + `routes/doctorWorkflow/`.
+- Metrics labels must use route patterns (`baseUrl + route.path`) or
+  `unmatched` — never raw `req.path` (ID leakage + cardinality).
 
 ## Git
 
