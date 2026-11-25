@@ -50,7 +50,10 @@ app.use(metricsMiddleware);
 app.use(securityHeaders);
 app.use(cors({
   origin: config.frontendUrl,
-  credentials: true,
+  // No cookie-based auth anywhere — all calls carry Authorization:
+  // Bearer, which browsers never attach ambiently, so credentialed CORS
+  // is surface for no benefit and CSRF is not applicable by design.
+  credentials: false,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(sanitizeInput);

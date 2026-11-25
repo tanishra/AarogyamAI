@@ -67,6 +67,20 @@ docker compose -f docker-compose.prod.yml --profile backup up -d backup
   `./docker/nginx/certs/` (server.crt / server.key) for production.
 - Edge limits: api 10r/s, web 30r/s per IP → 429 on excess.
 
+## CSRF posture
+
+- Authentication is `Authorization: Bearer` only — no cookies are set or read
+  anywhere in the stack (verified G6). CSRF tokens are therefore not
+  applicable: browsers never attach Bearer tokens ambiently, and CORS runs
+  with `credentials: false`.
+- If cookie-based auth is ever introduced, add CSRF middleware
+  (`csurf`-style synchronizer tokens) and set `credentials: true` in the same
+  change.
+- Refresh-token theft response: replaying a rotated refresh token revokes the
+  whole family — all user sessions are invalidated and a per-user iat cutoff
+  rejects every refresh token issued before the detection
+  (`refresh:cutoff:<userId>` in Redis, cleared on next successful login).
+
 ## Incident quick reference
 
 | Symptom | Check | Fix |
