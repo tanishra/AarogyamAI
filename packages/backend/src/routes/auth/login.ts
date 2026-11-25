@@ -6,6 +6,7 @@ import { generateAccessToken, generateRefreshToken } from '../../auth/jwt';
 import { createSession } from '../../auth/session';
 import { randomBytes } from 'crypto';
 import { getLockSeconds, recordFailedAttempt, clearAttempts } from '../../lib/accountLockout';
+import { clearRefreshCutoff } from '../../auth/session';
 
 import { logger } from '../../lib/logger';
 import { userRepo, writeAuditLog, authRateLimit } from './shared';
@@ -127,6 +128,10 @@ router.post('/login', authRateLimit, async (req: Request, res: Response) => {
     }
 
     await clearAttempts(email);
+    // A successful interactive login resets the refresh-token family:
+    // any cutoff from a prior replay detection no longer applies to
+    // tokens issued from now on.
+    await clearRefreshCutoff(user.id);
 
     // Check if MFA is enabled
     if (user.mfa_enabled) {

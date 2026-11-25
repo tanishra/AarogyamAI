@@ -185,6 +185,31 @@ export async function refreshSession(sessionId: string): Promise<boolean> {
   return true;
 }
 
+const getRefreshCutoffKey = (userId: string) => `refresh:cutoff:${userId}`;
+
+/**
+ * Token-family theft response: refresh tokens issued before this timestamp
+ * are rejected on presentation. Combined with session invalidation, this
+ * revokes the entire token family when a rotated token is replayed.
+ */
+export async function setRefreshCutoff(userId: string, ttlSeconds: number): Promise<void> {
+  const redis = getRedisClient();
+  await redis.setex(getRefreshCutoffKey(userId), ttlSeconds, String(Date.now()));
+}
+
+/** Returns the cutoff timestamp (ms) or 0 when unset. */
+export async function getRefreshCutoff(userId: string): Promise<number> {
+  const redis = getRedisClient();
+  const value = await redis.get(getRefreshCutoffKey(userId));
+  return value ? Number(value) : 0;
+}
+
+/** A successful interactive login resets the family — new tokens postdate the cutoff. */
+export async function clearRefreshCutoff(userId: string): Promise<void> {
+  const redis = getRedisClient();
+  await redis.del(getRefreshCutoffKey(userId));
+}
+
 /**
  * Check if a token is blacklisted
  */

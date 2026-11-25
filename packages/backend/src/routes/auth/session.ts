@@ -2,8 +2,9 @@ import { maskEmail } from '../../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../auth/jwt';
-import { invalidateSession, getUserSessions } from '../../auth/session';
-import { blacklistToken, isTokenBlacklisted } from '../../auth/session';
+import { invalidateSession, invalidateUserSessions, getUserSessions } from '../../auth/session';
+import { blacklistToken, isTokenBlacklisted, setRefreshCutoff, getRefreshCutoff } from '../../auth/session';
+import { decodeToken } from '../../auth/jwt';
 import { authenticate } from '../../auth/authMiddleware';
 import { randomBytes } from 'crypto';
 
@@ -80,9 +81,33 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
 
     const { refreshToken } = validation.data;
 
-    // Reject already-rotated tokens
+    // Reject already-rotated tokens — a replay means theft: kill the whole
+    // token family (sessions + a cutoff that rejects every refresh token
+    // issued before now).
     try {
       if (await isTokenBlacklisted(refreshToken)) {
+        const replayed = decodeToken(refreshToken);
+        if (replayed?.userId) {
+          const revokedCount = await invalidateUserSessions(replayed.userId);
+          await setRefreshCutoff(replayed.userId, 30 * 24 * 60 * 60);
+          logger.error('Refresh token replay detected — token family revoked', {
+            userId: replayed.userId,
+            sessionsRevoked: revokedCount,
+          });
+          await writeAuditLog({
+            userId: replayed.userId,
+            userName: maskEmail(replayed.email ?? 'unknown'),
+            userRole: replayed.role ?? 'Unknown',
+            actionType: 'refresh_reuse_detected',
+            resource: 'auth',
+            outcome: 'failure',
+            errorDetails: `Token family revoked; ${revokedCount} sessions invalidated`,
+            ipAddress: req.ip || 'unknown',
+            userAgent: req.headers['user-agent'] || 'unknown',
+            requestId: randomBytes(16).toString('hex'),
+            hash: '',
+          });
+        }
         res.status(401).json({
           error: 'Unauthorized',
           message: 'Refresh token has already been used',
@@ -107,6 +132,16 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
       res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid or expired refresh token',
+      });
+      return;
+    }
+
+    // Token-family cutoff: tokens issued before a detected replay are dead.
+    const cutoff = await getRefreshCutoff(payload.userId);
+    if (cutoff > 0 && (payload as any).iat && (payload as any).iat * 1000 < cutoff) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Refresh token predates a security revocation — please log in again',
       });
       return;
     }

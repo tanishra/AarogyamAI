@@ -131,8 +131,12 @@ const mockGetUserSessions = vi.fn();
 vi.mock('../auth/session', () => ({
   createSession: vi.fn().mockResolvedValue('session-id'),
   invalidateSession: vi.fn().mockResolvedValue(undefined),
+  invalidateUserSessions: vi.fn().mockResolvedValue(0),
   blacklistToken: vi.fn().mockResolvedValue(undefined),
   isTokenBlacklisted: vi.fn().mockResolvedValue(false),
+  setRefreshCutoff: vi.fn().mockResolvedValue(undefined),
+  getRefreshCutoff: vi.fn().mockResolvedValue(0),
+  clearRefreshCutoff: vi.fn().mockResolvedValue(undefined),
   getSession: vi.fn().mockResolvedValue(null),
   getUserSessions: (...args: any[]) => mockGetUserSessions(...args),
 }));

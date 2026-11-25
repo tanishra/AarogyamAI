@@ -78,7 +78,7 @@ describe('Security paths (E2E)', () => {
     }
   });
 
-  it('rejects a rotated refresh token on replay (401)', async () => {
+  it('rejects a rotated refresh token on replay and kills the token family', async () => {
     const res = await login(email, password);
     expect(res.status).toBe(200);
     const refreshToken = res.body.data.refreshToken;
@@ -89,16 +89,25 @@ describe('Security paths (E2E)', () => {
     expect(rotated.status).toBe(200);
     expect(rotated.body.data.refreshToken).not.toBe(refreshToken);
 
+    // Replay the stolen old token → theft response
     const replay = await request(app)
       .post('/api/auth/refresh')
       .send({ refreshToken });
     expect(replay.status).toBe(401);
 
-    // The rotated token itself still works
-    const valid = await request(app)
+    // Family revocation: the rotated token predates the cutoff and dies too
+    const dead = await request(app)
       .post('/api/auth/refresh')
       .send({ refreshToken: rotated.body.data.refreshToken });
-    expect(valid.status).toBe(200);
+    expect(dead.status).toBe(401);
+
+    // A fresh login resets the family — new refresh token works
+    const fresh = await login(email, password);
+    expect(fresh.status).toBe(200);
+    const refreshed = await request(app)
+      .post('/api/auth/refresh')
+      .send({ refreshToken: fresh.body.data.refreshToken });
+    expect(refreshed.status).toBe(200);
   });
 
   it('returns 429 once the auth rate limit is exceeded', async () => {
@@ -111,10 +120,17 @@ describe('Security paths (E2E)', () => {
   });
 
   it('serves the fixed safe response when the LLM provider is down (circuit + fallback)', async () => {
+    // The replay test above revokes this user's whole token family —
+    // log in fresh for a live session.
+    const fresh = await login(email, password);
+    expect(fresh.status).toBe(200);
+    const token = fresh.body.data.accessToken;
+    const sid = fresh.body.data.sessionId;
+
     const start = await request(app)
       .post('/api/patient/chat/start')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .set('x-session-id', sessionId)
+      .set('Authorization', `Bearer ${token}`)
+      .set('x-session-id', sid)
       .send({ patientId: userId });
     expect(start.status).toBe(201);
     const chatSessionId = start.body.data.sessionId as string;
@@ -127,8 +143,8 @@ describe('Security paths (E2E)', () => {
     for (let i = 0; i < 4; i++) {
       last = await request(app)
         .post('/api/patient/chat/message')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .set('x-session-id', sessionId)
+        .set('Authorization', `Bearer ${token}`)
+        .set('x-session-id', sid)
         .send({ sessionId: chatSessionId, message: `symptom ${i}` });
       expect(last.status).toBe(200);
       expect(last.body.data.response).toContain('noting it down for the doctor');
