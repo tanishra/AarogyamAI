@@ -82,6 +82,10 @@ router.get('/encounters', authenticate({}), async (req: Request, res: Response) 
     }));
 
     logger.debug('[Patient Encounters] Returning encounters', { count: encounters.length });
+    res.status(200).json({
+      message: 'Encounters retrieved successfully',
+      data: { encounters, count: encounters.length },
+    });
   } catch (error) {
     logger.error('Error getting patient encounters:', { error });
     res.status(500).json({
