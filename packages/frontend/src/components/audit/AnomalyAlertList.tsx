@@ -68,8 +68,8 @@ export default function AnomalyAlertList() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">{t('audit.alertsLoadError')}</h3>
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 aria-level={2} className="text-red-800 font-semibold">{t('audit.alertsLoadError')}</h3>
           <p className="text-red-600 mt-2">
             {error instanceof Error ? error.message : t('audit.alertsLoadFailed')}
           </p>
@@ -82,13 +82,13 @@ export default function AnomalyAlertList() {
     <>
       {/* Alert Banner */}
       {unacknowledgedCount > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-3">
             <svg className="w-6 h-6 text-red-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <div>
-              <h3 className="text-red-800 font-semibold">
+              <h3 aria-level={2} className="text-red-800 font-semibold">
                 {t('audit.unacked', { count: unacknowledgedCount, plural: unacknowledgedCount > 1 ? 'ies' : 'y' })}
               </h3>
               <p className="text-red-600 text-sm mt-1">
@@ -102,7 +102,7 @@ export default function AnomalyAlertList() {
       {/* Alerts List */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">{t('admin.anomalyAlerts')}</h3>
+          <h3 aria-level={2} className="text-lg font-semibold text-gray-900">{t('admin.anomalyAlerts')}</h3>
           <p className="text-sm text-gray-600 mt-1">
             {t('audit.totalAlerts', { count: alerts.length, plural: alerts.length !== 1 ? 's' : '', unacked: unacknowledgedCount })}
           </p>
@@ -133,7 +133,7 @@ export default function AnomalyAlertList() {
                           {t('audit.newBadge')}
                         </span>
                       )}
-                      <h4 className="text-sm font-semibold text-gray-900">
+                      <h4 aria-level={3} className="text-sm font-semibold text-gray-900">
                         {alert.triggerCondition}
                       </h4>
                     </div>
@@ -213,9 +213,14 @@ export default function AnomalyAlertList() {
       {/* Acknowledgment Confirmation Dialog */}
       {selectedAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="anomaly-ack-dialog-title"
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
+          >
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">{t('audit.ackTitle')}</h3>
+              <h3 id="anomaly-ack-dialog-title" aria-level={2} className="text-lg font-semibold text-gray-900">{t('audit.ackTitle')}</h3>
             </div>
 
             <div className="px-6 py-4">
@@ -239,6 +244,7 @@ export default function AnomalyAlertList() {
               <button
                 onClick={() => setSelectedAlert(null)}
                 disabled={acknowledgeMutation.isPending}
+                autoFocus
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
               >
                 {t('common.cancel')}

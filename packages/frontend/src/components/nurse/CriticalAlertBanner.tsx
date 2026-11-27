@@ -68,7 +68,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <div className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
-        <h3 className="text-sm font-semibold text-red-900 uppercase tracking-wide">
+        <h3 aria-level={2} className="text-sm font-semibold text-red-900 uppercase tracking-wide">
           {t('alerts.critical', { count: alerts.length })}
         </h3>
       </div>
@@ -76,6 +76,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
       {alerts.map((alert) => (
         <div
           key={alert.id}
+          role="alert"
           className={`rounded-xl border-2 p-4 ${getSeverityStyles(alert.severity)} transition-all`}
         >
           <div className="flex items-start justify-between gap-3">
@@ -84,7 +85,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
                 <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${getSeverityBadge(alert.severity)}`}>
                   {alert.severity}
                 </span>
-                <h4 className="font-bold text-base">{alert.vital_name}</h4>
+                <h4 aria-level={3} className="font-bold text-base">{alert.vital_name}</h4>
               </div>
 
               <div className="space-y-1 text-sm">
@@ -104,13 +105,15 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
               {/* Expandable Recommended Action */}
               <button
                 onClick={() => setExpandedId(expandedId === alert.id ? null : alert.id)}
+                aria-expanded={expandedId === alert.id}
+                aria-controls={`alert-action-${alert.id}`}
                 className="mt-2 text-sm font-semibold underline hover:no-underline"
               >
                 {expandedId === alert.id ? t('alerts.hideAction') : t('alerts.showAction')}
               </button>
 
               {expandedId === alert.id && (
-                <div className="mt-2 p-3 rounded-lg bg-white/50 border border-current">
+                <div id={`alert-action-${alert.id}`} className="mt-2 p-3 rounded-lg bg-white/50 border border-current">
                   <p className="text-sm font-medium">{alert.recommended_action}</p>
                 </div>
               )}

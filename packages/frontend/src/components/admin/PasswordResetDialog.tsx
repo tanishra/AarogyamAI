@@ -70,8 +70,13 @@ export function PasswordResetDialog({ user }: PasswordResetDialogProps) {
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">{t('admin.confirmResetTitle')}</h3>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="password-reset-dialog-title"
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+          >
+            <h3 id="password-reset-dialog-title" className="text-lg font-semibold mb-4">{t('admin.confirmResetTitle')}</h3>
             <p className="text-sm text-gray-600 mb-4">
               {t('admin.confirmResetBody', { name: user.name })}
             </p>
@@ -87,6 +92,7 @@ export function PasswordResetDialog({ user }: PasswordResetDialogProps) {
               <button
                 onClick={() => setShowConfirmDialog(false)}
                 disabled={resetMutation.isPending}
+                autoFocus
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
                 {t('common.cancel')}

@@ -245,13 +245,13 @@ function NurseVitalsEntryContent() {
             />
 
             {submitVitalsMutation.isSuccess && (
-              <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              <div role="status" className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                 {t('vitals.saved')}
               </div>
             )}
 
             {submitVitalsMutation.error && (
-              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {(submitVitalsMutation.error as Error).message}
               </div>
             )}
@@ -267,7 +267,7 @@ function NurseVitalsEntryContent() {
               </AnimatedButton>
 
               {markReadyMutation.error && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {(markReadyMutation.error as Error).message}
                 </p>
               )}

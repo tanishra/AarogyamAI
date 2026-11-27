@@ -227,7 +227,7 @@ export function PatientChat() {
   return (
     <div className="space-y-4 animate-fade-up">
       {emergencyDetected && (
-        <div className="ui-surface border-amber-200 bg-gradient-to-r from-amber-50/90 to-orange-50/90 p-4 animate-fade-in">
+        <div role="alert" className="ui-surface border-amber-200 bg-gradient-to-r from-amber-50/90 to-orange-50/90 p-4 animate-fade-in">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-amber-800">Potential High-Risk Symptoms Detected</h3>
@@ -241,7 +241,7 @@ export function PatientChat() {
       )}
 
       {error ? (
-        <div className="ui-surface border-red-200 bg-red-50/80 p-4 text-sm text-red-700">{error}</div>
+        <div role="alert" className="ui-surface border-red-200 bg-red-50/80 p-4 text-sm text-red-700">{error}</div>
       ) : null}
 
       <div className="ui-surface overflow-hidden">
@@ -307,7 +307,11 @@ export function PatientChat() {
 
               {isTyping ? (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm"
+                  >
                     {t('chat.thinking')}
                   </div>
                 </div>
@@ -354,7 +358,7 @@ export function PatientChat() {
       </div>
 
       {sessionComplete && (
-        <div className="ui-surface border-green-200 bg-gradient-to-r from-green-50/90 to-emerald-50/90 p-4 animate-fade-in">
+        <div role="status" aria-live="polite" className="ui-surface border-green-200 bg-gradient-to-r from-green-50/90 to-emerald-50/90 p-4 animate-fade-in">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-green-800">Session Completed Successfully</h3>
