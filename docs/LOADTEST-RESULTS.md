@@ -1,7 +1,25 @@
-# Load Test Results — 2026-11-20
+# Load Test Results — 2026-11-20 (updated 2026-11-27)
 
 Environment: prod compose stack on dev host (M-series Mac, Docker Desktop).
-Tool: autocannon, 50 connections, 20s.
+Tool: autocannon, 50 connections, 20s. 2026-11-27 re-run: in-network fetch
+loop (50 conns equivalent), 30s, **observed through Prometheus/Grafana**.
+
+## Monitoring-observed run (2026-11-27)
+
+Load driven inside `aarogyam-prod_internal` against `backend:3001/health`,
+metrics scraped live by Prometheus (`--profile monitoring`):
+
+| Metric observed | Value | Source |
+|---|---|---|
+| Requests attempted | ~282k in 30s (~9.4k rps) | in-container loop |
+| Shed at app limiter | `unmatched 429` rate ≈ 8.1k rps | `rate(http_requests_total[30s])` |
+| Admitted `/health` 200 | ~0.1 rps sustained post-limit | same |
+| p99 admitted latency | **4.9ms** | `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))` |
+| Errors on admitted path | 0 | counter has no 5xx |
+
+Key observation: shed requests are labelled `unmatched` with status `429`
+because the limiter middleware runs **before** routing — expected label
+behavior, not a metrics bug. Route labels remained ID-free throughout.
 
 ## Edge path (https://localhost → nginx → app)
 

@@ -81,6 +81,21 @@ docker compose -f docker-compose.prod.yml --profile backup up -d backup
   rejects every refresh token issued before the detection
   (`refresh:cutoff:<userId>` in Redis, cleared on next successful login).
 
+## Alert thresholds (suggested)
+
+Wire these in Grafana contact points or an external alertmanager — the
+metrics all exist; thresholds are policy, not code:
+
+| Signal | Alert when | Why |
+|---|---|---|
+| 5xx rate | `rate(http_requests_total{status=~"5.."}[5m]) > 0.02` of total | real errors, not sheds |
+| Admitted p99 | `histogram_quantile(0.99, ...[5m]) > 1` (1s) | saturation |
+| `db_pool_waiting` | `> 0` sustained 5m | pool exhaustion |
+| `llm_circuit_open` | `= 1` for >5m | provider outage |
+| `llm_fallback_total` | `rate > 0.16/s` (≈10/min) | fallback storm — already log-alerted |
+| `account_lockouts_total` | `rate > 5/h` | credential stuffing wave |
+| `rate_limit_rejections_total` | `rate > 100/s` sustained | active attack vs organic burst |
+
 ## Incident quick reference
 
 | Symptom | Check | Fix |
