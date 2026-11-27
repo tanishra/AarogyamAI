@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 interface HistoricalVitals {
   id: string;
@@ -19,6 +20,7 @@ interface PatientHistoryPanelProps {
 }
 
 export function PatientHistoryPanel({ patientId, token }: PatientHistoryPanelProps) {
+  const { t } = useI18n();
   const [vitalsHistory, setVitalsHistory] = useState<HistoricalVitals[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,14 +48,14 @@ export function PatientHistoryPanel({ patientId, token }: PatientHistoryPanelPro
 
   return (
     <div className="ui-surface p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Previous Vitals</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('history.previousVitals')}</h3>
 
       {isLoading ? (
         <div className="py-6 text-center">
           <div className="mx-auto h-7 w-7 animate-spin rounded-full border-b-2 border-blue-600" />
         </div>
       ) : vitalsHistory.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-500">No previous vitals recorded</p>
+        <p className="py-4 text-center text-sm text-slate-500">{t('history.noVitals')}</p>
       ) : (
         <div className="mt-3 max-h-72 space-y-3 overflow-y-auto pr-1">
           {vitalsHistory.map((vitals) => (
@@ -63,22 +65,22 @@ export function PatientHistoryPanel({ patientId, token }: PatientHistoryPanelPro
             >
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs text-slate-500">{new Date(vitals.recordedAt).toLocaleDateString()}</span>
-                <span className="text-xs text-slate-500">by {vitals.recordedBy}</span>
+                <span className="text-xs text-slate-500">{t('history.recordedBy', { name: vitals.recordedBy })}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-slate-700">
                 {vitals.bloodPressureSystolic && vitals.bloodPressureDiastolic ? (
                   <p>
-                    BP: <span className="font-semibold text-slate-900">{vitals.bloodPressureSystolic}/{vitals.bloodPressureDiastolic}</span>
+                    {t('vitals.bpAbbr')}: <span className="font-semibold text-slate-900">{vitals.bloodPressureSystolic}/{vitals.bloodPressureDiastolic}</span>
                   </p>
                 ) : null}
                 {vitals.heartRate ? (
                   <p>
-                    HR: <span className="font-semibold text-slate-900">{vitals.heartRate} bpm</span>
+                    {t('vitals.hrAbbr')}: <span className="font-semibold text-slate-900">{vitals.heartRate} bpm</span>
                   </p>
                 ) : null}
                 {vitals.temperatureFahrenheit ? (
                   <p>
-                    Temp: <span className="font-semibold text-slate-900">{vitals.temperatureFahrenheit}F</span>
+                    {t('vitals.tempAbbr')}: <span className="font-semibold text-slate-900">{vitals.temperatureFahrenheit}F</span>
                   </p>
                 ) : null}
                 {vitals.oxygenSaturation ? (

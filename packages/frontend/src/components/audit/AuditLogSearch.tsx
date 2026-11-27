@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useI18n } from '@/lib/i18n';
 
 export interface AuditLogFilters {
   userId?: string;
@@ -16,6 +17,7 @@ interface AuditLogSearchProps {
 }
 
 export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<AuditLogFilters>({});
   const [activeFilters, setActiveFilters] = useState<AuditLogFilters>({});
@@ -49,20 +51,20 @@ export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Search Audit Logs</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.searchAuditLogs')}</h3>
 
       {/* Filter Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         {/* User ID */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            User ID
+            {t('admin.userId')}
           </label>
           <input
             type="text"
             value={filters.userId || ''}
             onChange={(e) => handleFilterChange('userId', e.target.value)}
-            placeholder="Enter user ID"
+            placeholder={t('admin.enterUserId')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -70,40 +72,40 @@ export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
         {/* Action Type */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Action Type
+            {t('admin.actionType')}
           </label>
           <select
             value={filters.actionType || ''}
             onChange={(e) => handleFilterChange('actionType', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">All Actions</option>
-            <option value="login">Login</option>
-            <option value="logout">Logout</option>
-            <option value="registration_approved">Registration Approved</option>
-            <option value="registration_rejected">Registration Rejected</option>
-            <option value="role_change">Role Change</option>
-            <option value="account_deactivation">Account Deactivation</option>
-            <option value="account_activation">Account Activation</option>
-            <option value="password_reset">Password Reset</option>
-            <option value="mfa_enabled">MFA Enabled</option>
-            <option value="mfa_disabled">MFA Disabled</option>
-            <option value="consent_withdrawal">Consent Withdrawal</option>
-            <option value="grievance_update">Grievance Update</option>
-            <option value="data_access_fulfilled">Data Access Fulfilled</option>
+            <option value="">{t('admin.allActions')}</option>
+            <option value="login">{t('admin.actionLogin')}</option>
+            <option value="logout">{t('admin.actionLogout')}</option>
+            <option value="registration_approved">{t('admin.actionRegApproved')}</option>
+            <option value="registration_rejected">{t('admin.actionRegRejected')}</option>
+            <option value="role_change">{t('admin.actionRoleChange')}</option>
+            <option value="account_deactivation">{t('admin.actionDeactivation')}</option>
+            <option value="account_activation">{t('admin.actionActivation')}</option>
+            <option value="password_reset">{t('admin.actionPasswordReset')}</option>
+            <option value="mfa_enabled">{t('admin.actionMfaEnabled')}</option>
+            <option value="mfa_disabled">{t('admin.actionMfaDisabled')}</option>
+            <option value="consent_withdrawal">{t('admin.actionConsentWithdrawal')}</option>
+            <option value="grievance_update">{t('admin.actionGrievanceUpdate')}</option>
+            <option value="data_access_fulfilled">{t('admin.actionDataAccess')}</option>
           </select>
         </div>
 
         {/* Resource */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Resource
+            {t('admin.resource')}
           </label>
           <input
             type="text"
             value={filters.resource || ''}
             onChange={(e) => handleFilterChange('resource', e.target.value)}
-            placeholder="Enter resource ID"
+            placeholder={t('admin.enterResourceId')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -111,7 +113,7 @@ export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
         {/* Start Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Start Date
+            {t('admin.startDate')}
           </label>
           <input
             type="date"
@@ -124,7 +126,7 @@ export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
         {/* End Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            End Date
+            {t('admin.endDate')}
           </label>
           <input
             type="date"
@@ -141,17 +143,17 @@ export default function AuditLogSearch({ onSearch }: AuditLogSearchProps) {
           onClick={handleSearch}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
-          Search
+          {t('common.search')}
         </button>
         <button
           onClick={handleClearFilters}
           className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
         >
-          Clear Filters
+          {t('admin.clearFilters')}
         </button>
         {activeFilterCount > 0 && (
           <span className="text-sm text-gray-600">
-            {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+            {t('admin.filtersActive', { count: activeFilterCount })}
           </span>
         )}
       </div>

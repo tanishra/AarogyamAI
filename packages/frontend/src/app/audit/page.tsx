@@ -5,6 +5,7 @@ import { AuthGuard } from '@/lib/auth/AuthGuard';
 import { RoleGuard } from '@/lib/auth/RoleGuard';
 import { Navigation } from '@/components/Navigation';
 import { AppShell, PanelTabs } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 import AuditLogSearch from '@/components/audit/AuditLogSearch';
 import AuditLogTable from '@/components/audit/AuditLogTable';
 import AccessPatternViewer from '@/components/audit/AccessPatternViewer';
@@ -14,13 +15,14 @@ import LogVerification from '@/components/audit/LogVerification';
 type TabType = 'logs' | 'patterns' | 'anomalies' | 'verification';
 
 function AuditPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('logs');
 
   const tabs = [
-    { id: 'logs' as TabType, label: 'Audit Logs' },
-    { id: 'patterns' as TabType, label: 'Access Patterns' },
-    { id: 'anomalies' as TabType, label: 'Anomaly Alerts' },
-    { id: 'verification' as TabType, label: 'Log Verification' },
+    { id: 'logs' as TabType, label: t('admin.auditLogs') },
+    { id: 'patterns' as TabType, label: t('admin.accessPatterns') },
+    { id: 'anomalies' as TabType, label: t('admin.anomalyAlerts') },
+    { id: 'verification' as TabType, label: t('admin.logVerification') },
   ];
 
   return (
@@ -28,9 +30,9 @@ function AuditPage() {
       <Navigation />
       <AppShell>
         <div className="mb-6 overflow-hidden rounded-[22px] border border-rose-300/45 bg-gradient-to-r from-rose-700 via-orange-700 to-amber-600 px-6 py-6 text-white shadow-2xl shadow-rose-900/30">
-          <p className="ui-chip border-white/30 bg-white/10 text-rose-100">Security Operations</p>
-          <h1 className="mt-3 text-3xl font-bold">Audit Center</h1>
-          <p className="mt-1 text-sm text-rose-100/90">Trace system behavior, detect anomalies, and verify log integrity</p>
+          <p className="ui-chip border-white/30 bg-white/10 text-rose-100">{t('admin.securityOps')}</p>
+          <h1 className="mt-3 text-3xl font-bold">{t('admin.auditCenter')}</h1>
+          <p className="mt-1 text-sm text-rose-100/90">{t('admin.auditCenterDesc')}</p>
         </div>
 
         <div className="ui-surface mb-5 border-orange-200/70 bg-gradient-to-r from-orange-50 to-amber-50 p-3">

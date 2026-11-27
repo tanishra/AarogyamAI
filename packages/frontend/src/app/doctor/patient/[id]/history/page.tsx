@@ -70,8 +70,8 @@ function PatientHistoryContent() {
   return (
     <AppShell tone="doctor">
       <PageHeader
-        title="Patient Medical History"
-        subtitle="Complete clinical record of all encounters"
+        title={t('history.pageTitle')}
+        subtitle={t('history.pageSubtitle')}
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => router.back()}>
@@ -92,14 +92,14 @@ function PatientHistoryContent() {
         </div>
       ) : encounters.length === 0 ? (
         <EmptyState
-          title="No completed encounters"
-          description="This patient hasn't had any completed clinical encounters yet."
+          title={t('history.noEncounters')}
+          description={t('history.noEncountersDesc')}
         />
       ) : (
         <div className="space-y-6">
           <div className="ui-surface p-6">
             <h2 className="mb-4 text-lg font-semibold text-slate-900">
-              Clinical Encounters ({encounters.length})
+              {t('history.encounters', { count: encounters.length })}
             </h2>
             
             <div className="space-y-4">
@@ -130,9 +130,9 @@ function PatientHistoryContent() {
                       </div>
                       
                       <p className="mt-1 text-sm text-slate-600">
-                        Duration: {encounter.durationMinutes} minutes
-                        {encounter.doctorName && ` • Doctor: ${encounter.doctorName}`}
-                        {encounter.nurseName && ` • Nurse: ${encounter.nurseName}`}
+                        {t('history.durationMin', { count: encounter.durationMinutes ?? 0 })}
+                        {encounter.doctorName && ` • ${t('history.doctorLabel', { name: encounter.doctorName })}`}
+                        {encounter.nurseName && ` • ${t('dash.nurseLabel', { name: encounter.nurseName })}`}
                       </p>
 
                       {encounter.summary && (
@@ -149,7 +149,7 @@ function PatientHistoryContent() {
                           {encounter.summary.symptoms && encounter.summary.symptoms.length > 0 && (
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Symptoms
+                                {t('common.symptoms')}
                               </p>
                               <p className="mt-1 text-sm text-slate-800">
                                 {encounter.summary.symptoms.join(', ')}
@@ -160,7 +160,7 @@ function PatientHistoryContent() {
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Duration
+                                {t('history.duration')}
                               </p>
                               <p className="mt-1 text-sm text-slate-800">
                                 {encounter.summary.duration}
@@ -168,7 +168,7 @@ function PatientHistoryContent() {
                             </div>
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Severity
+                                {t('history.severity')}
                               </p>
                               <p className="mt-1 text-sm text-slate-800">
                                 {encounter.summary.severity}
@@ -181,13 +181,13 @@ function PatientHistoryContent() {
                       {encounter.clinicalReasoning && (
                         <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
-                            Clinical Assessment
+                            {t('history.clinicalAssessment')}
                           </p>
 
                           {encounter.clinicalReasoning.differentialDiagnosis && (
                             <div className="mt-2">
                               <p className="text-xs font-semibold text-slate-700">
-                                Differential Diagnosis
+                                {t('history.diffDiagnosis')}
                               </p>
                               <ul className="mt-1 space-y-1">
                                 {encounter.clinicalReasoning.differentialDiagnosis.map((dx: string, idx: number) => (
@@ -203,7 +203,7 @@ function PatientHistoryContent() {
                           {encounter.clinicalReasoning.diagnosticPlan && (
                             <div className="mt-3">
                               <p className="text-xs font-semibold text-slate-700">
-                                Treatment Plan
+                                {t('history.treatmentPlan')}
                               </p>
                               <p className="mt-1 text-sm text-slate-800">
                                 {encounter.clinicalReasoning.diagnosticPlan}
@@ -233,7 +233,7 @@ function PatientHistoryContent() {
           {vitalsHistory.length > 0 && (
             <div className="ui-surface p-6">
               <h2 className="mb-4 text-lg font-semibold text-slate-900">
-                Vitals History ({vitalsHistory.length})
+                {t('history.vitalsHistoryCount', { count: vitalsHistory.length })}
               </h2>
               
               <div className="space-y-3">
@@ -248,7 +248,7 @@ function PatientHistoryContent() {
                     <div className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                       {vital.bloodPressureSystolic && (
                         <p>
-                          <span className="text-slate-500">BP:</span>{' '}
+                          <span className="text-slate-500">{t('vitals.bpAbbr')}:</span>{' '}
                           <span className="font-semibold text-slate-800">
                             {vital.bloodPressureSystolic}/{vital.bloodPressureDiastolic}
                           </span>
@@ -256,13 +256,13 @@ function PatientHistoryContent() {
                       )}
                       {vital.heartRate && (
                         <p>
-                          <span className="text-slate-500">HR:</span>{' '}
+                          <span className="text-slate-500">{t('vitals.hrAbbr')}:</span>{' '}
                           <span className="font-semibold text-slate-800">{vital.heartRate}</span>
                         </p>
                       )}
                       {vital.temperatureFahrenheit && (
                         <p>
-                          <span className="text-slate-500">Temp:</span>{' '}
+                          <span className="text-slate-500">{t('vitals.tempAbbr')}:</span>{' '}
                           <span className="font-semibold text-slate-800">
                             {vital.temperatureFahrenheit}°F
                           </span>
@@ -270,7 +270,7 @@ function PatientHistoryContent() {
                       )}
                       {vital.oxygenSaturation && (
                         <p>
-                          <span className="text-slate-500">SpO2:</span>{' '}
+                          <span className="text-slate-500">{t('vitals.spo2')}:</span>{' '}
                           <span className="font-semibold text-slate-800">
                             {vital.oxygenSaturation}%
                           </span>
@@ -279,7 +279,7 @@ function PatientHistoryContent() {
                     </div>
                     {(vital.flaggedAbnormal || vital.flagged_abnormal) && (
                       <p className="mt-2 text-xs font-semibold text-rose-600">
-                        ⚠ Abnormal values detected
+                        {t('history.abnormalDetected')}
                       </p>
                     )}
                   </div>

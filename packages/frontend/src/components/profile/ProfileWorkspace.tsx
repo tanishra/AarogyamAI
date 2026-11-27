@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, EmptyState, Skeleton } from '@/components/common';
 import { SessionsSection } from './SessionsSection';
 
@@ -95,6 +96,7 @@ function formStateFromProfile(data: ProfilePayload): Record<string, string> {
 
 export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
   const { token } = useAuth();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formState, setFormState] = useState<Record<string, string>>(EMPTY_FORM_STATE);
@@ -148,7 +150,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err?.message || 'Failed to update profile');
+        throw new Error(err?.message || t('profile.updateFailed'));
       }
 
       return response.json();
@@ -170,6 +172,12 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
     return Object.entries(activityData.stats);
   }, [activityData]);
 
+  const statLabel = (key: string): string => {
+    const i18nKey = `profile.stats.${key}`;
+    const translated = t(i18nKey);
+    return translated === i18nKey ? key.replace(/([A-Z])/g, ' $1') : translated;
+  };
+
   if (profileLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -180,7 +188,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
   }
 
   if (!profileData) {
-    return <EmptyState title="Profile unavailable" description="Unable to load your profile right now." />;
+    return <EmptyState title={t('profile.unavailable')} description={t('profile.unavailableDesc')} />;
   }
 
   const showClinicalFields = role === 'Nurse' || role === 'Doctor';
@@ -190,8 +198,8 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
       <section className="ui-surface ui-surface-hover p-5 lg:col-span-2">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">My Profile</h2>
-            <p className="mt-1 text-sm text-slate-600">Keep your personal and professional details up to date.</p>
+            <h2 className="text-xl font-semibold text-slate-900">{t('profile.title')}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t('profile.subtitle')}</p>
           </div>
           {!isEditing ? (
             <AnimatedButton
@@ -201,15 +209,15 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                 setIsEditing(true);
               }}
             >
-              Edit Profile
+              {t('profile.edit')}
             </AnimatedButton>
           ) : (
             <div className="flex items-center gap-2">
               <AnimatedButton variant="ghost" onClick={() => setIsEditing(false)} disabled={updateMutation.isPending}>
-                Cancel
+                {t('common.cancel')}
               </AnimatedButton>
               <AnimatedButton onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                {updateMutation.isPending ? t('common.saving') : t('profile.saveChanges')}
               </AnimatedButton>
             </div>
           )}
@@ -217,14 +225,14 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[
-            ['name', 'Full Name', 'text'],
-            ['phone', 'Phone', 'text'],
-            ['dateOfBirth', 'Date of Birth', 'date'],
-            ['gender', 'Gender', 'text'],
-            ['organization', 'Organization', 'text'],
-            ['department', 'Department', 'text'],
-            ['preferredLanguage', 'Preferred Language', 'text'],
-            ['timezone', 'Timezone', 'text'],
+            ['name', t('profile.fullName'), 'text'],
+            ['phone', t('profile.phone'), 'text'],
+            ['dateOfBirth', t('profile.dob'), 'date'],
+            ['gender', t('profile.gender'), 'text'],
+            ['organization', t('profile.organization'), 'text'],
+            ['department', t('profile.department'), 'text'],
+            ['preferredLanguage', t('profile.preferredLanguage'), 'text'],
+            ['timezone', t('profile.timezone'), 'text'],
           ].map(([key, label, type]) => (
             <label key={key} className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
@@ -237,7 +245,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                 />
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                  {profileValue(key) || 'Not provided'}
+                  {profileValue(key) || t('profile.notProvided')}
                 </div>
               )}
             </label>
@@ -246,8 +254,8 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
           {showClinicalFields ? (
             <>
               {[
-                ['specialization', 'Specialization'],
-                ['licenseNumber', 'License Number'],
+                ['specialization', t('profile.specialization')],
+                ['licenseNumber', t('profile.licenseNumber')],
               ].map(([key, label]) => (
                 <label key={key} className="block">
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
@@ -260,7 +268,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                     />
                   ) : (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                      {profileValue(key) || 'Not provided'}
+                      {profileValue(key) || t('profile.notProvided')}
                     </div>
                   )}
                 </label>
@@ -269,8 +277,8 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
           ) : (
             <>
               {[
-                ['emergencyContactName', 'Emergency Contact Name'],
-                ['emergencyContactPhone', 'Emergency Contact Phone'],
+                ['emergencyContactName', t('profile.emergencyName')],
+                ['emergencyContactPhone', t('profile.emergencyPhone')],
               ].map(([key, label]) => (
                 <label key={key} className="block">
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
@@ -294,7 +302,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block sm:col-span-2">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Address</span>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{t('profile.address')}</span>
             {isEditing ? (
               <input
                 type="text"
@@ -304,14 +312,19 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
               />
             ) : (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                {profileValue('addressLine1') || 'Not provided'}
+                {profileValue('addressLine1') || t('profile.notProvided')}
               </div>
             )}
           </label>
 
-          {['city', 'state', 'country', 'postalCode'].map((key) => (
+          {([
+            ['city', t('profile.city')],
+            ['state', t('profile.state')],
+            ['country', t('profile.country')],
+            ['postalCode', t('profile.postalCode')],
+          ] as const).map(([key, label]) => (
             <label key={key} className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{key}</span>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
               {isEditing ? (
                 <input
                   type="text"
@@ -321,7 +334,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                 />
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                  {profileValue(key) || 'Not provided'}
+                  {profileValue(key) || t('profile.notProvided')}
                 </div>
               )}
             </label>
@@ -329,7 +342,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
         </div>
 
         <label className="mt-4 block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Bio</span>
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{t('profile.bio')}</span>
           {isEditing ? (
             <textarea
               rows={4}
@@ -339,7 +352,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
             />
           ) : (
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              {profileValue('bio') || 'No bio added yet'}
+              {profileValue('bio') || t('profile.noBio')}
             </div>
           )}
         </label>
@@ -353,19 +366,19 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
 
       <section className="space-y-4">
         <div className="ui-surface ui-surface-hover p-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Account Summary</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('profile.accountSummary')}</h3>
           <div className="mt-3 space-y-2 text-sm text-slate-700">
             <p>
-              Role: <span className="font-semibold text-slate-900">{profileData.role}</span>
+              {t('common.role')}: <span className="font-semibold text-slate-900">{profileData.role}</span>
             </p>
             <p>
-              Email: <span className="font-semibold text-slate-900">{profileData.email}</span>
+              {t('common.email')}: <span className="font-semibold text-slate-900">{profileData.email}</span>
             </p>
             <p>
-              Status: <span className="font-semibold text-slate-900">{profileData.isActive ? 'Active' : 'Inactive'}</span>
+              {t('common.status')}: <span className="font-semibold text-slate-900">{profileData.isActive ? t('common.active') : t('common.inactive')}</span>
             </p>
             <p>
-              Joined: <span className="font-semibold text-slate-900">{new Date(profileData.createdAt).toLocaleDateString()}</span>
+              {t('profile.joined')}: <span className="font-semibold text-slate-900">{new Date(profileData.createdAt).toLocaleDateString()}</span>
             </p>
           </div>
         </div>
@@ -373,7 +386,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
         <SessionsSection />
 
         <div className="ui-surface ui-surface-hover p-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">My Activity</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t('profile.myActivity')}</h3>
           {activityLoading ? (
             <div className="mt-3 space-y-2">
               <Skeleton className="h-10 w-full" />
@@ -384,22 +397,22 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
               <div className="mt-3 space-y-2">
                 {stats.map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                    <span className="capitalize text-slate-600">{label.replace(/([A-Z])/g, ' $1')}:</span>{' '}
+                    <span className="capitalize text-slate-600">{statLabel(label)}:</span>{' '}
                     <span className="font-semibold text-slate-900">{String(value)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Items</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('profile.recentItems')}</p>
                 <div className="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
                   {(activityData?.recent || []).length === 0 ? (
-                    <p className="text-xs text-slate-500">No recent records.</p>
+                    <p className="text-xs text-slate-500">{t('profile.noRecent')}</p>
                   ) : (
                     (activityData?.recent || []).map((item, index) => (
                       <div key={item.id || index} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
                         {item.patient_name ? <p className="font-semibold text-slate-900">{item.patient_name}</p> : null}
                         <p>
-                          {item.status || 'record'}
+                          {item.status || t('profile.record')}
                           {item.priority ? ` • ${item.priority}` : ''}
                         </p>
                         <p className="text-slate-500">

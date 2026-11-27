@@ -104,6 +104,15 @@ function NurseDashboardContent() {
     return patients.filter((p) => p.priority === queueFilter);
   }, [patients, queueFilter]);
 
+  const queueFilterLabels: Record<QueueFilter, string> = {
+    all: t('common.all'),
+    emergency: t('queue.emergency'),
+    urgent: t('queue.urgent'),
+    routine: t('queue.routine'),
+    vitals_added: t('dash.vitalsAdded'),
+  };
+  const queueFilterLabel = queueFilterLabels[queueFilter];
+
   const fetchPatientSummary = async (patient: QueuePatient) => {
     const response = await fetch(
       `/api/nurse/patient/${patient.patient_id}/summary?sessionId=${patient.session_id}`,
@@ -176,15 +185,15 @@ function NurseDashboardContent() {
 
   const tabs = [
     { id: 'vitals' as NurseTab, label: t('vitals.title') },
-    { id: 'history' as NurseTab, label: 'Previous Vitals' },
+    { id: 'history' as NurseTab, label: t('history.previousVitals') },
   ];
 
   return (
     <AppShell tone="nurse">
       <PageHeader
-        title="Nurse Intake Dashboard"
-        subtitle="Review AI summary, capture vitals, and route patient for doctor review"
-        badge={`${activeCount} Active`}
+        title={t('dash.nurseTitle')}
+        subtitle={t('dash.nurseSubtitle')}
+        badge={t('dash.activeBadge', { count: activeCount })}
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => queryClient.invalidateQueries({ queryKey: ['nurseQueue'] })}>
@@ -197,28 +206,28 @@ function NurseDashboardContent() {
 
       <section className="relative mb-5 overflow-hidden rounded-3xl border border-cyan-200/70 bg-gradient-to-r from-[#e8f7ff] via-[#f2fbff] to-[#e8fffb] p-5 animate-fade-up">
         <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-cyan-200/50 blur-2xl" />
-        <h2 className="text-xl font-semibold text-slate-900">Shift workflow command center</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{t('dash.nurseHero')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Prioritize queue patients, capture vitals with abnormal flags, and handoff complete context to doctors.
+          {t('dash.nurseHeroDesc')}
         </p>
       </section>
 
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatTile label="Queue" value={activeCount} trend="Awaiting vitals" />
-        <StatTile label="Emergency Priority" value={emergencyCount} trend="Immediate review" tone={emergencyCount > 0 ? 'danger' : 'default'} />
-        <StatTile label="Avg Wait" value={`${avgWaitMinutes}m`} trend={`${vitalsAddedCount} with vitals captured`} />
+        <StatTile label={t('dash.queue')} value={activeCount} trend={t('dash.awaitingVitals')} />
+        <StatTile label={t('dash.emergencyPriority')} value={emergencyCount} trend={t('dash.immediateReview')} tone={emergencyCount > 0 ? 'danger' : 'default'} />
+        <StatTile label={t('dash.avgWait')} value={`${avgWaitMinutes}m`} trend={t('dash.withVitals', { count: vitalsAddedCount })} />
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatTile label="On Shift" value={user?.name || 'Nurse'} trend={user?.email || ''} />
-        <StatTile label="Vitals Added" value={vitalsAddedCount} trend="Ready to handoff soon" tone={vitalsAddedCount > 0 ? 'success' : 'default'} />
-        <StatTile label="Queue Filter" value={queueFilter.replace('_', ' ')} trend="Active queue scope" />
+        <StatTile label={t('dash.onShift')} value={user?.name || t('dash.nurseFallback')} trend={user?.email || ''} />
+        <StatTile label={t('dash.vitalsAdded')} value={vitalsAddedCount} trend={t('dash.readyHandoff')} tone={vitalsAddedCount > 0 ? 'success' : 'default'} />
+        <StatTile label={t('dash.queueFilter')} value={queueFilterLabel} trend={t('dash.queueScope')} />
       </div>
 
       <PanelTabs
         tabs={[
-          { id: 'workflow', label: 'Workflow' },
-          { id: 'profile', label: 'My Profile' },
+          { id: 'workflow', label: t('dash.tabWorkflow') },
+          { id: 'profile', label: t('profile.title') },
         ]}
         value={dashboardTab}
         onChange={setDashboardTab}
@@ -235,10 +244,10 @@ function NurseDashboardContent() {
               <div className="mt-2 flex flex-wrap gap-2">
                 {[
                   ['all', t('common.all')],
-                  ['emergency', 'Emergency'],
-                  ['urgent', 'Urgent'],
-                  ['routine', 'Routine'],
-                  ['vitals_added', 'Vitals Added'],
+                  ['emergency', t('queue.emergency')],
+                  ['urgent', t('queue.urgent')],
+                  ['routine', t('queue.routine')],
+                  ['vitals_added', t('dash.vitalsAdded')],
                 ].map(([id, label]) => (
                   <button
                     key={id}
@@ -263,7 +272,7 @@ function NurseDashboardContent() {
                 </div>
               ) : filteredPatients.length === 0 ? (
                 <div className="p-4">
-                  <EmptyState title={t('dash.queueEmpty')} description="Try a different filter or refresh the queue." />
+                  <EmptyState title={t('dash.queueEmpty')} description={t('dash.queueEmptyFilter')} />
                 </div>
               ) : (
                 filteredPatients.map((patient) => (
@@ -290,7 +299,7 @@ function NurseDashboardContent() {
                     </p>
                     <p className="mt-1 text-[11px] font-medium text-slate-500">
                       {t('queue.status')}: {patient.status}
-                      {patient.emergency_detected ? ' • Emergency signal detected' : ''}
+                      {patient.emergency_detected ? ` • ${t('queue.emergencySignal')}` : ''}
                     </p>
                   </button>
                 ))
@@ -301,14 +310,14 @@ function NurseDashboardContent() {
 
         <section className="lg:col-span-8">
           {!selectedPatient ? (
-            <EmptyState title="Select a patient" description="Pick a patient from the queue to review AI summary and capture vitals." />
+            <EmptyState title={t('dash.selectPatient')} description={t('dash.selectPatientDescNurse')} />
           ) : (
             <div className="space-y-5">
               <div className="ui-surface ui-surface-hover p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">{selectedPatient.patient_name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">Triage Status: Intake in progress</p>
+                    <p className="mt-1 text-sm text-slate-500">{t('dash.triageStatus')}</p>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getPriorityStyle(selectedPatient.priority)}`}>
                     {selectedPatient.priority}
@@ -316,10 +325,10 @@ function NurseDashboardContent() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href={`/nurse/vitals/${selectedPatient.patient_id}?sessionId=${selectedPatient.session_id}`}>
-                    <AnimatedButton size="sm" variant="secondary">Open Dedicated Vitals Page</AnimatedButton>
+                    <AnimatedButton size="sm" variant="secondary">{t('dash.openVitalsPage')}</AnimatedButton>
                   </Link>
                   <Link href={`/nurse/patient/${selectedPatient.patient_id}/history`}>
-                    <AnimatedButton size="sm" variant="secondary">Open Full Patient History</AnimatedButton>
+                    <AnimatedButton size="sm" variant="secondary">{t('dash.openHistory')}</AnimatedButton>
                   </Link>
                 </div>
 
@@ -327,15 +336,15 @@ function NurseDashboardContent() {
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
-                      <p className="mt-1 text-sm text-slate-800">{summary.chiefComplaint || 'Not captured'}</p>
+                      <p className="mt-1 text-sm text-slate-800">{summary.chiefComplaint || t('common.notCaptured')}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</p>
-                      <p className="mt-1 text-sm text-slate-800">{summary.symptoms?.join(', ') || 'Not captured'}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.symptoms')}</p>
+                      <p className="mt-1 text-sm text-slate-800">{summary.symptoms?.join(', ') || t('common.notCaptured')}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Medical History</p>
-                      <p className="mt-1 text-sm text-slate-800">{summary.medicalHistory?.join(', ') || 'None reported'}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('history.medicalHistory')}</p>
+                      <p className="mt-1 text-sm text-slate-800">{summary.medicalHistory?.join(', ') || t('common.noneReported')}</p>
                     </div>
                   </div>
                 ) : null}
@@ -348,12 +357,12 @@ function NurseDashboardContent() {
                   <h3 className="mb-4 text-lg font-semibold text-slate-900">{t('vitals.title')}</h3>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {[
-                      ['bloodPressureSystolic', 'Systolic BP (mmHg)'],
-                      ['bloodPressureDiastolic', 'Diastolic BP (mmHg)'],
+                      ['bloodPressureSystolic', t('vitals.systolicBp')],
+                      ['bloodPressureDiastolic', t('vitals.diastolicBp')],
                       ['heartRate', `${t('vitals.hr')} (bpm)`],
                       ['temperatureFahrenheit', `${t('vitals.temp')} (°F)`],
                       ['oxygenSaturation', `${t('vitals.spo2')} (%)`],
-                      ['respiratoryRate', 'Respiratory Rate'],
+                      ['respiratoryRate', t('vitals.rr')],
                       ['weightKg', `${t('vitals.weight')} (kg)`],
                       ['heightCm', `${t('vitals.height')} (cm)`],
                     ].map(([key, label]) => (
@@ -376,7 +385,7 @@ function NurseDashboardContent() {
                       onChange={(e) => setVitals((prev) => ({ ...prev, notes: e.target.value }))}
                       rows={3}
                       className="ui-focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition-all hover:border-cyan-300"
-                      placeholder="Enter observations or context for the doctor"
+                      placeholder={t('vitals.notesPlaceholder')}
                     />
                   </div>
 
@@ -389,7 +398,7 @@ function NurseDashboardContent() {
                       {addVitalsMutation.isPending ? t('common.loading') : t('vitals.save')}
                     </AnimatedButton>
                     <AnimatedButton onClick={() => markReadyMutation.mutate()} disabled={markReadyMutation.isPending}>
-                      {markReadyMutation.isPending ? 'Marking...' : 'Mark Ready for Doctor'}
+                      {markReadyMutation.isPending ? t('vitals.marking') : t('vitals.markReady')}
                     </AnimatedButton>
                   </div>
                 </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface Diagnosis {
   code: string;
@@ -36,6 +37,7 @@ export function DifferentialList({
   onReorder,
   isLoading = false,
 }: DifferentialListProps) {
+  const { t } = useI18n();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -86,7 +88,7 @@ export function DifferentialList({
     }
     return (
       <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-        Physician
+        {t('diff.sourcePhysician')}
       </span>
     );
   };
@@ -95,18 +97,18 @@ export function DifferentialList({
     <div className="ui-surface overflow-hidden p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Differential Diagnoses</h3>
-          <p className="mt-1 text-sm text-slate-600">Drag to reorder by priority</p>
+          <h3 className="text-lg font-semibold text-slate-900">{t('diff.title')}</h3>
+          <p className="mt-1 text-sm text-slate-600">{t('diff.reorderHint')}</p>
         </div>
         <AnimatedButton onClick={onAdd} disabled={isLoading} size="sm">
-          Add Diagnosis
+          {t('diff.add')}
         </AnimatedButton>
       </div>
 
       {differentials.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 py-12 text-center">
-          <p className="text-sm font-medium text-slate-700">No differential diagnoses yet</p>
-          <p className="mt-1 text-xs text-slate-500">Add diagnoses to build your differential list</p>
+          <p className="text-sm font-medium text-slate-700">{t('diff.empty')}</p>
+          <p className="mt-1 text-xs text-slate-500">{t('diff.emptyHint')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -153,7 +155,7 @@ export function DifferentialList({
                 <button
                   onClick={() => onRemove(diff.id)}
                   className="flex-shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                  aria-label="Remove diagnosis"
+                  aria-label={t('diff.remove')}
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

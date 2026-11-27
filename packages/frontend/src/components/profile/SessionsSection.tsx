@@ -43,7 +43,7 @@ export function SessionsSection() {
         )}
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        Devices currently signed in. Revoke anything you don&apos;t recognize.
+        {t('session.help')}
       </p>
       <div className="mt-3 space-y-2">
         {isLoading ? (
@@ -58,7 +58,7 @@ export function SessionsSection() {
             >
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-800">
-                  {s.userAgent || 'Unknown device'}
+                  {s.userAgent || t('session.unknownDevice')}
                   {s.current && (
                     <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                       {t('session.thisDevice')}

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { useToast } from '@/lib/notifications/toast';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import type { UserAccount } from '@/lib/api/types';
 
 interface AccountStatusToggleProps {
@@ -14,6 +15,7 @@ interface AccountStatusToggleProps {
 
 export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps) {
   const { showToast } = useToast();
+  const { t } = useI18n();
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -25,7 +27,7 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
     mutationFn: ({ isActive, reason }: { isActive: boolean; reason?: string }) =>
       UserManagementAPI.changeUserStatus(user.id, isActive, reason),
     onSuccess: () => {
-      showToast('success', `User account ${user.isActive ? 'deactivated' : 'activated'} successfully`);
+      showToast('success', user.isActive ? t('admin.deactivatedOk') : t('admin.activatedOk'));
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['userActivity', user.id] });
       setShowConfirmDialog(false);
@@ -33,13 +35,13 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
       onUpdate();
     },
     onError: (error: Error) => {
-      showToast('error', error.message || 'Failed to update account status');
+      showToast('error', error.message || t('admin.statusFailed'));
     },
   });
 
   const handleToggle = () => {
     if (isSelf && user.isActive) {
-      showToast('error', 'You cannot deactivate your own account');
+      showToast('error', t('admin.cannotDeactivateSelf'));
       return;
     }
     setShowConfirmDialog(true);
@@ -54,19 +56,19 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h4 className="text-sm font-semibold text-gray-700 mb-3">Account Status</h4>
-      
+      <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.accountStatus')}</h4>
+
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600">
-            Current Status:{' '}
+            {t('admin.currentStatus')}{' '}
             <span className={`font-semibold ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
-              {user.isActive ? 'Active' : 'Inactive'}
+              {user.isActive ? t('common.active') : t('common.inactive')}
             </span>
           </p>
           {isSelf && user.isActive && (
             <p className="text-xs text-red-600 mt-1">
-              You cannot deactivate your own account
+              {t('admin.cannotDeactivateSelf')}
             </p>
           )}
         </div>
@@ -81,10 +83,10 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
           }`}
         >
           {changeStatusMutation.isPending
-            ? 'Processing...'
+            ? t('admin.processing')
             : user.isActive
-            ? 'Deactivate'
-            : 'Activate'}
+            ? t('admin.deactivate')
+            : t('admin.activate')}
         </button>
       </div>
 
@@ -93,20 +95,22 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">
-              Confirm Account {user.isActive ? 'Deactivation' : 'Activation'}
+              {t('admin.confirmAccount', { action: user.isActive ? t('admin.deactivation') : t('admin.activation') })}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to {user.isActive ? 'deactivate' : 'activate'} the account for{' '}
-              <strong>{user.name}</strong>?
+              {t('admin.confirmStatusBody', {
+                action: user.isActive ? t('admin.actionDeactivate') : t('admin.actionActivate'),
+                name: user.name,
+              })}
             </p>
             {user.isActive && (
               <>
                 <p className="text-xs text-gray-500 mb-3">
-                  This will prevent new authentication attempts and terminate all active sessions.
+                  {t('admin.deactivationNote')}
                 </p>
                 <div className="mb-4">
                   <label htmlFor="statusReason" className="block text-sm font-medium text-gray-700 mb-2">
-                    Reason {user.isActive ? '(optional)' : ''}
+                    {user.isActive ? t('admin.reasonOptional') : t('admin.reason')}
                   </label>
                   <textarea
                     id="statusReason"
@@ -114,7 +118,7 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
                     onChange={(e) => setReason(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    placeholder="Provide a reason for this action..."
+                    placeholder={t('admin.statusReasonPlaceholder')}
                   />
                 </div>
               </>
@@ -128,7 +132,7 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
                 disabled={changeStatusMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmToggle}
@@ -140,10 +144,10 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
                 }`}
               >
                 {changeStatusMutation.isPending
-                  ? 'Processing...'
+                  ? t('admin.processing')
                   : user.isActive
-                  ? 'Deactivate'
-                  : 'Activate'}
+                  ? t('admin.deactivate')
+                  : t('admin.activate')}
               </button>
             </div>
           </div>

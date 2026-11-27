@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { useToast } from '@/lib/notifications/toast';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useI18n } from '@/lib/i18n';
 import type { RegistrationRequest } from '@/lib/api/types';
 
 export function RegistrationQueue() {
   const { showToast } = useToast();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -24,12 +26,12 @@ export function RegistrationQueue() {
   const approveMutation = useMutation({
     mutationFn: (id: string) => UserManagementAPI.approveRegistration(id),
     onSuccess: () => {
-      showToast('success', 'Registration request approved successfully');
+      showToast('success', t('admin.regApproved'));
       queryClient.invalidateQueries({ queryKey: ['registrationRequests'] });
       setSelectedRequest(null);
     },
     onError: (error: Error) => {
-      showToast('error', error.message || 'Failed to approve registration request');
+      showToast('error', error.message || t('admin.regApproveFailed'));
     },
   });
 
@@ -38,19 +40,19 @@ export function RegistrationQueue() {
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       UserManagementAPI.rejectRegistration(id, reason),
     onSuccess: () => {
-      showToast('success', 'Registration request rejected');
+      showToast('success', t('admin.regRejected'));
       queryClient.invalidateQueries({ queryKey: ['registrationRequests'] });
       setSelectedRequest(null);
       setShowRejectDialog(false);
       setRejectionReason('');
     },
     onError: (error: Error) => {
-      showToast('error', error.message || 'Failed to reject registration request');
+      showToast('error', error.message || t('admin.regRejectFailed'));
     },
   });
 
   const handleApprove = (request: RegistrationRequest) => {
-    if (window.confirm(`Approve registration for ${request.applicantName}?`)) {
+    if (window.confirm(t('admin.approveConfirm', { name: request.applicantName }))) {
       approveMutation.mutate(request.id);
     }
   };
@@ -62,7 +64,7 @@ export function RegistrationQueue() {
 
   const confirmReject = () => {
     if (!selectedRequest || !rejectionReason.trim()) {
-      showToast('error', 'Please provide a rejection reason');
+      showToast('error', t('admin.reasonRequired'));
       return;
     }
     rejectMutation.mutate({ id: selectedRequest.id, reason: rejectionReason });
@@ -79,7 +81,7 @@ export function RegistrationQueue() {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        Error loading registration requests: {(error as Error).message}
+        {t('admin.regLoadError', { message: (error as Error).message })}
       </div>
     );
   }
@@ -89,15 +91,17 @@ export function RegistrationQueue() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Registration Queue</h2>
+        <h2 className="text-2xl font-bold">{t('admin.regQueue')}</h2>
         <span className="text-sm text-gray-600">
-          {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+          {pendingRequests.length === 1
+            ? t('admin.pendingOne', { count: pendingRequests.length })
+            : t('admin.pendingMany', { count: pendingRequests.length })}
         </span>
       </div>
 
       {pendingRequests.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-8 rounded text-center">
-          No pending registration requests
+          {t('admin.noPending')}
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -105,22 +109,22 @@ export function RegistrationQueue() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Applicant
+                  {t('admin.applicant')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  {t('common.email')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Requested Role
+                  {t('admin.requestedRole')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submitted
+                  {t('admin.submitted')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Credentials
+                  {t('admin.credentials')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -150,14 +154,14 @@ export function RegistrationQueue() {
                       disabled={approveMutation.isPending}
                       className="text-green-600 hover:text-green-900 disabled:opacity-50"
                     >
-                      Approve
+                      {t('common.approve')}
                     </button>
                     <button
                       onClick={() => handleReject(request)}
                       disabled={rejectMutation.isPending}
                       className="text-red-600 hover:text-red-900 disabled:opacity-50"
                     >
-                      Reject
+                      {t('common.reject')}
                     </button>
                   </td>
                 </tr>
@@ -172,14 +176,14 @@ export function RegistrationQueue() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">
-              Reject Registration Request
+              {t('admin.rejectTitle')}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Rejecting registration for: <strong>{selectedRequest.applicantName}</strong>
+              {t('admin.rejectingFor', { name: selectedRequest.applicantName })}
             </p>
             <div className="mb-4">
               <label htmlFor="rejectionReason" className="block text-sm font-medium text-gray-700 mb-2">
-                Rejection Reason *
+                {t('admin.rejectionReason')}
               </label>
               <textarea
                 id="rejectionReason"
@@ -187,7 +191,7 @@ export function RegistrationQueue() {
                 onChange={(e) => setRejectionReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={4}
-                placeholder="Please provide a reason for rejection..."
+                placeholder={t('admin.rejectionPlaceholder')}
               />
             </div>
             <div className="flex justify-end space-x-3">
@@ -200,14 +204,14 @@ export function RegistrationQueue() {
                 disabled={rejectMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmReject}
                 disabled={rejectMutation.isPending || !rejectionReason.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
               >
-                {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
+                {rejectMutation.isPending ? t('admin.rejecting') : t('common.reject')}
               </button>
             </div>
           </div>

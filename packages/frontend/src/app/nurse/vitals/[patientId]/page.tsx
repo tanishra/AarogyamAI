@@ -150,8 +150,8 @@ function NurseVitalsEntryContent() {
     return (
       <AppShell tone="nurse">
         <EmptyState
-          title="Missing session ID"
-          description="Open this page from the nurse queue so we can attach vitals to the right intake session."
+          title={t('history.missingSession')}
+          description={t('history.missingSessionDescNurse')}
         />
       </AppShell>
     );
@@ -163,12 +163,12 @@ function NurseVitalsEntryContent() {
     <AppShell tone="nurse">
       <PageHeader
         title={t('vitals.title')}
-        subtitle="Capture structured vitals with real-time outlier highlighting"
-        badge="Nurse"
+        subtitle={t('vitals.pageSubtitle')}
+        badge={t('dash.nurseFallback')}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/nurse/dashboard">
-              <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
+              <AnimatedButton variant="secondary">{t('common.backToDashboard')}</AnimatedButton>
             </Link>
             <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
@@ -187,9 +187,9 @@ function NurseVitalsEntryContent() {
 
       <section className="relative mb-5 overflow-hidden rounded-3xl border border-cyan-200/70 bg-gradient-to-r from-[#e9f6ff] via-[#f4fbff] to-[#e8fffb] p-5 animate-fade-up">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
-        <h2 className="text-lg font-semibold text-slate-900">Objective data capture with safety checks</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t('vitals.heroTitle')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Enter vitals, verify outliers, and attach notes to support physician decision-making.
+          {t('vitals.heroDesc')}
         </p>
       </section>
 
@@ -202,26 +202,26 @@ function NurseVitalsEntryContent() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           {/* Patient Context */}
           <section className="lg:col-span-4 ui-surface ui-surface-hover p-5 animate-fade-up">
-            <h2 className="text-lg font-bold text-slate-900">Patient Context</h2>
-            <p className="mt-1 text-sm text-slate-500">Review before documenting objective measurements.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('history.patientContext')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('history.patientContextDesc')}</p>
 
             <div className="mt-4 space-y-3">
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                 <p className="text-xs text-slate-500">{t('queue.patient')}</p>
-                <p className="text-sm font-semibold text-slate-900">{data?.patient?.name || 'Patient'}</p>
+                <p className="text-sm font-semibold text-slate-900">{data?.patient?.name || t('queue.patient')}</p>
                 <p className="text-xs text-slate-500">{data?.patient?.email || ''}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
-                <p className="mt-1 text-sm text-slate-800">{data?.summary?.chiefComplaint || 'Not captured'}</p>
+                <p className="mt-1 text-sm text-slate-800">{data?.summary?.chiefComplaint || t('common.notCaptured')}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</p>
-                <p className="mt-1 text-sm text-slate-800">{data?.summary?.symptoms?.join(', ') || 'Not captured'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.symptoms')}</p>
+                <p className="mt-1 text-sm text-slate-800">{data?.summary?.symptoms?.join(', ') || t('common.notCaptured')}</p>
               </div>
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Allergies</p>
-                <p className="mt-1 text-sm text-amber-800">{data?.summary?.allergies?.join(', ') || 'No known allergies'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{t('common.allergies')}</p>
+                <p className="mt-1 text-sm text-amber-800">{data?.summary?.allergies?.join(', ') || t('common.noAllergies')}</p>
               </div>
             </div>
 
@@ -234,7 +234,7 @@ function NurseVitalsEntryContent() {
           {/* Vitals Form */}
           <section className="lg:col-span-8 ui-surface ui-surface-hover p-5 animate-fade-up delay-1">
             <h2 className="text-lg font-bold text-slate-900">{t('vitals.title')}</h2>
-            <p className="mt-1 text-sm text-slate-500 mb-4">Enter patient vitals. Critical values will trigger alerts.</p>
+            <p className="mt-1 text-sm text-slate-500 mb-4">{t('vitals.enterHint')}</p>
 
             <VitalsEntryForm
               patientId={patientId}
@@ -246,7 +246,7 @@ function NurseVitalsEntryContent() {
 
             {submitVitalsMutation.isSuccess && (
               <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                ✓ Vitals saved successfully
+                {t('vitals.saved')}
               </div>
             )}
 
@@ -263,7 +263,7 @@ function NurseVitalsEntryContent() {
                 disabled={markReadyMutation.isPending}
                 className="w-full"
               >
-                {markReadyMutation.isPending ? 'Marking Ready...' : 'Mark Patient Ready for Doctor'}
+                {markReadyMutation.isPending ? t('vitals.markingReady') : t('vitals.markReadyPatient')}
               </AnimatedButton>
 
               {markReadyMutation.error && (

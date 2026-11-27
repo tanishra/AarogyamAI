@@ -79,11 +79,11 @@ export function VitalsEntryForm({
       {/* Previous Vitals Comparison */}
       {previousVitals && (
         <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-          <h4 className="text-sm font-semibold text-slate-700 mb-2">Previous Vitals (for comparison)</h4>
+          <h4 className="text-sm font-semibold text-slate-700 mb-2">{t('vitals.previousComparison')}</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             {previousVitals.bloodPressureSystolic && previousVitals.bloodPressureDiastolic && (
               <div>
-                <span className="text-slate-500">BP:</span>{' '}
+                <span className="text-slate-500">{t('vitals.bpAbbr')}:</span>{' '}
                 <span className="font-semibold text-slate-900">
                   {previousVitals.bloodPressureSystolic}/{previousVitals.bloodPressureDiastolic}
                 </span>
@@ -91,25 +91,25 @@ export function VitalsEntryForm({
             )}
             {previousVitals.heartRate && (
               <div>
-                <span className="text-slate-500">HR:</span>{' '}
+                <span className="text-slate-500">{t('vitals.hrAbbr')}:</span>{' '}
                 <span className="font-semibold text-slate-900">{previousVitals.heartRate} bpm</span>
               </div>
             )}
             {previousVitals.temperatureFahrenheit && (
               <div>
-                <span className="text-slate-500">Temp:</span>{' '}
+                <span className="text-slate-500">{t('vitals.tempAbbr')}:</span>{' '}
                 <span className="font-semibold text-slate-900">{previousVitals.temperatureFahrenheit}°F</span>
               </div>
             )}
             {previousVitals.oxygenSaturation && (
               <div>
-                <span className="text-slate-500">O2:</span>{' '}
+                <span className="text-slate-500">{t('vitals.o2Abbr')}:</span>{' '}
                 <span className="font-semibold text-slate-900">{previousVitals.oxygenSaturation}%</span>
               </div>
             )}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Recorded: {new Date(previousVitals.recordedAt).toLocaleString()}
+            {t('history.recordedAt', { time: new Date(previousVitals.recordedAt).toLocaleString() })}
           </p>
         </div>
       )}
@@ -124,7 +124,7 @@ export function VitalsEntryForm({
           <div className="flex gap-2">
             <input
               type="number"
-              placeholder="Systolic"
+              placeholder={t('vitals.bpSystolic')}
               value={vitals.bloodPressureSystolic || ''}
               onChange={(e) => setVitals(prev => ({ 
                 ...prev, 
@@ -135,7 +135,7 @@ export function VitalsEntryForm({
             <span className="self-center text-slate-400">/</span>
             <input
               type="number"
-              placeholder="Diastolic"
+              placeholder={t('vitals.bpDiastolic')}
               value={vitals.bloodPressureDiastolic || ''}
               onChange={(e) => setVitals(prev => ({ 
                 ...prev, 
@@ -153,7 +153,7 @@ export function VitalsEntryForm({
           </label>
           <input
             type="number"
-            placeholder="e.g., 72"
+            placeholder={t('common.eg', { value: '72' })}
             value={vitals.heartRate || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -171,7 +171,7 @@ export function VitalsEntryForm({
           <input
             type="number"
             step="0.1"
-            placeholder="e.g., 98.6"
+            placeholder={t('common.eg', { value: '98.6' })}
             value={vitals.temperatureFahrenheit || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -188,7 +188,7 @@ export function VitalsEntryForm({
           </label>
           <input
             type="number"
-            placeholder="e.g., 98"
+            placeholder={t('common.eg', { value: '98' })}
             value={vitals.oxygenSaturation || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -201,11 +201,11 @@ export function VitalsEntryForm({
         {/* Respiratory Rate */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            Respiratory Rate (breaths/min)
+            {t('vitals.rr')} (breaths/min)
           </label>
           <input
             type="number"
-            placeholder="e.g., 16"
+            placeholder={t('common.eg', { value: '16' })}
             value={vitals.respiratoryRate || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -222,7 +222,7 @@ export function VitalsEntryForm({
           </label>
           <input
             type="number"
-            placeholder="e.g., 170"
+            placeholder={t('common.eg', { value: '170' })}
             value={vitals.heightCm || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -240,7 +240,7 @@ export function VitalsEntryForm({
           <input
             type="number"
             step="0.1"
-            placeholder="e.g., 70"
+            placeholder={t('common.eg', { value: '70' })}
             value={vitals.weightKg || ''}
             onChange={(e) => setVitals(prev => ({ 
               ...prev, 
@@ -254,7 +254,7 @@ export function VitalsEntryForm({
         {bmi && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              BMI (calculated)
+              {t('vitals.bmi')} ({t('vitals.calculated')})
             </label>
             <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900">
               {bmi}
@@ -266,11 +266,11 @@ export function VitalsEntryForm({
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          {t('review.notes')} (optional)
+          {t('review.notes')} ({t('common.optional')})
         </label>
         <textarea
           rows={3}
-          placeholder="Enter any observations or context for the doctor..."
+          placeholder={t('vitals.notesPlaceholder')}
           value={vitals.notes || ''}
           onChange={(e) => setVitals(prev => ({ ...prev, notes: e.target.value }))}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200"

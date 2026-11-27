@@ -1,5 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipValueType } from 'recharts';
+import { useI18n } from '@/lib/i18n';
 
 interface AIAcceptanceData {
   overallRate: number;
@@ -16,11 +17,12 @@ interface AIAcceptanceChartProps {
 }
 
 export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartProps) {
+  const { t } = useI18n();
   if (!data) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Acceptance Rate</h3>
-        <div className="text-gray-500">No data available</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.aiAcceptanceRate')}</h3>
+        <div className="text-gray-500">{t('admin.noData')}</div>
       </div>
     );
   }
@@ -41,7 +43,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">AI Acceptance Rate</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{t('admin.aiAcceptanceRate')}</h3>
         <div className={`text-3xl font-bold ${rateColor}`}>
           {data.overallRate.toFixed(1)}%
         </div>
@@ -55,7 +57,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <span className="text-sm text-red-800 font-medium">
-              Acceptance rate below 40% threshold
+              {t('admin.aiAcceptWarn')}
             </span>
           </div>
         </div>
@@ -63,7 +65,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
 
       {/* Trend Chart */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Acceptance Trend</h4>
+        <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.acceptanceTrend')}</h4>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -84,7 +86,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
             />
             <Tooltip 
               labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-              formatter={(value: TooltipValueType | undefined) => [`${Number(value).toFixed(1)}%`, 'Acceptance Rate']}
+              formatter={(value: TooltipValueType | undefined) => [`${Number(value).toFixed(1)}%`, t('admin.acceptanceRate')]}
             />
             <Legend />
             <Line 
@@ -92,7 +94,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
               dataKey="value" 
               stroke={chartColor}
               strokeWidth={2}
-              name="Acceptance Rate"
+              name={t('admin.acceptanceRate')}
               dot={{ fill: chartColor }}
             />
           </LineChart>
@@ -102,16 +104,16 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
       {/* Doctor Segmentation */}
       {doctorData.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">By Doctor</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.byDoctor')}</h4>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Doctor
+                    {t('common.doctor')}
                   </th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                    Acceptance Rate
+                    {t('admin.acceptanceRate')}
                   </th>
                 </tr>
               </thead>

@@ -3,23 +3,25 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { AuthGuard } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import { Navigation } from '@/components/Navigation';
 import { AppShell } from '@/components/common';
 
 function DashboardContent() {
   const { user, role } = useAuth();
+  const { t } = useI18n();
 
   const adminCards = [
-    { title: 'User Management', description: 'Manage roles, access states, and onboarding requests', href: '/admin/users', tag: 'Core' },
-    { title: 'Metrics Dashboard', description: 'Monitor system performance and adoption trends', href: '/metrics', tag: 'Analytics' },
-    { title: 'Audit Console', description: 'Trace access history and security-relevant actions', href: '/audit', tag: 'Compliance' },
-    { title: 'Consent Ops', description: 'Review consent records and grievance pipelines', href: '/admin/consent', tag: 'DPO' },
+    { title: t('admin.userManagement'), description: t('admin.cardUsersDesc'), href: '/admin/users', tag: t('admin.tagCore') },
+    { title: t('admin.cardMetrics'), description: t('admin.cardMetricsDesc'), href: '/metrics', tag: t('admin.tagAnalytics') },
+    { title: t('admin.cardAudit'), description: t('admin.cardAuditDesc'), href: '/audit', tag: t('admin.tagCompliance') },
+    { title: t('admin.cardConsent'), description: t('admin.cardConsentDesc'), href: '/admin/consent', tag: t('admin.tagDpo') },
   ];
 
   const dpoCards = [
-    { title: 'DPO Hub', description: 'Consent, grievances, and data request governance', href: '/dpo', tag: 'Primary' },
-    { title: 'Audit Console', description: 'Investigate access patterns and anomalies', href: '/audit', tag: 'Security' },
-    { title: 'Consent Ops', description: 'Track withdrawals and patient rights workflows', href: '/admin/consent', tag: 'Legal' },
+    { title: t('admin.cardDpo'), description: t('admin.cardDpoDesc'), href: '/dpo', tag: t('admin.tagPrimary') },
+    { title: t('admin.cardAudit'), description: t('admin.cardAuditDescDpo'), href: '/audit', tag: t('admin.tagSecurity') },
+    { title: t('admin.cardConsent'), description: t('admin.cardConsentDescDpo'), href: '/admin/consent', tag: t('admin.tagLegal') },
   ];
 
   const cards = role === 'Administrator' ? adminCards : dpoCards;
@@ -29,11 +31,11 @@ function DashboardContent() {
       <Navigation />
             <AppShell>
         <div className="mb-6 overflow-hidden rounded-[22px] border border-blue-300/50 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 px-6 py-6 text-white shadow-2xl shadow-blue-900/30">
-          <p className="ui-chip border-white/30 bg-white/10 text-cyan-100">Admin Control Center</p>
-          <h1 className="mt-3 text-3xl font-bold">Welcome, {user?.name || 'User'}</h1>
-          <p className="mt-1 text-sm text-cyan-100/90">Command center for administrative and compliance workflows</p>
+          <p className="ui-chip border-white/30 bg-white/10 text-cyan-100">{t('admin.controlCenter')}</p>
+          <h1 className="mt-3 text-3xl font-bold">{t('admin.welcome', { name: user?.name || t('admin.userFallback') })}</h1>
+          <p className="mt-1 text-sm text-cyan-100/90">{t('admin.welcomeDesc')}</p>
           <p className="mt-3 inline-flex rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-            {role || 'Role'}
+            {role || t('common.role')}
           </p>
         </div>
 
@@ -51,15 +53,15 @@ function DashboardContent() {
               </p>
               <h3 className="mt-3 text-lg font-bold text-slate-900 transition-colors group-hover:text-blue-700">{card.title}</h3>
               <p className="mt-2 text-sm text-slate-600">{card.description}</p>
-              <p className="mt-4 text-sm font-semibold text-blue-600">Open workspace</p>
+              <p className="mt-4 text-sm font-semibold text-blue-600">{t('admin.openWorkspace')}</p>
             </Link>
           ))}
         </div>
 
         <div className="ui-surface mt-6 border-cyan-200/70 bg-gradient-to-r from-cyan-50 to-blue-50 p-5">
-          <h2 className="text-base font-semibold text-slate-900">Operational Snapshot</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t('admin.opSnapshot')}</h2>
           <p className="mt-2 text-sm text-slate-600">
-            This panel now uses a modern bento-style surface system with smooth transitions and hover depth for faster visual scanning.
+            {t('admin.opSnapshotDesc')}
           </p>
         </div>
       </AppShell>

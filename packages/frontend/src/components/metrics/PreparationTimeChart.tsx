@@ -1,5 +1,6 @@
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipValueType } from 'recharts';
+import { useI18n } from '@/lib/i18n';
 
 interface PreparationTimeData {
   average: number;
@@ -14,11 +15,12 @@ interface PreparationTimeChartProps {
 }
 
 export default function PreparationTimeChart({ data, period }: PreparationTimeChartProps) {
+  const { t } = useI18n();
   if (!data) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Preparation Time</h3>
-        <div className="text-gray-500">No data available</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.prepTime')}</h3>
+        <div className="text-gray-500">{t('admin.noData')}</div>
       </div>
     );
   }
@@ -35,14 +37,14 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Preparation Time</h3>
-        <div className="text-3xl font-bold text-purple-600">{avgMinutes} min</div>
+        <h3 className="text-lg font-semibold text-gray-900">{t('admin.prepTime')}</h3>
+        <div className="text-3xl font-bold text-purple-600">{t('admin.minutes', { count: avgMinutes })}</div>
       </div>
 
       {/* Distribution Histogram */}
       {data.distribution && data.distribution.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Time Distribution</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.timeDistribution')}</h4>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.distribution}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -52,13 +54,13 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip 
-                formatter={(value: TooltipValueType | undefined) => [value, 'Consultations']}
+                formatter={(value: TooltipValueType | undefined) => [value, t('admin.consultations')]}
               />
               <Legend />
               <Bar 
                 dataKey="count" 
                 fill="#8b5cf6" 
-                name="Consultations"
+                name={t('admin.consultations')}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -68,7 +70,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
       {/* Trend Chart */}
       {data.trend && data.trend.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Trend Over Time</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.trendOverTime')}</h4>
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.trend}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -88,14 +90,14 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <Tooltip 
                 labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-                formatter={(value: TooltipValueType | undefined) => [`${Math.round(Number(value) / 60)} min`, 'Avg Time']}
+                formatter={(value: TooltipValueType | undefined) => [`${Math.round(Number(value) / 60)} min`, t('admin.avgTime')]}
               />
               <Line 
                 type="monotone" 
                 dataKey="value" 
                 stroke="#8b5cf6" 
                 strokeWidth={2}
-                name="Avg Prep Time"
+                name={t('admin.avgPrepTime')}
                 dot={{ fill: '#8b5cf6' }}
               />
             </LineChart>
@@ -106,12 +108,12 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
       {/* Doctor Segmentation */}
       {doctorData.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">By Doctor</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.byDoctor')}</h4>
           <div className="space-y-2">
             {doctorData.map(({ doctor, time }) => (
               <div key={doctor} className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">{doctor}</span>
-                <span className="text-sm font-medium text-gray-900">{time} min</span>
+                <span className="text-sm font-medium text-gray-900">{t('admin.minutes', { count: time })}</span>
               </div>
             ))}
           </div>

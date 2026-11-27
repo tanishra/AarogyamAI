@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { DifferentialManager } from './DifferentialManager';
+import { I18nProvider } from '@/lib/i18n';
 import apiClient from '@/lib/api/client';
 
 // Mock the API client
@@ -33,10 +34,12 @@ describe('DifferentialManager', () => {
 
   it('renders differential list', () => {
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={mockDifferentials}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={mockDifferentials}
+        />
+      </I18nProvider>
     );
 
     expect(screen.getByText('Differential Diagnoses')).toBeInTheDocument();
@@ -46,10 +49,12 @@ describe('DifferentialManager', () => {
 
   it('shows add diagnosis button', () => {
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={[]}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={[]}
+        />
+      </I18nProvider>
     );
 
     const addButton = screen.getByText('Add Diagnosis');
@@ -58,10 +63,12 @@ describe('DifferentialManager', () => {
 
   it('shows add form when add button clicked', () => {
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={[]}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={[]}
+        />
+      </I18nProvider>
     );
 
     const addButton = screen.getByText('Add Diagnosis');
@@ -80,10 +87,12 @@ describe('DifferentialManager', () => {
     global.confirm = vi.fn(() => true);
 
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={mockDifferentials}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={mockDifferentials}
+        />
+      </I18nProvider>
     );
 
     const removeButton = screen.getByLabelText('Remove diagnosis');
@@ -98,10 +107,12 @@ describe('DifferentialManager', () => {
 
   it('displays empty state when no differentials', () => {
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={[]}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={[]}
+        />
+      </I18nProvider>
     );
 
     expect(screen.getByText('No differential diagnoses yet')).toBeInTheDocument();
@@ -109,10 +120,12 @@ describe('DifferentialManager', () => {
 
   it('shows AI badge for AI-generated diagnoses', () => {
     render(
-      <DifferentialManager
-        encounterId={mockEncounterId}
-        initialDifferentials={mockDifferentials}
-      />
+      <I18nProvider>
+        <DifferentialManager
+          encounterId={mockEncounterId}
+          initialDifferentials={mockDifferentials}
+        />
+      </I18nProvider>
     );
 
     expect(screen.getByText('AI')).toBeInTheDocument();

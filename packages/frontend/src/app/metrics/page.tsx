@@ -13,10 +13,12 @@ import { AuthGuard } from '@/lib/auth/AuthGuard';
 import { RoleGuard } from '@/lib/auth/RoleGuard';
 import { Navigation } from '@/components/Navigation';
 import { AppShell, AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly';
 
 function MetricsPage() {
+  const { t } = useI18n();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('daily');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
@@ -39,11 +41,11 @@ function MetricsPage() {
     return (
       <AppShell>
         <div className="ui-surface border-red-200 bg-red-50 p-5">
-          <h3 className="font-semibold text-red-800">Error Loading Metrics</h3>
+          <h3 className="font-semibold text-red-800">{t('admin.metricsErrorTitle')}</h3>
           <p className="mt-2 text-sm text-red-700">
-            {error instanceof Error ? error.message : 'Failed to load metrics data'}
+            {error instanceof Error ? error.message : t('admin.metricsLoadFailed')}
           </p>
-          <AnimatedButton onClick={() => refetch()} className="mt-4">Retry</AnimatedButton>
+          <AnimatedButton onClick={() => refetch()} className="mt-4">{t('common.retry')}</AnimatedButton>
         </div>
       </AppShell>
     );
@@ -55,9 +57,9 @@ function MetricsPage() {
       <AppShell>
         <div className="mb-6 flex flex-col gap-4 overflow-hidden rounded-[22px] border border-blue-300/45 bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 px-6 py-6 text-white shadow-2xl shadow-indigo-900/30 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="ui-chip border-white/30 bg-white/10 text-blue-100">Analytics Workspace</p>
-            <h1 className="mt-3 text-3xl font-bold">Metrics Dashboard</h1>
-            <p className="mt-1 text-sm text-blue-100/90">Operational analytics with live refresh and role-wise adoption insights</p>
+            <p className="ui-chip border-white/30 bg-white/10 text-blue-100">{t('admin.analyticsWorkspace')}</p>
+            <h1 className="mt-3 text-3xl font-bold">{t('admin.cardMetrics')}</h1>
+            <p className="mt-1 text-sm text-blue-100/90">{t('admin.metricsDesc')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -65,9 +67,9 @@ function MetricsPage() {
               onChange={(e) => setTimePeriod(e.target.value as TimePeriod)}
               className="ui-focus-ring h-11 rounded-xl border border-white/35 bg-white/15 px-3 text-sm text-white"
             >
-              <option value="daily" className="text-slate-900">Daily</option>
-              <option value="weekly" className="text-slate-900">Weekly</option>
-              <option value="monthly" className="text-slate-900">Monthly</option>
+              <option value="daily" className="text-slate-900">{t('admin.daily')}</option>
+              <option value="weekly" className="text-slate-900">{t('admin.weekly')}</option>
+              <option value="monthly" className="text-slate-900">{t('admin.monthly')}</option>
             </select>
             <label className="flex items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-3 py-2 text-sm text-white">
               <input
@@ -76,15 +78,15 @@ function MetricsPage() {
                 onChange={(e) => setAutoRefresh(e.target.checked)}
                 className="h-4 w-4"
               />
-              Auto refresh
+              {t('admin.autoRefresh')}
             </label>
-            <AnimatedButton variant="secondary" onClick={() => refetch()}>Refresh</AnimatedButton>
+            <AnimatedButton variant="secondary" onClick={() => refetch()}>{t('common.refresh')}</AnimatedButton>
           </div>
         </div>
 
         {summary?.lastUpdated ? (
           <p className="mb-4 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50 to-cyan-50 px-3 py-2 text-xs text-slate-600">
-            Last updated: {new Date(summary.lastUpdated).toLocaleString()}
+            {t('admin.lastUpdated', { time: new Date(summary.lastUpdated).toLocaleString() })}
           </p>
         ) : null}
 

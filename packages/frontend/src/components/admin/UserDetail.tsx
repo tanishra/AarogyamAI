@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useI18n } from '@/lib/i18n';
 import { RoleEditor } from './RoleEditor';
 import { AccountStatusToggle } from './AccountStatusToggle';
 import { PasswordResetDialog } from './PasswordResetDialog';
@@ -17,6 +18,7 @@ interface UserDetailProps {
 }
 
 export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
+  const { t } = useI18n();
   const [activityPage, setActivityPage] = useState(1);
   const [activityFilters, setActivityFilters] = useState({
     startDate: '',
@@ -36,11 +38,11 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">User Details</h2>
+          <h2 className="text-2xl font-bold">{t('admin.userDetails')}</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-2xl"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -51,28 +53,28 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
           <div className="bg-gray-50 rounded-lg p-4 space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Name</label>
+                <label className="text-sm font-medium text-gray-500">{t('common.name')}</label>
                 <p className="text-gray-900">{user.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Email</label>
+                <label className="text-sm font-medium text-gray-500">{t('common.email')}</label>
                 <p className="text-gray-900">{user.email}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">User ID</label>
+                <label className="text-sm font-medium text-gray-500">{t('admin.userId')}</label>
                 <p className="text-gray-900 font-mono text-sm">{user.id}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Created</label>
+                <label className="text-sm font-medium text-gray-500">{t('admin.created')}</label>
                 <p className="text-gray-900">{new Date(user.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Last Password Change</label>
+                <label className="text-sm font-medium text-gray-500">{t('admin.lastPasswordChange')}</label>
                 <p className="text-gray-900">{new Date(user.lastPasswordChange).toLocaleDateString()}</p>
               </div>
               {user.lastMFAVerification && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Last MFA Verification</label>
+                  <label className="text-sm font-medium text-gray-500">{t('admin.lastMfaVerification')}</label>
                   <p className="text-gray-900">{new Date(user.lastMFAVerification).toLocaleDateString()}</p>
                 </div>
               )}
@@ -81,7 +83,7 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
 
           {/* Management Actions */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Management Actions</h3>
+            <h3 className="text-lg font-semibold">{t('admin.mgmtActions')}</h3>
             
             <RoleEditor user={user} onUpdate={onUpdate} />
             <AccountStatusToggle user={user} onUpdate={onUpdate} />
@@ -91,13 +93,13 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
 
           {/* Activity History */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Activity History</h3>
+            <h3 className="text-lg font-semibold">{t('admin.activityHistory')}</h3>
             
             {/* Filters */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date
+                  {t('admin.startDate')}
                 </label>
                 <input
                   type="date"
@@ -108,7 +110,7 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date
+                  {t('admin.endDate')}
                 </label>
                 <input
                   type="date"
@@ -119,13 +121,13 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Action Type
+                  {t('admin.actionType')}
                 </label>
                 <input
                   type="text"
                   value={activityFilters.actionType}
                   onChange={(e) => setActivityFilters(f => ({ ...f, actionType: e.target.value }))}
-                  placeholder="e.g., login, update"
+                  placeholder={t('common.eg', { value: 'login, update' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -142,16 +144,16 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Timestamp
+                          {t('admin.timestamp')}
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Action
+                          {t('admin.action')}
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Resource
+                          {t('admin.resource')}
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Outcome
+                          {t('admin.outcome')}
                         </th>
                       </tr>
                     </thead>
@@ -198,24 +200,24 @@ export function UserDetail({ user, onClose, onUpdate }: UserDetailProps) {
                       disabled={activityPage === 1}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                     >
-                      Previous
+                      {t('common.previous')}
                     </button>
                     <span className="text-sm text-gray-600">
-                      Page {activityPage} of {totalPages}
+                      {t('admin.pageOf', { page: activityPage, total: totalPages })}
                     </span>
                     <button
                       onClick={() => setActivityPage(p => Math.min(totalPages, p + 1))}
                       disabled={activityPage === totalPages}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
                     >
-                      Next
+                      {t('common.next')}
                     </button>
                   </div>
                 )}
               </>
             ) : (
               <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-8 rounded text-center">
-                No activity history found
+                {t('admin.noActivity')}
               </div>
             )}
           </div>

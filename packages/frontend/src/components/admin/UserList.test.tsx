@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserList } from './UserList';
+import { I18nProvider } from '@/lib/i18n';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import type { UserAccount, PaginatedResponse } from '@/lib/api/types';
 
@@ -57,9 +58,11 @@ describe('UserList', () => {
 
   const renderComponent = () => {
     return render(
-      <QueryClientProvider client={queryClient}>
-        <UserList onSelectUser={mockOnSelectUser} />
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <UserList onSelectUser={mockOnSelectUser} />
+        </QueryClientProvider>
+      </I18nProvider>
     );
   };
 

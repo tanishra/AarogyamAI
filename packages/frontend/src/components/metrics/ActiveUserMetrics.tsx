@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useI18n } from '@/lib/i18n';
 
 interface ActiveUserData {
   byRole: Record<string, number>;
@@ -14,11 +15,12 @@ interface ActiveUserMetricsProps {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
+  const { t } = useI18n();
   if (!data) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Active User Metrics</h3>
-        <div className="text-gray-500">No data available</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.activeUserMetrics')}</h3>
+        <div className="text-gray-500">{t('admin.noData')}</div>
       </div>
     );
   }
@@ -46,14 +48,14 @@ export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Active Users</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{t('admin.activeUsers')}</h3>
         <div className="text-3xl font-bold text-green-600">{totalActive}</div>
       </div>
 
       {/* Pie Chart */}
       {pieData.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Active Users by Role</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.activeByRole')}</h4>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -79,7 +81,7 @@ export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
       {/* Registered Users */}
       {registeredData.length > 0 && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Total Registered</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.totalRegistered')}</h4>
           <div className="grid grid-cols-2 gap-3">
             {registeredData.map(({ role, count }) => (
               <div key={role} className="bg-gray-50 rounded p-3">
@@ -94,12 +96,12 @@ export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
       {/* Average Session Duration */}
       {sessionData.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Avg Session Duration</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-3">{t('admin.avgSession')}</h4>
           <div className="space-y-2">
             {sessionData.map(({ role, duration }) => (
               <div key={role} className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">{role}</span>
-                <span className="text-sm font-medium text-gray-900">{duration} min</span>
+                <span className="text-sm font-medium text-gray-900">{t('admin.minutes', { count: duration })}</span>
               </div>
             ))}
           </div>

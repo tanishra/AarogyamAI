@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AuditLogAPI } from '@/lib/api/services/auditLog';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import AuditLogDetail from './AuditLogDetail';
 import AuditLogExport from './AuditLogExport';
@@ -24,6 +25,7 @@ interface AuditLogEntry {
 }
 
 export default function AuditLogTable() {
+  const { t } = useI18n();
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const pageSize = 50;
@@ -48,9 +50,9 @@ export default function AuditLogTable() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error Loading Audit Logs</h3>
+          <h3 className="text-red-800 font-semibold">{t('admin.auditLoadError')}</h3>
           <p className="text-red-600 mt-2">
-            {error instanceof Error ? error.message : 'Failed to load audit logs'}
+            {error instanceof Error ? error.message : t('admin.auditLoadFailed')}
           </p>
         </div>
       </div>
@@ -67,9 +69,9 @@ export default function AuditLogTable() {
         {/* Header with Export */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Audit Log Entries</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('admin.auditLogEntries')}</h3>
             <p className="text-sm text-gray-600 mt-1">
-              {totalEntries} total entries
+              {t('admin.totalEntries', { count: totalEntries })}
             </p>
           </div>
           <AuditLogExport />
@@ -81,19 +83,19 @@ export default function AuditLogTable() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
+                  {t('admin.timestamp')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                  {t('admin.user')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
+                  {t('admin.action')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Resource
+                  {t('admin.resource')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Outcome
+                  {t('admin.outcome')}
                 </th>
               </tr>
             </thead>
@@ -101,7 +103,7 @@ export default function AuditLogTable() {
               {logs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    No audit logs found
+                    {t('admin.noAuditLogs')}
                   </td>
                 </tr>
               ) : (
@@ -151,7 +153,7 @@ export default function AuditLogTable() {
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Page {page} of {totalPages}
+              {t('admin.pageOf', { page, total: totalPages })}
             </div>
             <div className="flex gap-2">
               <button
@@ -159,14 +161,14 @@ export default function AuditLogTable() {
                 disabled={page === 1}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                {t('common.previous')}
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                {t('common.next')}
               </button>
             </div>
           </div>

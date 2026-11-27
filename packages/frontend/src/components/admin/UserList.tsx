@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useI18n } from '@/lib/i18n';
 import type { UserAccount } from '@/lib/api/types';
 
 interface UserListProps {
@@ -11,6 +12,7 @@ interface UserListProps {
 }
 
 export function UserList({ onSelectUser }: UserListProps) {
+  const { t } = useI18n();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const pageSize = 50;
@@ -38,7 +40,7 @@ export function UserList({ onSelectUser }: UserListProps) {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        Error loading users: {(error as Error).message}
+        {t('admin.loadError', { message: (error as Error).message })}
       </div>
     );
   }
@@ -46,17 +48,17 @@ export function UserList({ onSelectUser }: UserListProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">User Management</h2>
+        <h2 className="text-2xl font-bold">{t('admin.userManagement')}</h2>
         <div className="flex items-center space-x-4">
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t('admin.searchUsers')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <span className="text-sm text-gray-600">
-            {data?.total || 0} total users
+            {t('admin.totalUsers', { count: data?.total || 0 })}
           </span>
         </div>
       </div>
@@ -66,22 +68,22 @@ export function UserList({ onSelectUser }: UserListProps) {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                {t('common.name')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
+                {t('common.email')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
+                {t('common.role')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                {t('common.status')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 MFA
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('common.actions')}
               </th>
             </tr>
           </thead>
@@ -105,7 +107,7 @@ export function UserList({ onSelectUser }: UserListProps) {
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
+                    {user.isActive ? t('common.active') : t('common.inactive')}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -114,7 +116,7 @@ export function UserList({ onSelectUser }: UserListProps) {
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {user.mfaEnabled ? `Enabled (${user.mfaMethod})` : 'Disabled'}
+                    {user.mfaEnabled ? t('admin.mfaEnabled', { method: user.mfaMethod ?? '' }) : t('common.disabled')}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -122,7 +124,7 @@ export function UserList({ onSelectUser }: UserListProps) {
                     onClick={() => onSelectUser(user)}
                     className="text-blue-600 hover:text-blue-900"
                   >
-                    View Details
+                    {t('admin.viewDetails')}
                   </button>
                 </td>
               </tr>
@@ -139,17 +141,17 @@ export function UserList({ onSelectUser }: UserListProps) {
             disabled={page === 1}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Previous
+            {t('common.previous')}
           </button>
           <span className="text-sm text-gray-600">
-            Page {page} of {totalPages}
+            {t('admin.pageOf', { page, total: totalPages })}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Next
+            {t('common.next')}
           </button>
         </div>
       )}

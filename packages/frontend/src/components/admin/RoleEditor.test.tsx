@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RoleEditor } from './RoleEditor';
+import { I18nProvider } from '@/lib/i18n';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { useToast } from '@/lib/notifications/toast';
 import { useAuth } from '@/lib/auth';
@@ -55,9 +56,11 @@ describe('RoleEditor', () => {
 
   const renderComponent = (user = mockUser) => {
     return render(
-      <QueryClientProvider client={queryClient}>
-        <RoleEditor user={user} onUpdate={mockOnUpdate} />
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <RoleEditor user={user} onUpdate={mockOnUpdate} />
+        </QueryClientProvider>
+      </I18nProvider>
     );
   };
 

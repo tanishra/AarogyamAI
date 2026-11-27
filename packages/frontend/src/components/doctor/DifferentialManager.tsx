@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { DifferentialList } from './DifferentialList';
 import { AddDifferentialForm } from './AddDifferentialForm';
+import { useI18n } from '@/lib/i18n';
 import apiClient from '@/lib/api/client';
 
 interface Diagnosis {
@@ -33,6 +34,7 @@ export function DifferentialManager({
   initialDifferentials = [],
   onUpdate,
 }: DifferentialManagerProps) {
+  const { t } = useI18n();
   const [differentials, setDifferentials] = useState<Differential[]>(initialDifferentials);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,14 +72,14 @@ export function DifferentialManager({
       onUpdate?.();
     } catch (error) {
       console.error('Error adding differential:', error);
-      alert('Failed to add differential diagnosis');
+      alert(t('diff.addFailed'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemove = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this diagnosis?')) {
+    if (!confirm(t('diff.confirmRemove'))) {
       return;
     }
 
@@ -92,7 +94,7 @@ export function DifferentialManager({
       onUpdate?.();
     } catch (error) {
       console.error('Error removing differential:', error);
-      alert('Failed to remove differential diagnosis');
+      alert(t('diff.removeFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +117,7 @@ export function DifferentialManager({
       console.error('Error reordering differentials:', error);
       // Revert on error
       await refreshDifferentials();
-      alert('Failed to reorder differential diagnoses');
+      alert(t('diff.reorderFailed'));
     }
   };
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n';
+
 interface AuditLogEntry {
   id: string;
   timestamp: string;
@@ -22,12 +24,13 @@ interface AuditLogDetailProps {
 }
 
 export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-          <h3 className="text-lg font-semibold text-gray-900">Audit Log Details</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('admin.auditLogDetails')}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -42,20 +45,20 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
         <div className="px-6 py-4 space-y-6">
           {/* Basic Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Basic Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.basicInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-500">Entry ID</label>
+                <label className="text-xs text-gray-500">{t('admin.entryId')}</label>
                 <div className="text-sm text-gray-900 font-mono">{log.id}</div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Timestamp</label>
+                <label className="text-xs text-gray-500">{t('admin.timestamp')}</label>
                 <div className="text-sm text-gray-900">
                   {new Date(log.timestamp).toLocaleString()}
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Action Type</label>
+                <label className="text-xs text-gray-500">{t('admin.actionType')}</label>
                 <div className="text-sm">
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                     {log.actionType}
@@ -63,7 +66,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Outcome</label>
+                <label className="text-xs text-gray-500">{t('admin.outcome')}</label>
                 <div className="text-sm">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -81,18 +84,18 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* User Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">User Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.userInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-500">User ID</label>
+                <label className="text-xs text-gray-500">{t('admin.userId')}</label>
                 <div className="text-sm text-gray-900 font-mono">{log.userId}</div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">User Name</label>
+                <label className="text-xs text-gray-500">{t('admin.userName')}</label>
                 <div className="text-sm text-gray-900">{log.userName}</div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">User Role</label>
+                <label className="text-xs text-gray-500">{t('admin.userRole')}</label>
                 <div className="text-sm text-gray-900">{log.userRole}</div>
               </div>
             </div>
@@ -100,15 +103,15 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* Resource Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Resource Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.resourceInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-gray-500">Resource Type</label>
+                <label className="text-xs text-gray-500">{t('admin.resourceType')}</label>
                 <div className="text-sm text-gray-900">{log.resource}</div>
               </div>
               {log.resourceId && (
                 <div>
-                  <label className="text-xs text-gray-500">Resource ID</label>
+                  <label className="text-xs text-gray-500">{t('admin.resourceId')}</label>
                   <div className="text-sm text-gray-900 font-mono">{log.resourceId}</div>
                 </div>
               )}
@@ -117,18 +120,18 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* Technical Details */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Technical Details</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.techDetails')}</h4>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-500">IP Address</label>
+                <label className="text-xs text-gray-500">{t('admin.ipAddress')}</label>
                 <div className="text-sm text-gray-900 font-mono">{log.ipAddress}</div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">User Agent</label>
+                <label className="text-xs text-gray-500">{t('admin.userAgent')}</label>
                 <div className="text-sm text-gray-900 break-all">{log.userAgent}</div>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Hash (Tamper Detection)</label>
+                <label className="text-xs text-gray-500">{t('admin.hashLabel')}</label>
                 <div className="text-sm text-gray-900 font-mono break-all bg-gray-50 p-2 rounded">
                   {log.hash}
                 </div>
@@ -139,7 +142,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
           {/* Error Details (if failure) */}
           {log.outcome === 'failure' && log.errorDetails && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Error Details</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.errorDetails')}</h4>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <pre className="text-sm text-red-800 whitespace-pre-wrap break-all">
                   {log.errorDetails}
@@ -155,7 +158,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
             onClick={onClose}
             className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
           >
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

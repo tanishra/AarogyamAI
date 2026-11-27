@@ -6,12 +6,14 @@ import { UserList } from '@/components/admin/UserList';
 import { UserDetail } from '@/components/admin/UserDetail';
 import { Navigation } from '@/components/Navigation';
 import { AuthGuard } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 import type { UserAccount } from '@/lib/api/types';
 import { AppShell, PanelTabs } from '@/components/common';
 
 type AdminTab = 'queue' | 'users';
 
 function UsersPageContent() {
+  const { t } = useI18n();
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('queue');
 
@@ -20,16 +22,16 @@ function UsersPageContent() {
       <Navigation />
             <AppShell>
         <div className="mb-6 overflow-hidden rounded-[22px] border border-fuchsia-300/45 bg-gradient-to-r from-fuchsia-700 via-violet-700 to-blue-700 px-6 py-6 text-white shadow-2xl shadow-violet-900/30">
-          <p className="ui-chip border-white/30 bg-white/10 text-violet-100">Admin Workspace</p>
-          <h1 className="mt-3 text-3xl font-bold">User Management</h1>
-          <p className="mt-1 text-sm text-violet-100/90">Handle registration queue, user access, and role governance</p>
+          <p className="ui-chip border-white/30 bg-white/10 text-violet-100">{t('admin.workspace')}</p>
+          <h1 className="mt-3 text-3xl font-bold">{t('admin.userManagement')}</h1>
+          <p className="mt-1 text-sm text-violet-100/90">{t('admin.usersDesc')}</p>
         </div>
 
         <div className="ui-surface mb-5 border-violet-200/70 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-3">
           <PanelTabs
             tabs={[
-              { id: 'queue' as AdminTab, label: 'Registration Queue' },
-              { id: 'users' as AdminTab, label: 'All Users' },
+              { id: 'queue' as AdminTab, label: t('admin.regQueue') },
+              { id: 'users' as AdminTab, label: t('admin.allUsers') },
             ]}
             value={activeTab}
             onChange={setActiveTab}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface Differential {
   id: string;
@@ -30,6 +31,7 @@ export function InlineEditor({
   onSave,
   onCancel,
 }: InlineEditorProps) {
+  const { t } = useI18n();
   const [priority, setPriority] = useState(differential.priority);
   const [clinicalReasoning, setClinicalReasoning] = useState(
     differential.clinicalReasoning || ''
@@ -46,7 +48,7 @@ export function InlineEditor({
     const newErrors: Record<string, string> = {};
     
     if (priority < 1 || priority > 10) {
-      newErrors.priority = 'Priority must be between 1 and 10';
+      newErrors.priority = t('diff.priorityError');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -62,7 +64,7 @@ export function InlineEditor({
       });
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Failed to save changes');
+      alert(t('diff.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +74,7 @@ export function InlineEditor({
     <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
       <div className="mb-3">
         <h4 className="text-sm font-semibold text-slate-900">
-          Edit: {differential.diagnosis.name}
+          {t('diff.edit')}: {differential.diagnosis.name}
         </h4>
         <p className="text-xs text-slate-500">ICD-10: {differential.diagnosis.code}</p>
       </div>
@@ -80,7 +82,7 @@ export function InlineEditor({
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-700">
-            Priority (1 = highest)
+            {t('diff.priority')}
           </label>
           <input
             type="number"
@@ -102,13 +104,13 @@ export function InlineEditor({
 
         <div>
           <label className="mb-1 block text-xs font-semibold text-slate-700">
-            Clinical Reasoning
+            {t('diff.reasoning')}
           </label>
           <textarea
             value={clinicalReasoning}
             onChange={(e) => setClinicalReasoning(e.target.value)}
             rows={3}
-            placeholder="Explain why this diagnosis is being considered..."
+            placeholder={t('diff.reasoningPlaceholder')}
             className="ui-focus-ring w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
           />
         </div>
@@ -119,7 +121,7 @@ export function InlineEditor({
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? t('common.saving') : t('common.save')}
           </AnimatedButton>
           <AnimatedButton
             size="sm"
@@ -127,10 +129,10 @@ export function InlineEditor({
             onClick={onCancel}
             disabled={isSaving}
           >
-            Cancel
+            {t('common.cancel')}
           </AnimatedButton>
           {hasChanges && (
-            <span className="ml-2 text-xs text-amber-600">Unsaved changes</span>
+            <span className="ml-2 text-xs text-amber-600">{t('diff.unsaved')}</span>
           )}
         </div>
       </div>

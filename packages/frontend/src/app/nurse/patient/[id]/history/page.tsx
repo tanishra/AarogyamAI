@@ -85,13 +85,13 @@ function NursePatientHistoryContent() {
   return (
     <AppShell tone="nurse">
       <PageHeader
-        title="Patient History View"
-        subtitle="Review context before triage and vitals workflow"
-        badge="Nurse"
+        title={t('history.nurseTitle')}
+        subtitle={t('history.nurseSubtitle')}
+        badge={t('dash.nurseFallback')}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/nurse/dashboard">
-              <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
+              <AnimatedButton variant="secondary">{t('common.backToDashboard')}</AnimatedButton>
             </Link>
             <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
@@ -100,16 +100,16 @@ function NursePatientHistoryContent() {
 
       <section className="relative mb-5 overflow-hidden rounded-3xl border border-blue-200/70 bg-gradient-to-r from-[#eaf4ff] via-[#f4fbff] to-[#edfff8] p-5 animate-fade-up">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-blue-200/45 blur-3xl" />
-        <h2 className="text-lg font-semibold text-slate-900">Context-first patient history review</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t('history.nurseHero')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Verify allergies, prior sessions, and vitals trends before entering new measurements.
+          {t('history.nurseHeroDesc')}
         </p>
       </section>
 
       <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatTile label="Recent Sessions" value={history?.recentSessions?.length || 0} trend="Last 10 interactions" />
-        <StatTile label="Vitals Records" value={vitalsHistory.length} trend="Last 20 captures" />
-        <StatTile label="Abnormal Flags" value={abnormalCount} trend="Needs attention" tone={abnormalCount > 0 ? 'warning' : 'default'} />
+        <StatTile label={t('history.recentSessions')} value={history?.recentSessions?.length || 0} trend={t('history.last10')} />
+        <StatTile label={t('history.vitalsRecords')} value={vitalsHistory.length} trend={t('history.last20')} />
+        <StatTile label={t('history.abnormalFlags')} value={abnormalCount} trend={t('history.needsAttention')} tone={abnormalCount > 0 ? 'warning' : 'default'} />
       </div>
 
       {isLoading ? (
@@ -118,38 +118,38 @@ function NursePatientHistoryContent() {
           <Skeleton className="h-72 w-full" />
         </div>
       ) : !history?.patient ? (
-        <EmptyState title="Patient not found" description="The requested patient history could not be loaded." />
+        <EmptyState title={t('history.patientNotFound')} description={t('history.patientNotFoundDesc')} />
       ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           <section className="space-y-5 lg:col-span-5">
             <div className="ui-surface ui-surface-hover p-5 animate-fade-up">
-              <h2 className="text-lg font-bold text-slate-900">Patient Summary</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t('history.patientSummary')}</h2>
               <p className="mt-1 text-sm text-slate-500">{history.patient.name} • {history.patient.email}</p>
 
               <div className="mt-4 space-y-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
-                  <p className="mt-1 text-sm text-slate-800">{history.summary?.chief_complaint || 'Not captured'}</p>
+                  <p className="mt-1 text-sm text-slate-800">{history.summary?.chief_complaint || t('common.notCaptured')}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</p>
-                  <p className="mt-1 text-sm text-slate-800">{history.summary?.symptoms?.join(', ') || 'Not captured'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.symptoms')}</p>
+                  <p className="mt-1 text-sm text-slate-800">{history.summary?.symptoms?.join(', ') || t('common.notCaptured')}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Allergies</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.allergies')}</p>
                   <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    {history.summary?.allergies?.join(', ') || 'No known allergies'}
+                    {history.summary?.allergies?.join(', ') || t('common.noAllergies')}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Medications</p>
-                  <p className="mt-1 text-sm text-slate-800">{history.summary?.current_medications?.join(', ') || 'Not listed'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('history.currentMeds')}</p>
+                  <p className="mt-1 text-sm text-slate-800">{history.summary?.current_medications?.join(', ') || t('history.notListed')}</p>
                 </div>
               </div>
             </div>
 
             <div className="ui-surface ui-surface-hover p-5 animate-fade-up delay-1">
-              <h3 className="text-base font-semibold text-slate-900">Recent Intake Sessions</h3>
+              <h3 className="text-base font-semibold text-slate-900">{t('history.recentIntake')}</h3>
               <div className="mt-3 space-y-2">
                 {(history.recentSessions || []).map((session) => (
                   <div
@@ -159,7 +159,7 @@ function NursePatientHistoryContent() {
                     <p className="font-semibold text-slate-900">{new Date(session.started_at).toLocaleString()}</p>
                     <p className="text-xs text-slate-500">
                       {session.status}
-                      {session.emergency_detected ? ' • Emergency detected' : ''}
+                      {session.emergency_detected ? ` • ${t('queue.emergencyDetected')}` : ''}
                     </p>
                   </div>
                 ))}
@@ -168,23 +168,23 @@ function NursePatientHistoryContent() {
           </section>
 
           <section className="ui-surface ui-surface-hover p-5 animate-fade-up delay-2 lg:col-span-7">
-            <h2 className="text-lg font-bold text-slate-900">Vitals History</h2>
-            <p className="mt-1 text-sm text-slate-500">Trend overview for safe triage decisions.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('history.vitalsHistory')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('history.trendDesc')}</p>
 
             {vitalsHistory.length === 0 ? (
-              <EmptyState title="No vitals recorded" description="Vitals history will appear here after nurse entries." />
+              <EmptyState title={t('vitals.noneRecorded')} description={t('history.vitalsAppearDesc')} />
             ) : (
               <div className="mt-4 overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
-                      <th className="px-2 py-2">Recorded</th>
-                      <th className="px-2 py-2">BP</th>
-                      <th className="px-2 py-2">HR</th>
-                      <th className="px-2 py-2">Temp</th>
-                      <th className="px-2 py-2">SpO2</th>
-                      <th className="px-2 py-2">RR</th>
-                      <th className="px-2 py-2">Flag</th>
+                      <th className="px-2 py-2">{t('history.recorded')}</th>
+                      <th className="px-2 py-2">{t('vitals.bpAbbr')}</th>
+                      <th className="px-2 py-2">{t('vitals.hrAbbr')}</th>
+                      <th className="px-2 py-2">{t('vitals.tempAbbr')}</th>
+                      <th className="px-2 py-2">{t('vitals.spo2')}</th>
+                      <th className="px-2 py-2">{t('vitals.rrAbbr')}</th>
+                      <th className="px-2 py-2">{t('history.flag')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -202,7 +202,7 @@ function NursePatientHistoryContent() {
                               item.flagged_abnormal ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
                             }`}
                           >
-                            {item.flagged_abnormal ? 'Abnormal' : 'Normal'}
+                            {item.flagged_abnormal ? t('history.abnormal') : t('history.normal')}
                           </span>
                         </td>
                       </tr>

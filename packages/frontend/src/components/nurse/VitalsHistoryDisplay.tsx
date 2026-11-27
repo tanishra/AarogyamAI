@@ -41,8 +41,8 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-slate-700">No previous vitals recorded</p>
-        <p className="text-xs text-slate-500 mt-1">Vitals history will appear here once recorded</p>
+        <p className="text-sm font-medium text-slate-700">{t('history.noVitals')}</p>
+        <p className="text-xs text-slate-500 mt-1">{t('history.vitalsAppearOnce')}</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-        Previous Vitals ({vitals.length})
+        {t('history.previousVitalsCount', { count: vitals.length })}
       </h3>
 
       <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
@@ -70,14 +70,14 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
                 })}
               </span>
               {record.recordedBy && (
-                <span className="text-xs text-slate-500">by {record.recordedBy}</span>
+                <span className="text-xs text-slate-500">{t('history.recordedBy', { name: record.recordedBy })}</span>
               )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {record.bloodPressureSystolic && record.bloodPressureDiastolic && (
                 <div className="text-sm">
-                  <span className="text-slate-500">BP:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.bpAbbr')}:</span>{' '}
                   <span className="font-semibold text-slate-900">
                     {record.bloodPressureSystolic}/{record.bloodPressureDiastolic}
                   </span>
@@ -87,7 +87,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.heartRate && (
                 <div className="text-sm">
-                  <span className="text-slate-500">HR:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.hrAbbr')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.heartRate}</span>
                   <span className="text-xs text-slate-400 ml-1">bpm</span>
                 </div>
@@ -95,7 +95,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.temperatureFahrenheit && (
                 <div className="text-sm">
-                  <span className="text-slate-500">Temp:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.tempAbbr')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.temperatureFahrenheit}</span>
                   <span className="text-xs text-slate-400 ml-1">°F</span>
                 </div>
@@ -103,7 +103,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.oxygenSaturation && (
                 <div className="text-sm">
-                  <span className="text-slate-500">O2:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.o2Abbr')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.oxygenSaturation}</span>
                   <span className="text-xs text-slate-400 ml-1">%</span>
                 </div>
@@ -111,7 +111,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.respiratoryRate && (
                 <div className="text-sm">
-                  <span className="text-slate-500">RR:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.rrAbbr')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.respiratoryRate}</span>
                   <span className="text-xs text-slate-400 ml-1">/min</span>
                 </div>
@@ -135,7 +135,7 @@ export function VitalsHistoryDisplay({ vitals, isLoading = false }: VitalsHistor
 
               {record.bmi && (
                 <div className="text-sm">
-                  <span className="text-slate-500">BMI:</span>{' '}
+                  <span className="text-slate-500">{t('vitals.bmi')}:</span>{' '}
                   <span className="font-semibold text-slate-900">{record.bmi}</span>
                 </div>
               )}

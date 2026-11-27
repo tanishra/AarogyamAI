@@ -297,9 +297,9 @@ function DoctorDashboardContent() {
   return (
     <AppShell tone="doctor">
       <PageHeader
-        title="Doctor Review Dashboard"
-        subtitle="AI-assisted differential framing with physician-in-control approval"
-        badge={`${activeCount} Ready`}
+        title={t('dash.doctorTitle')}
+        subtitle={t('dash.doctorSubtitle')}
+        badge={t('dash.readyBadge', { count: activeCount })}
         actions={
           <div className="flex items-center gap-2">
             <AnimatedButton variant="secondary" onClick={() => queryClient.invalidateQueries({ queryKey: ['doctorQueue'] })}>
@@ -312,29 +312,29 @@ function DoctorDashboardContent() {
 
       <section className="relative mb-5 overflow-hidden rounded-3xl border border-indigo-200/70 bg-gradient-to-r from-[#eef2ff] via-[#f7f9ff] to-[#ecfffb] p-5 animate-fade-up">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-indigo-200/45 blur-3xl" />
-        <h2 className="text-xl font-semibold text-slate-900">Physician decision workspace</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{t('dash.doctorHero')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Review nurse-prepared context, evaluate AI considerations, and approve final clinical reasoning.
+          {t('dash.doctorHeroDesc')}
         </p>
       </section>
 
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatTile label="Pending Reviews" value={activeCount} trend="Awaiting physician action" />
-        <StatTile label="Urgent Cases" value={urgentCount} trend="Prioritized in queue" tone={urgentCount > 0 ? 'warning' : 'default'} />
-        <StatTile label="Under Review" value={underReviewCount} trend="Already opened by a doctor" />
+        <StatTile label={t('dash.pendingReviews')} value={activeCount} trend={t('dash.awaitingPhysician')} />
+        <StatTile label={t('dash.urgentCases')} value={urgentCount} trend={t('dash.prioritized')} tone={urgentCount > 0 ? 'warning' : 'default'} />
+        <StatTile label={t('dash.underReview')} value={underReviewCount} trend={t('dash.alreadyOpened')} />
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatTile label="On Duty" value={user?.name || 'Doctor'} trend={user?.email || ''} />
-        <StatTile label="No Nurse Assigned" value={unassignedNurseCount} trend="Need intake owner visibility" tone={unassignedNurseCount > 0 ? 'warning' : 'default'} />
-        <StatTile label="Queue Health" value={activeCount > 0 ? 'Active' : 'Clear'} trend="Live queue status" />
+        <StatTile label={t('dash.onDuty')} value={user?.name || t('dash.doctorFallback')} trend={user?.email || ''} />
+        <StatTile label={t('dash.noNurse')} value={unassignedNurseCount} trend={t('dash.needIntakeOwner')} tone={unassignedNurseCount > 0 ? 'warning' : 'default'} />
+        <StatTile label={t('dash.queueHealth')} value={activeCount > 0 ? t('common.active') : t('dash.healthClear')} trend={t('dash.liveQueueStatus')} />
       </div>
 
       <PanelTabs
         tabs={[
-          { id: 'workflow', label: 'Workflow' },
-          { id: 'history', label: 'Completed Patients' },
-          { id: 'profile', label: 'My Profile' },
+          { id: 'workflow', label: t('dash.tabWorkflow') },
+          { id: 'history', label: t('dash.completedPatients') },
+          { id: 'profile', label: t('profile.title') },
         ]}
         value={dashboardTab}
         onChange={setDashboardTab}
@@ -344,9 +344,9 @@ function DoctorDashboardContent() {
         <ProfileWorkspace role="Doctor" />
       ) : dashboardTab === 'history' ? (
         <div className="ui-surface p-6">
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">Completed Patients</h2>
+          <h2 className="mb-4 text-xl font-semibold text-slate-900">{t('dash.completedPatients')}</h2>
           <p className="mb-6 text-sm text-slate-600">
-            View your previously treated patients and their clinical outcomes.
+            {t('dash.completedDesc')}
           </p>
           
           {!completedPatientsData ? (
@@ -356,9 +356,9 @@ function DoctorDashboardContent() {
               <Skeleton className="h-24 w-full" />
             </div>
           ) : completedPatientsData?.data?.patients?.length === 0 ? (
-            <EmptyState 
-              title="No completed patients yet" 
-              description="Patients you've treated will appear here after you approve their clinical reasoning." 
+            <EmptyState
+              title={t('dash.noCompleted')}
+              description={t('dash.noCompletedDesc')}
             />
           ) : (
             <div className="space-y-3">
@@ -374,21 +374,21 @@ function DoctorDashboardContent() {
                       
                       {patient.lastComplaint && (
                         <div className="mt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last Visit</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('history.lastVisit')}</p>
                           <p className="mt-1 text-sm text-slate-700">{patient.lastComplaint}</p>
                         </div>
                       )}
                       
                       {patient.lastPlan && (
                         <div className="mt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Treatment Plan</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('history.treatmentPlan')}</p>
                           <p className="mt-1 text-sm text-slate-700 line-clamp-2">{patient.lastPlan}</p>
                         </div>
                       )}
                       
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
-                          Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
+                          {t('history.lastVisitDate', { date: new Date(patient.lastVisit).toLocaleDateString() })}
                         </span>
                         {patient.lastPriority && (
                           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -404,7 +404,7 @@ function DoctorDashboardContent() {
                     
                     <Link href={`/doctor/patient/${patient.patientId}/history`}>
                       <AnimatedButton size="sm" variant="secondary">
-                        View Full History
+                        {t('history.viewFull')}
                       </AnimatedButton>
                     </Link>
                   </div>
@@ -429,7 +429,7 @@ function DoctorDashboardContent() {
                 </div>
               ) : patients.length === 0 ? (
                 <div className="p-4">
-                  <EmptyState title={t('dash.queueEmpty')} description="Queue is clear for now." />
+                  <EmptyState title={t('dash.queueEmpty')} description={t('dash.queueClear')} />
                 </div>
               ) : (
                 patients.map((patient) => (
@@ -445,7 +445,7 @@ function DoctorDashboardContent() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{patient.patient_name}</p>
-                        <p className="mt-1 text-xs text-slate-500">Nurse: {patient.nurse_name || 'Unassigned'}</p>
+                        <p className="mt-1 text-xs text-slate-500">{t('dash.nurseLabel', { name: patient.nurse_name || t('queue.unassigned') })}</p>
                       </div>
                       <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${getPriorityStyle(patient.priority)}`}>
                         {patient.priority}
@@ -461,8 +461,8 @@ function DoctorDashboardContent() {
         <section className="space-y-5 lg:col-span-8">
           {!selectedPatient ? (
             <EmptyState
-              title="Select a patient"
-              description="Choose a patient from the queue to review full context and AI considerations."
+              title={t('dash.selectPatient')}
+              description={t('dash.selectPatientDescDoctor')}
             />
           ) : (
             <>
@@ -470,7 +470,7 @@ function DoctorDashboardContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">{selectedPatient.patient_name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">Comprehensive context prepared for physician review</p>
+                    <p className="mt-1 text-sm text-slate-500">{t('dash.contextPrepared')}</p>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getPriorityStyle(selectedPatient.priority)}`}>
                     {selectedPatient.priority}
@@ -478,10 +478,10 @@ function DoctorDashboardContent() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href={`/doctor/patient/${selectedPatient.patient_id}/review?sessionId=${selectedPatient.session_id}`}>
-                    <AnimatedButton size="sm" variant="secondary">Open Dedicated Review Page</AnimatedButton>
+                    <AnimatedButton size="sm" variant="secondary">{t('dash.openReviewPage')}</AnimatedButton>
                   </Link>
                   <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                    Nurse: {selectedPatient.nurse_name || 'Unassigned'}
+                    {t('dash.nurseLabel', { name: selectedPatient.nurse_name || t('queue.unassigned') })}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                     {t('queue.status')}: {selectedPatient.status}
@@ -491,47 +491,47 @@ function DoctorDashboardContent() {
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
-                    <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || 'Not captured yet'}</p>
+                    <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || t('common.notCapturedYet')}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-slate-50/75 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</p>
-                    <p className="mt-1 text-sm text-slate-800">{summary?.symptoms?.join(', ') || 'Not captured yet'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.symptoms')}</p>
+                    <p className="mt-1 text-sm text-slate-800">{summary?.symptoms?.join(', ') || t('common.notCapturedYet')}</p>
                   </div>
                 </div>
 
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nurse Vitals</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('vitals.nurseVitals')}</p>
                   {vitals ? (
                     <>
                       <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3 lg:grid-cols-6">
-                        <p>BP: <span className="font-semibold">{vitals.bloodPressureSystolic || '-'}/{vitals.bloodPressureDiastolic || '-'}</span></p>
-                        <p>HR: <span className="font-semibold">{vitals.heartRate || '-'}</span> bpm</p>
-                        <p>Temp: <span className="font-semibold">{vitals.temperatureFahrenheit || '-'}</span> °F</p>
-                        <p>SpO2: <span className="font-semibold">{vitals.oxygenSaturation || '-'}</span>%</p>
-                        <p>RR: <span className="font-semibold">{vitals.respiratoryRate || '-'}</span> /min</p>
-                        <p>BMI: <span className="font-semibold">{vitals.bmi || '-'}</span></p>
+                        <p>{t('vitals.bpAbbr')}: <span className="font-semibold">{vitals.bloodPressureSystolic || '-'}/{vitals.bloodPressureDiastolic || '-'}</span></p>
+                        <p>{t('vitals.hrAbbr')}: <span className="font-semibold">{vitals.heartRate || '-'}</span> bpm</p>
+                        <p>{t('vitals.tempAbbr')}: <span className="font-semibold">{vitals.temperatureFahrenheit || '-'}</span> °F</p>
+                        <p>{t('vitals.spo2')}: <span className="font-semibold">{vitals.oxygenSaturation || '-'}</span>%</p>
+                        <p>{t('vitals.rrAbbr')}: <span className="font-semibold">{vitals.respiratoryRate || '-'}</span> /min</p>
+                        <p>{t('vitals.bmi')}: <span className="font-semibold">{vitals.bmi || '-'}</span></p>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-3">
-                        <p>Height: <span className="font-semibold">{vitals.heightCm || '-'}</span> cm</p>
-                        <p>Weight: <span className="font-semibold">{vitals.weightKg || '-'}</span> kg</p>
+                        <p>{t('vitals.height')}: <span className="font-semibold">{vitals.heightCm || '-'}</span> cm</p>
+                        <p>{t('vitals.weight')}: <span className="font-semibold">{vitals.weightKg || '-'}</span> kg</p>
                       </div>
                     </>
                   ) : (
-                    <p className="mt-2 text-sm text-slate-500">No vitals recorded yet</p>
+                    <p className="mt-2 text-sm text-slate-500">{t('vitals.noneYet')}</p>
                   )}
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Prior Sessions</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{t('history.priorSessions')}</p>
                     <p className="mt-1 text-lg font-semibold text-indigo-900">{historyData?.sessions?.length || 0}</p>
                   </div>
                   <div className="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Vitals Records</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">{t('history.vitalsRecords')}</p>
                     <p className="mt-1 text-lg font-semibold text-cyan-900">{historyData?.vitalsHistory?.length || 0}</p>
                   </div>
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Reasoning History</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{t('history.reasoningHistory')}</p>
                     <p className="mt-1 text-lg font-semibold text-emerald-900">{historyData?.reasoningHistory?.length || 0}</p>
                   </div>
                 </div>

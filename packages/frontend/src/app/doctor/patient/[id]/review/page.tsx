@@ -153,8 +153,8 @@ function DoctorPatientReviewContent() {
     return (
       <AppShell tone="doctor">
         <EmptyState
-          title="Missing session ID"
-          description="Open this page from the doctor queue with a valid session context."
+          title={t('history.missingSession')}
+          description={t('history.missingSessionDescDoctor')}
         />
       </AppShell>
     );
@@ -166,13 +166,13 @@ function DoctorPatientReviewContent() {
   return (
     <AppShell tone="doctor">
       <PageHeader
-        title="Doctor Patient Review"
-        subtitle="Unified context with physician-in-control AI decision support"
-        badge="Doctor"
+        title={t('review.pageTitle')}
+        subtitle={t('review.pageSubtitle')}
+        badge={t('dash.doctorFallback')}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/doctor/dashboard">
-              <AnimatedButton variant="secondary">Back to Dashboard</AnimatedButton>
+              <AnimatedButton variant="secondary">{t('common.backToDashboard')}</AnimatedButton>
             </Link>
             <AnimatedButton variant="secondary" onClick={logout}>{t('nav.logout')}</AnimatedButton>
           </div>
@@ -181,9 +181,9 @@ function DoctorPatientReviewContent() {
 
       <section className="relative mb-5 overflow-hidden rounded-3xl border border-indigo-200/70 bg-gradient-to-r from-[#eef2ff] via-[#f7f9ff] to-[#ecfffb] p-5 animate-fade-up">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-indigo-200/40 blur-3xl" />
-        <h2 className="text-lg font-semibold text-slate-900">Unified patient context and AI-assisted review</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{t('review.heroTitle')}</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Validate symptoms and vitals, adjudicate AI suggestions, and finalize the clinical reasoning trace.
+          {t('review.heroDesc')}
         </p>
       </section>
 
@@ -197,42 +197,42 @@ function DoctorPatientReviewContent() {
           <section className="ui-surface ui-surface-hover p-5 animate-fade-up">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">{data?.patient?.name || 'Patient review'}</h2>
+                <h2 className="text-xl font-bold text-slate-900">{data?.patient?.name || t('review.patientFallback')}</h2>
                 <p className="mt-1 text-sm text-slate-500">{data?.patient?.email || ''}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Session: {sessionId}
+                {t('review.sessionLabel', { id: sessionId })}
               </div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('queue.complaint')}</p>
-                <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || 'Not captured'}</p>
+                <p className="mt-1 text-sm text-slate-800">{summary?.chiefComplaint || t('common.notCaptured')}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</p>
-                <p className="mt-1 text-sm text-slate-800">{summary?.symptoms?.join(', ') || 'Not captured'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.symptoms')}</p>
+                <p className="mt-1 text-sm text-slate-800">{summary?.symptoms?.join(', ') || t('common.notCaptured')}</p>
               </div>
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Allergies</p>
-                <p className="mt-1 text-sm text-amber-800">{summary?.allergies?.join(', ') || 'No known allergies'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{t('common.allergies')}</p>
+                <p className="mt-1 text-sm text-amber-800">{summary?.allergies?.join(', ') || t('common.noAllergies')}</p>
               </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nurse Vitals</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('vitals.nurseVitals')}</p>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700 sm:grid-cols-3 lg:grid-cols-6">
-                <p>BP: <span className="font-semibold">{vitals?.bloodPressureSystolic || '-'}/{vitals?.bloodPressureDiastolic || '-'}</span></p>
-                <p>HR: <span className="font-semibold">{vitals?.heartRate || '-'}</span> bpm</p>
-                <p>Temp: <span className="font-semibold">{vitals?.temperatureFahrenheit || '-'}</span> °F</p>
-                <p>SpO2: <span className="font-semibold">{vitals?.oxygenSaturation || '-'}</span>%</p>
-                <p>RR: <span className="font-semibold">{vitals?.respiratoryRate || '-'}</span> /min</p>
-                <p>BMI: <span className="font-semibold">{vitals?.bmi || '-'}</span></p>
+                <p>{t('vitals.bpAbbr')}: <span className="font-semibold">{vitals?.bloodPressureSystolic || '-'}/{vitals?.bloodPressureDiastolic || '-'}</span></p>
+                <p>{t('vitals.hrAbbr')}: <span className="font-semibold">{vitals?.heartRate || '-'}</span> bpm</p>
+                <p>{t('vitals.tempAbbr')}: <span className="font-semibold">{vitals?.temperatureFahrenheit || '-'}</span> °F</p>
+                <p>{t('vitals.spo2')}: <span className="font-semibold">{vitals?.oxygenSaturation || '-'}</span>%</p>
+                <p>{t('vitals.rrAbbr')}: <span className="font-semibold">{vitals?.respiratoryRate || '-'}</span> /min</p>
+                <p>{t('vitals.bmi')}: <span className="font-semibold">{vitals?.bmi || '-'}</span></p>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700 sm:grid-cols-3">
-                <p>Height: <span className="font-semibold">{vitals?.heightCm || '-'}</span> cm</p>
-                <p>Weight: <span className="font-semibold">{vitals?.weightKg || '-'}</span> kg</p>
+                <p>{t('vitals.height')}: <span className="font-semibold">{vitals?.heightCm || '-'}</span> cm</p>
+                <p>{t('vitals.weight')}: <span className="font-semibold">{vitals?.weightKg || '-'}</span> kg</p>
               </div>
             </div>
           </section>

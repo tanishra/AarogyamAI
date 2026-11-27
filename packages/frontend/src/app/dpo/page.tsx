@@ -5,6 +5,7 @@ import { AuthGuard } from '@/lib/auth/AuthGuard';
 import { RoleGuard } from '@/lib/auth/RoleGuard';
 import { AppShell, PageHeader, PanelTabs } from '@/components/common';
 import { Navigation } from '@/components/Navigation';
+import { useI18n } from '@/lib/i18n';
 import ConsentRecordList from '@/components/consent/ConsentRecordList';
 import ConsentWithdrawalQueue from '@/components/consent/ConsentWithdrawalQueue';
 import GrievanceQueue from '@/components/grievance/GrievanceQueue';
@@ -14,14 +15,15 @@ import ComplianceReportGenerator from '@/components/compliance/ComplianceReportG
 type TabType = 'consent' | 'withdrawals' | 'grievances' | 'data-requests' | 'reports';
 
 function DPOPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('consent');
 
   const tabs = [
-    { id: 'consent' as TabType, label: 'Consent Records' },
-    { id: 'withdrawals' as TabType, label: 'Withdrawals' },
-    { id: 'grievances' as TabType, label: 'Grievances' },
-    { id: 'data-requests' as TabType, label: 'Data Requests' },
-    { id: 'reports' as TabType, label: 'Reports' },
+    { id: 'consent' as TabType, label: t('admin.consentRecords') },
+    { id: 'withdrawals' as TabType, label: t('admin.withdrawals') },
+    { id: 'grievances' as TabType, label: t('admin.grievances') },
+    { id: 'data-requests' as TabType, label: t('admin.dataRequests') },
+    { id: 'reports' as TabType, label: t('admin.reports') },
   ];
 
   return (
@@ -29,16 +31,16 @@ function DPOPage() {
       <Navigation />
       <AppShell>
         <PageHeader
-          title="DPO Operations"
-          subtitle="Consent governance, grievance handling, and compliance reporting"
+          title={t('admin.dpoOps')}
+          subtitle={t('admin.dpoOpsDesc')}
           badge="DPO"
         />
 
         <section className="relative mb-5 overflow-hidden rounded-3xl border border-emerald-200/70 bg-gradient-to-r from-[#e9fff6] via-[#f6fffb] to-[#eef8ff] p-5 animate-fade-up">
           <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-emerald-200/45 blur-3xl" />
-          <h2 className="text-xl font-semibold text-slate-900">Compliance control center</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t('admin.complianceCenter')}</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Manage consent lifecycle, resolve grievances, and generate compliance-ready reports.
+            {t('admin.complianceCenterDesc')}
           </p>
         </section>
 

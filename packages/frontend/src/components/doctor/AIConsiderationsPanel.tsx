@@ -61,17 +61,17 @@ export function AIConsiderationsPanel({
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">{t('review.aiSuggestions')}</h3>
-          <p className="mt-1 text-sm text-slate-600">Decision-support suggestions for physician review and adjudication.</p>
+          <p className="mt-1 text-sm text-slate-600">{t('review.aiSubtitle')}</p>
         </div>
         <AnimatedButton onClick={onGenerate} disabled={isGenerating}>
-          {isGenerating ? t('common.loading') : 'Generate Considerations'}
+          {isGenerating ? t('common.loading') : t('review.generate')}
         </AnimatedButton>
       </div>
 
       {considerations.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 py-12 text-center">
-          <p className="text-sm font-medium text-slate-700">No considerations generated yet</p>
-          <p className="mt-1 text-xs text-slate-500">Run AI generation after reviewing nurse summary and vitals.</p>
+          <p className="text-sm font-medium text-slate-700">{t('review.noConsiderations')}</p>
+          <p className="mt-1 text-xs text-slate-500">{t('review.noConsiderationsDesc')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -85,7 +85,7 @@ export function AIConsiderationsPanel({
                   <h4 className="text-sm font-semibold text-slate-900">{consideration.conditionName}</h4>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getLikelihoodColor(consideration.likelihood)}`}>
-                      {consideration.likelihood} likelihood
+                      {consideration.likelihood} {t('review.likelihoodWord')}
                     </span>
                     <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getUrgencyColor(consideration.urgency)}`}>
                       {consideration.urgency}
@@ -108,7 +108,7 @@ export function AIConsiderationsPanel({
                 <button
                   onClick={() => setExpandedId(expandedId === consideration.id ? null : consideration.id)}
                   className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Toggle detail"
+                  aria-label={t('review.toggleDetail')}
                 >
                   <svg
                     className={`h-5 w-5 transition-transform ${expandedId === consideration.id ? 'rotate-180' : ''}`}
@@ -124,13 +124,13 @@ export function AIConsiderationsPanel({
               {expandedId === consideration.id ? (
                 <div className="mt-3 space-y-3 border-t border-slate-200 pt-3 animate-fade-in">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Clinical Reasoning</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('review.clinicalReasoning')}</p>
                     <p className="mt-1 text-sm text-slate-800">{consideration.explanation}</p>
                   </div>
 
                   {consideration.supportingFactors.length > 0 ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Supporting Factors</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('review.supportingFactors')}</p>
                       <ul className="mt-1 space-y-1">
                         {consideration.supportingFactors.map((factor, idx) => (
                           <li key={idx} className="text-sm text-slate-700">
@@ -161,7 +161,7 @@ export function AIConsiderationsPanel({
       )}
 
       <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-800">
-        {t('review.aiNotice')} — AI output is advisory only. Final diagnosis and treatment decisions remain with the attending physician.
+        {t('review.aiNotice')} — {t('review.aiAdvisory')}
       </div>
     </div>
   );

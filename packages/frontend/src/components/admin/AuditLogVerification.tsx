@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useI18n } from '@/lib/i18n';
 
 interface VerificationResult {
   isValid: boolean;
@@ -10,6 +11,7 @@ interface VerificationResult {
 }
 
 export default function AuditLogVerification() {
+  const { t } = useI18n();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -35,7 +37,7 @@ export default function AuditLogVerification() {
       setResult(data.data);
     } catch (error) {
       console.error('Verification error:', error);
-      alert('Failed to verify audit logs');
+      alert(t('admin.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -43,14 +45,14 @@ export default function AuditLogVerification() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Audit Log Verification</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.auditVerify')}</h3>
       <p className="text-sm text-gray-600 mb-4">
-        Verify the integrity of audit logs using hash chain validation
+        {t('admin.auditVerifyDesc')}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.startDate')}</label>
           <input
             type="date"
             value={startDate}
@@ -59,7 +61,7 @@ export default function AuditLogVerification() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.endDate')}</label>
           <input
             type="date"
             value={endDate}
@@ -77,14 +79,14 @@ export default function AuditLogVerification() {
         {loading ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Verifying...</span>
+            <span>{t('admin.verifying')}</span>
           </>
         ) : (
           <>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Verify Integrity</span>
+            <span>{t('admin.verifyIntegrity')}</span>
           </>
         )}
       </button>
@@ -106,11 +108,11 @@ export default function AuditLogVerification() {
                 {result.message}
               </h4>
               <p className={`text-sm mt-1 ${result.isValid ? 'text-green-700' : 'text-red-700'}`}>
-                Verified {result.totalEntries} entries
+                {t('admin.verifiedEntries', { count: result.totalEntries })}
               </p>
               {result.tamperedEntries.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium text-red-900 mb-2">Tampered Entries:</p>
+                  <p className="text-sm font-medium text-red-900 mb-2">{t('admin.tamperedEntries')}</p>
                   <div className="bg-white rounded p-2 max-h-40 overflow-y-auto">
                     {result.tamperedEntries.map((id) => (
                       <div key={id} className="text-xs text-red-600 font-mono py-1">

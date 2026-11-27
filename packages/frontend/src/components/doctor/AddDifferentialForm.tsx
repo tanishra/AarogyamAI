@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AnimatedButton } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 
 interface Diagnosis {
   code: string;
@@ -26,6 +27,7 @@ export function AddDifferentialForm({
   onSearch,
   isSubmitting = false,
 }: AddDifferentialFormProps) {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Diagnosis[]>([]);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
@@ -91,14 +93,14 @@ export function AddDifferentialForm({
   return (
     <div className="ui-surface p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Add Differential Diagnosis</h3>
-        <p className="mt-1 text-sm text-slate-600">Search for ICD-10 diagnosis</p>
+        <h3 className="text-lg font-semibold text-slate-900">{t('diff.addTitle')}</h3>
+        <p className="mt-1 text-sm text-slate-600">{t('diff.addSubtitle')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="relative">
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Search Diagnosis
+            {t('diff.searchLabel')}
           </label>
           <input
             type="text"
@@ -116,7 +118,7 @@ export function AddDifferentialForm({
                 setShowResults(true);
               }
             }}
-            placeholder="Type to search ICD-10 codes..."
+            placeholder={t('diff.searchPlaceholder')}
             className="ui-focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
             required
           />
@@ -186,7 +188,7 @@ export function AddDifferentialForm({
 
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Priority (1 = highest)
+            {t('diff.priority')}
           </label>
           <input
             type="number"
@@ -201,13 +203,13 @@ export function AddDifferentialForm({
 
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Clinical Reasoning (Optional)
+            {t('diff.reasoningOptional')}
           </label>
           <textarea
             value={clinicalReasoning}
             onChange={(e) => setClinicalReasoning(e.target.value)}
             rows={3}
-            placeholder="Explain why this diagnosis is being considered..."
+            placeholder={t('diff.reasoningPlaceholder')}
             className="ui-focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
           />
         </div>
@@ -217,7 +219,7 @@ export function AddDifferentialForm({
             type="submit"
             disabled={!selectedDiagnosis || isSubmitting}
           >
-            {isSubmitting ? 'Adding...' : 'Add Diagnosis'}
+            {isSubmitting ? t('diff.adding') : t('diff.add')}
           </AnimatedButton>
           <AnimatedButton
             type="button"
@@ -225,7 +227,7 @@ export function AddDifferentialForm({
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            {t('common.cancel')}
           </AnimatedButton>
         </div>
       </form>

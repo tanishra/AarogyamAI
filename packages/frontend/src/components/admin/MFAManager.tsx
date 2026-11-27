@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserManagementAPI } from '@/lib/api/services/userManagement';
 import { useToast } from '@/lib/notifications/toast';
+import { useI18n } from '@/lib/i18n';
 import type { UserAccount } from '@/lib/api/types';
 
 interface MFAManagerProps {
@@ -13,6 +14,7 @@ interface MFAManagerProps {
 
 export function MFAManager({ user, onUpdate }: MFAManagerProps) {
   const { showToast } = useToast();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [action, setAction] = useState<'enable' | 'disable' | 'reenroll'>('enable');
@@ -22,15 +24,20 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
     mutationFn: ({ enabled, method }: { enabled: boolean; method?: 'totp' | 'sms' }) =>
       UserManagementAPI.updateMFA(user.id, enabled, method),
     onSuccess: () => {
-      const actionText = action === 'enable' ? 'enabled' : action === 'disable' ? 'disabled' : 're-enrollment required';
-      showToast('success', `MFA ${actionText} for ${user.name}`);
+      const message =
+        action === 'enable'
+          ? t('admin.mfaEnabledOk', { name: user.name })
+          : action === 'disable'
+            ? t('admin.mfaDisabledOk', { name: user.name })
+            : t('admin.mfaReenrollOk', { name: user.name });
+      showToast('success', message);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['userActivity', user.id] });
       setShowDialog(false);
       onUpdate();
     },
     onError: (error: Error) => {
-      showToast('error', error.message || 'Failed to update MFA settings');
+      showToast('error', error.message || t('admin.mfaFailed'));
     },
   });
 
@@ -52,20 +59,20 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h4 className="text-sm font-semibold text-gray-700 mb-3">Multi-Factor Authentication</h4>
+      <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.mfaTitle')}</h4>
       
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-600">
-              Status:{' '}
+              {t('common.status')}:{' '}
               <span className={`font-semibold ${user.mfaEnabled ? 'text-green-600' : 'text-gray-600'}`}>
-                {user.mfaEnabled ? `Enabled (${user.mfaMethod?.toUpperCase()})` : 'Disabled'}
+                {user.mfaEnabled ? t('admin.mfaEnabled', { method: user.mfaMethod?.toUpperCase() ?? '' }) : t('common.disabled')}
               </span>
             </p>
             {user.lastMFAVerification && (
               <p className="text-xs text-gray-500 mt-1">
-                Last verification: {new Date(user.lastMFAVerification).toLocaleDateString()}
+                {t('admin.lastVerification', { date: new Date(user.lastMFAVerification).toLocaleDateString() })}
               </p>
             )}
           </div>
@@ -78,7 +85,7 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
               disabled={mfaMutation.isPending}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
             >
-              Enable MFA
+              {t('admin.enableMfa')}
             </button>
           ) : (
             <>
@@ -87,14 +94,14 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
                 disabled={mfaMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
               >
-                Disable MFA
+                {t('admin.disableMfa')}
               </button>
               <button
                 onClick={() => handleAction('reenroll')}
                 disabled={mfaMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                Require Re-enrollment
+                {t('admin.requireReenroll')}
               </button>
             </>
           )}
@@ -106,41 +113,41 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">
-              {action === 'enable' && 'Enable MFA'}
-              {action === 'disable' && 'Disable MFA'}
-              {action === 'reenroll' && 'Require MFA Re-enrollment'}
+              {action === 'enable' && t('admin.enableMfa')}
+              {action === 'disable' && t('admin.disableMfa')}
+              {action === 'reenroll' && t('admin.reenrollTitle')}
             </h3>
-            
+
             <p className="text-sm text-gray-600 mb-4">
-              {action === 'enable' && `Enable multi-factor authentication for ${user.name}?`}
-              {action === 'disable' && `Disable multi-factor authentication for ${user.name}?`}
-              {action === 'reenroll' && `Require ${user.name} to re-enroll their MFA device?`}
+              {action === 'enable' && t('admin.enableMfaBody', { name: user.name })}
+              {action === 'disable' && t('admin.disableMfaBody', { name: user.name })}
+              {action === 'reenroll' && t('admin.reenrollBody', { name: user.name })}
             </p>
 
             {action === 'enable' && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MFA Method
+                  {t('admin.mfaMethod')}
                 </label>
                 <select
                   value={mfaMethod}
                   onChange={(e) => setMfaMethod(e.target.value as 'totp' | 'sms')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="totp">Authenticator App (TOTP)</option>
-                  <option value="sms">SMS</option>
+                  <option value="totp">{t('admin.methodTotp')}</option>
+                  <option value="sms">{t('admin.methodSms')}</option>
                 </select>
               </div>
             )}
 
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
               <p className="text-xs text-blue-800">
-                {action === 'enable' && 'The user will be prompted to set up MFA on their next login.'}
-                {action === 'disable' && 'The user will no longer be required to provide MFA codes.'}
-                {action === 'reenroll' && 'The user will need to set up a new MFA device on their next login.'}
+                {action === 'enable' && t('admin.enableInfo')}
+                {action === 'disable' && t('admin.disableInfo')}
+                {action === 'reenroll' && t('admin.reenrollInfo')}
               </p>
               <p className="text-xs text-blue-600 mt-2">
-                A notification email will be sent to: <strong>{user.email}</strong>
+                {t('admin.notifyEmail')} <strong>{user.email}</strong>
               </p>
             </div>
 
@@ -150,7 +157,7 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
                 disabled={mfaMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmAction}
@@ -161,7 +168,7 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {mfaMutation.isPending ? 'Processing...' : 'Confirm'}
+                {mfaMutation.isPending ? t('admin.processing') : t('common.confirm')}
               </button>
             </div>
           </div>

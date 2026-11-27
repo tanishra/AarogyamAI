@@ -69,7 +69,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
       <div className="flex items-center gap-2">
         <div className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
         <h3 className="text-sm font-semibold text-red-900 uppercase tracking-wide">
-          Critical Alerts ({alerts.length})
+          {t('alerts.critical', { count: alerts.length })}
         </h3>
       </div>
 
@@ -89,10 +89,10 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
 
               <div className="space-y-1 text-sm">
                 <p>
-                  <span className="font-semibold">Value:</span> {alert.vital_value}
+                  <span className="font-semibold">{t('alerts.value')}</span> {alert.vital_value}
                 </p>
                 <p>
-                  <span className="font-semibold">Normal Range:</span> {alert.normal_range}
+                  <span className="font-semibold">{t('alerts.normalRange')}</span> {alert.normal_range}
                 </p>
                 {alert.patient_name && (
                   <p>
@@ -106,7 +106,7 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
                 onClick={() => setExpandedId(expandedId === alert.id ? null : alert.id)}
                 className="mt-2 text-sm font-semibold underline hover:no-underline"
               >
-                {expandedId === alert.id ? 'Hide' : 'Show'} Recommended Action
+                {expandedId === alert.id ? t('alerts.hideAction') : t('alerts.showAction')}
               </button>
 
               {expandedId === alert.id && (
@@ -123,12 +123,12 @@ export function CriticalAlertBanner({ alerts, onAcknowledge }: CriticalAlertBann
               disabled={acknowledgingId === alert.id}
               className="shrink-0"
             >
-              {acknowledgingId === alert.id ? 'Acknowledging...' : 'Acknowledge'}
+              {acknowledgingId === alert.id ? t('alerts.acknowledging') : t('alerts.acknowledge')}
             </AnimatedButton>
           </div>
 
           <p className="text-xs mt-3 opacity-75">
-            Alert created: {new Date(alert.created_at).toLocaleString()}
+            {t('alerts.createdAt', { time: new Date(alert.created_at).toLocaleString() })}
           </p>
         </div>
       ))}
