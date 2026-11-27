@@ -111,8 +111,13 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
       {/* Action Dialog */}
       {showDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mfa-manager-dialog-title"
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+          >
+            <h3 id="mfa-manager-dialog-title" className="text-lg font-semibold mb-4">
               {action === 'enable' && t('admin.enableMfa')}
               {action === 'disable' && t('admin.disableMfa')}
               {action === 'reenroll' && t('admin.reenrollTitle')}
@@ -155,6 +160,7 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
               <button
                 onClick={() => setShowDialog(false)}
                 disabled={mfaMutation.isPending}
+                autoFocus
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
                 {t('common.cancel')}

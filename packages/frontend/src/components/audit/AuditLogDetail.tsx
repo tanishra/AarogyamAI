@@ -27,12 +27,18 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
   const { t } = useI18n();
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="audit-log-detail-dialog-title"
+        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-          <h3 className="text-lg font-semibold text-gray-900">{t('admin.auditLogDetails')}</h3>
+          <h3 id="audit-log-detail-dialog-title" aria-level={2} className="text-lg font-semibold text-gray-900">{t('admin.auditLogDetails')}</h3>
           <button
             onClick={onClose}
+            aria-label={t('common.close')}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,7 +51,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
         <div className="px-6 py-4 space-y-6">
           {/* Basic Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.basicInfo')}</h4>
+            <h4 aria-level={3} className="text-sm font-semibold text-gray-700 mb-3">{t('admin.basicInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500">{t('admin.entryId')}</label>
@@ -84,7 +90,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* User Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.userInfo')}</h4>
+            <h4 aria-level={3} className="text-sm font-semibold text-gray-700 mb-3">{t('admin.userInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500">{t('admin.userId')}</label>
@@ -103,7 +109,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* Resource Information */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.resourceInfo')}</h4>
+            <h4 aria-level={3} className="text-sm font-semibold text-gray-700 mb-3">{t('admin.resourceInfo')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500">{t('admin.resourceType')}</label>
@@ -120,7 +126,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
 
           {/* Technical Details */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.techDetails')}</h4>
+            <h4 aria-level={3} className="text-sm font-semibold text-gray-700 mb-3">{t('admin.techDetails')}</h4>
             <div className="space-y-3">
               <div>
                 <label className="text-xs text-gray-500">{t('admin.ipAddress')}</label>
@@ -142,7 +148,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
           {/* Error Details (if failure) */}
           {log.outcome === 'failure' && log.errorDetails && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('admin.errorDetails')}</h4>
+              <h4 aria-level={3} className="text-sm font-semibold text-gray-700 mb-3">{t('admin.errorDetails')}</h4>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <pre className="text-sm text-red-800 whitespace-pre-wrap break-all">
                   {log.errorDetails}
@@ -156,6 +162,7 @@ export default function AuditLogDetail({ log, onClose }: AuditLogDetailProps) {
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end sticky bottom-0 bg-white">
           <button
             onClick={onClose}
+            autoFocus
             className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
           >
             {t('common.close')}

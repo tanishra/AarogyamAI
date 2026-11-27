@@ -59,7 +59,7 @@ export default function AccessPatternViewer() {
     <div className="space-y-6">
       {/* Search Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 aria-level={2} className="text-lg font-semibold text-gray-900 mb-4">
           {t('audit.patternsTitle')}
         </h3>
 
@@ -122,8 +122,8 @@ export default function AccessPatternViewer() {
             </div>
           ) : error ? (
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="text-red-800 font-semibold">{t('audit.patternsLoadError')}</h3>
+              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 aria-level={2} className="text-red-800 font-semibold">{t('audit.patternsLoadError')}</h3>
                 <p className="text-red-600 mt-2">
                   {error instanceof Error ? error.message : t('audit.patternsLoadFailed')}
                 </p>
@@ -134,7 +134,7 @@ export default function AccessPatternViewer() {
               {/* Timeline Chart */}
               {timeline.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h4 aria-level={3} className="text-lg font-semibold text-gray-900 mb-4">
                     {t('audit.timelineTitle')}
                   </h4>
                   <ResponsiveContainer width="100%" height={300}>
@@ -167,7 +167,7 @@ export default function AccessPatternViewer() {
               {/* Access Pattern Table */}
               <div className="bg-white rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
-                  <h4 className="text-lg font-semibold text-gray-900">
+                  <h4 aria-level={3} className="text-lg font-semibold text-gray-900">
                     {t('audit.usersWhoAccessed')}
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">

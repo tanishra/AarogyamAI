@@ -92,7 +92,10 @@ export default function AuditLogVerification() {
       </button>
 
       {result && (
-        <div className={`mt-6 p-4 rounded-lg ${result.isValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+        <div
+          role={result.isValid ? 'status' : 'alert'}
+          className={`mt-6 p-4 rounded-lg ${result.isValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
+        >
           <div className="flex items-start gap-3">
             {result.isValid ? (
               <svg className="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

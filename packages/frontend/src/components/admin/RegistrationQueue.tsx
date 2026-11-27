@@ -80,7 +80,7 @@ export function RegistrationQueue() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
         {t('admin.regLoadError', { message: (error as Error).message })}
       </div>
     );
@@ -174,8 +174,13 @@ export function RegistrationQueue() {
       {/* Reject Dialog */}
       {showRejectDialog && selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="registration-reject-dialog-title"
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+          >
+            <h3 id="registration-reject-dialog-title" className="text-lg font-semibold mb-4">
               {t('admin.rejectTitle')}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
@@ -202,6 +207,7 @@ export function RegistrationQueue() {
                   setRejectionReason('');
                 }}
                 disabled={rejectMutation.isPending}
+                autoFocus
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
               >
                 {t('common.cancel')}

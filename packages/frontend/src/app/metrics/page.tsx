@@ -40,8 +40,8 @@ function MetricsPage() {
   if (error) {
     return (
       <AppShell>
-        <div className="ui-surface border-red-200 bg-red-50 p-5">
-          <h3 className="font-semibold text-red-800">{t('admin.metricsErrorTitle')}</h3>
+        <div role="alert" className="ui-surface border-red-200 bg-red-50 p-5">
+          <h3 aria-level={2} className="font-semibold text-red-800">{t('admin.metricsErrorTitle')}</h3>
           <p className="mt-2 text-sm text-red-700">
             {error instanceof Error ? error.message : t('admin.metricsLoadFailed')}
           </p>

@@ -94,7 +94,7 @@ export default function SystemHealthPage() {
         </div>
 
         {unhealthy ? (
-          <div className="ui-surface mb-5 border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div role="alert" className="ui-surface mb-5 border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             {t('admin.connectivityWarn')}
           </div>
         ) : null}

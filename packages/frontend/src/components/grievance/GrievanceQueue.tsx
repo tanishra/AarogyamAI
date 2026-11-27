@@ -75,7 +75,7 @@ export default function GrievanceQueue() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h3 className="text-red-800 font-semibold">{t('grievance.loadError')}</h3>
           <p className="text-red-600 mt-2">
             {error instanceof Error ? error.message : t('grievance.loadFailed')}
@@ -112,7 +112,7 @@ export default function GrievanceQueue() {
 
       {/* Success Message */}
       {updateGrievance.isSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div role="status" aria-live="polite" className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 font-medium">
             {t('grievance.updateSuccess')}
           </p>
@@ -179,6 +179,8 @@ export default function GrievanceQueue() {
                           onClick={() =>
                             setExpandedRow(expandedRow === grievance.id ? null : grievance.id)
                           }
+                          aria-expanded={expandedRow === grievance.id}
+                          aria-controls={`grievance-details-${grievance.id}`}
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
                           {expandedRow === grievance.id ? t('common.hideDetails') : t('admin.viewDetails')}
@@ -188,7 +190,7 @@ export default function GrievanceQueue() {
 
                     {/* Expanded Row */}
                     {expandedRow === grievance.id && (
-                      <tr>
+                      <tr id={`grievance-details-${grievance.id}`}>
                         <td colSpan={5} className="px-6 py-4 bg-gray-50">
                           <div className="space-y-4">
                             {/* Full Description */}

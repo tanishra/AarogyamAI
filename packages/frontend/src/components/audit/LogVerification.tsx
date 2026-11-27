@@ -53,7 +53,7 @@ export default function LogVerification() {
     <div className="space-y-6">
       {/* Verification Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 aria-level={2} className="text-lg font-semibold text-gray-900 mb-4">
           {t('audit.verifyTitle')}
         </h3>
 
@@ -128,12 +128,13 @@ export default function LogVerification() {
       {/* Verification Results */}
       {result && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 aria-level={2} className="text-lg font-semibold text-gray-900 mb-4">
             {t('audit.resultsTitle')}
           </h3>
 
           {/* Status Banner */}
           <div
+            role={result.status === 'verified' ? 'status' : 'alert'}
             className={`rounded-lg p-4 mb-6 ${
               result.status === 'verified'
                 ? 'bg-green-50 border border-green-200'
@@ -147,7 +148,7 @@ export default function LogVerification() {
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <div>
-                    <h4 className="text-green-800 font-semibold text-lg">
+                    <h4 aria-level={3} className="text-green-800 font-semibold text-lg">
                       {t('audit.integrityVerified')}
                     </h4>
                     <p className="text-green-600 text-sm mt-1">
@@ -161,7 +162,7 @@ export default function LogVerification() {
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                   <div>
-                    <h4 className="text-red-800 font-semibold text-lg">
+                    <h4 aria-level={3} className="text-red-800 font-semibold text-lg">
                       {t('audit.tamperingDetected')}
                     </h4>
                     <p className="text-red-600 text-sm mt-1">
@@ -208,7 +209,7 @@ export default function LogVerification() {
           {/* Tampered Entries List */}
           {result.tamperedEntries.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">
+              <h4 aria-level={3} className="text-sm font-semibold text-gray-900 mb-3">
                 {t('audit.tamperedIds')}
               </h4>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">

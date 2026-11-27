@@ -98,7 +98,7 @@ export function InlineEditor({
             }`}
           />
           {errors.priority && (
-            <p className="mt-1 text-xs text-red-600">{errors.priority}</p>
+            <p role="alert" className="mt-1 text-xs text-red-600">{errors.priority}</p>
           )}
         </div>
 

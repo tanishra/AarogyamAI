@@ -135,7 +135,7 @@ export default function ComplianceReportGenerator() {
 
       {/* Error Message */}
       {generateReport.isError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h3 className="text-red-800 font-semibold">{t('compliance.generateError')}</h3>
           <p className="text-red-600 mt-2">
             {generateReport.error instanceof Error
@@ -147,7 +147,7 @@ export default function ComplianceReportGenerator() {
 
       {/* Report Ready */}
       {reportData && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div role="status" aria-live="polite" className="bg-white rounded-lg shadow p-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">

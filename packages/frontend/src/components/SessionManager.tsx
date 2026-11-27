@@ -64,7 +64,7 @@ export function SessionManager() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-50 border-b border-yellow-200 p-4">
+    <div role="alert" className="fixed top-0 left-0 right-0 z-50 bg-yellow-50 border-b border-yellow-200 p-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center">
           <svg

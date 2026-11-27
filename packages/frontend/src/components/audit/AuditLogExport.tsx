@@ -51,10 +51,15 @@ export default function AuditLogExport() {
       {/* Export Dialog */}
       {showDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="audit-log-export-dialog-title"
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">{t('admin.exportAuditLogs')}</h3>
+              <h3 id="audit-log-export-dialog-title" aria-level={2} className="text-lg font-semibold text-gray-900">{t('admin.exportAuditLogs')}</h3>
             </div>
 
             {/* Content */}
@@ -116,6 +121,7 @@ export default function AuditLogExport() {
               <button
                 onClick={() => setShowDialog(false)}
                 disabled={exportMutation.isPending}
+                autoFocus
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
               >
                 {t('common.cancel')}

@@ -88,7 +88,7 @@ export default function DataAccessRequestList() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h3 className="text-red-800 font-semibold">{t('consent.accessLoadError')}</h3>
           <p className="text-red-600 mt-2">
             {error instanceof Error ? error.message : t('consent.accessLoadFailed')}
@@ -125,7 +125,7 @@ export default function DataAccessRequestList() {
 
         {/* Overdue Warning */}
         {overdueRequests.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800 font-medium">
               {t('consent.overdueWarn', { count: overdueRequests.length, plural: overdueRequests.length !== 1 ? 's' : '' })}
             </p>
@@ -135,7 +135,7 @@ export default function DataAccessRequestList() {
 
       {/* Success Message */}
       {fulfillRequest.isSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div role="status" aria-live="polite" className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 font-medium">
             {t('consent.fulfillSuccess')}
           </p>

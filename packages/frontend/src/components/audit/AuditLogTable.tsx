@@ -49,8 +49,8 @@ export default function AuditLogTable() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">{t('admin.auditLoadError')}</h3>
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 aria-level={2} className="text-red-800 font-semibold">{t('admin.auditLoadError')}</h3>
           <p className="text-red-600 mt-2">
             {error instanceof Error ? error.message : t('admin.auditLoadFailed')}
           </p>
@@ -69,7 +69,7 @@ export default function AuditLogTable() {
         {/* Header with Export */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{t('admin.auditLogEntries')}</h3>
+            <h3 aria-level={2} className="text-lg font-semibold text-gray-900">{t('admin.auditLogEntries')}</h3>
             <p className="text-sm text-gray-600 mt-1">
               {t('admin.totalEntries', { count: totalEntries })}
             </p>

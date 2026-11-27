@@ -94,10 +94,12 @@ export function SystemHealthIndicator() {
         {/* Compact View */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          aria-controls="system-health-details"
           className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 transition-colors w-full"
         >
           <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
-          <span className="text-xs font-medium text-gray-700">{getStatusText()}</span>
+          <span role="status" aria-live="polite" className="text-xs font-medium text-gray-700">{getStatusText()}</span>
           <svg
             className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
@@ -110,7 +112,7 @@ export function SystemHealthIndicator() {
 
         {/* Expanded View */}
         {isExpanded && (
-          <div className="border-t border-gray-200 p-4 space-y-3">
+          <div id="system-health-details" className="border-t border-gray-200 p-4 space-y-3">
             <div>
               <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Status</div>
               <div className="flex items-center space-x-2">
@@ -137,7 +139,7 @@ export function SystemHealthIndicator() {
             </div>
 
             {health.consecutiveFailures > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded p-2">
+              <div role="alert" className="bg-red-50 border border-red-200 rounded p-2">
                 <div className="text-xs font-semibold text-red-900">
                   ⚠ {health.consecutiveFailures} consecutive failures
                 </div>

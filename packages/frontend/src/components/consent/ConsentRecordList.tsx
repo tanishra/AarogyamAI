@@ -61,7 +61,7 @@ export default function ConsentRecordList() {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
           <h3 className="text-red-800 font-semibold">{t('consent.loadError')}</h3>
           <p className="text-red-600 mt-2">
             {error instanceof Error ? error.message : t('consent.loadFailed')}
@@ -204,6 +204,8 @@ export default function ConsentRecordList() {
                           onClick={() =>
                             setExpandedRow(expandedRow === record.id ? null : record.id)
                           }
+                          aria-expanded={expandedRow === record.id}
+                          aria-controls={`consent-details-${record.id}`}
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
                           {expandedRow === record.id ? t('common.hideDetails') : t('admin.viewDetails')}
@@ -213,7 +215,7 @@ export default function ConsentRecordList() {
 
                     {/* Expanded Row */}
                     {expandedRow === record.id && (
-                      <tr>
+                      <tr id={`consent-details-${record.id}`}>
                         <td colSpan={6} className="px-6 py-4 bg-gray-50">
                           <div className="space-y-4">
                             {/* Data Categories */}

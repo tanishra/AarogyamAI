@@ -358,7 +358,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
         </label>
 
         {updateMutation.error ? (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {(updateMutation.error as Error).message}
           </p>
         ) : null}

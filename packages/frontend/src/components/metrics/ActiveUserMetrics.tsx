@@ -19,7 +19,7 @@ export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
   if (!data) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.activeUserMetrics')}</h3>
+        <h3 aria-level={2} className="text-lg font-semibold text-gray-900 mb-4">{t('admin.activeUserMetrics')}</h3>
         <div className="text-gray-500">{t('admin.noData')}</div>
       </div>
     );
@@ -48,7 +48,7 @@ export default function ActiveUserMetrics({ data }: ActiveUserMetricsProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{t('admin.activeUsers')}</h3>
+        <h3 aria-level={2} className="text-lg font-semibold text-gray-900">{t('admin.activeUsers')}</h3>
         <div className="text-3xl font-bold text-green-600">{totalActive}</div>
       </div>
 
