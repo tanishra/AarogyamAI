@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import DoctorDashboardPage from './page';
 import { useAuth } from '@/lib/auth';
 import { I18nProvider } from '@/lib/i18n';
@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: React.ComponentProps<'a'>) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -87,10 +87,10 @@ const PATIENT_CONTEXT = {
   reasoning: null,
 };
 
-const QUERY_DATA: Record<string, any> = {};
+const QUERY_DATA: Record<string, unknown> = {};
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(({ queryKey }: any) => ({
+  useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => ({
     data: QUERY_DATA[queryKey[0]],
     isLoading: false,
     error: null,
@@ -109,7 +109,7 @@ vi.mock('@tanstack/react-query', () => ({
 const logoutMock = vi.fn();
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 function renderPage() {
   return render(
@@ -130,7 +130,7 @@ describe('DoctorDashboardPage', () => {
       reasoningHistory: [],
     };
     QUERY_DATA['doctor-completed-patients'] = { data: { patients: [] } };
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       user: { id: 'd1', name: 'Dr. Meera Iyer', email: 'meera.iyer@example.com', role: 'Doctor' },
       role: 'Doctor',
       isAuthenticated: true,

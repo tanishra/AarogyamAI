@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AnimatedButton } from '@/components/common';
 import { useI18n } from '@/lib/i18n';
 
-interface Consideration {
+export interface Consideration {
   id: string;
   conditionName: string;
   likelihood: 'high' | 'moderate' | 'low';

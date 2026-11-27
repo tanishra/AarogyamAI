@@ -63,7 +63,7 @@ function PatientConsentContent() {
     },
   });
 
-  const records = data || [];
+  const records = useMemo<ConsentRecord[]>(() => data || [], [data]);
   const activeCount = useMemo(() => records.filter((item) => item.status === 'active').length, [records]);
   const pendingAction = withdrawMutation.isPending ? 1 : 0;
 

@@ -33,7 +33,7 @@ export function RoleEditor({ user, onUpdate }: RoleEditorProps) {
       setShowConfirmDialog(false);
       onUpdate();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to update user role');
     },
   });

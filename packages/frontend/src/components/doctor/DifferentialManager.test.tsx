@@ -6,7 +6,7 @@ import apiClient from '@/lib/api/client';
 
 // Mock the API client
 vi.mock('@/lib/api/client');
-const mockedApiClient = apiClient as any;
+const mockedApiClient = vi.mocked(apiClient);
 
 describe('DifferentialManager', () => {
   const mockEncounterId = 'test-encounter-123';

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AuditLogAPI } from '@/lib/api/services/auditLog';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { TooltipValueType } from 'recharts';
 
 interface AccessPattern {
   userId: string;
@@ -14,6 +15,16 @@ interface AccessPattern {
   lastAccess: string;
   purpose: string;
   isAnomaly: boolean;
+}
+
+interface TimelinePoint {
+  date: string;
+  count: number;
+}
+
+interface AccessPatternsResponse {
+  patterns?: AccessPattern[];
+  timeline?: TimelinePoint[];
 }
 
 export default function AccessPatternViewer() {
@@ -34,8 +45,13 @@ export default function AccessPatternViewer() {
     setSearchPatientId(patientId);
   };
 
-  const patterns: AccessPattern[] = Array.isArray(data) ? data : ((data as any)?.patterns || []);
-  const timeline = (data as any)?.timeline || [];
+  const responseData = data as AccessPattern[] | AccessPatternsResponse | undefined;
+  const patterns: AccessPattern[] = Array.isArray(responseData)
+    ? responseData
+    : (responseData?.patterns || []);
+  const timeline: TimelinePoint[] = Array.isArray(responseData)
+    ? []
+    : (responseData?.timeline || []);
 
   return (
     <div className="space-y-6">
@@ -130,7 +146,7 @@ export default function AccessPatternViewer() {
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip
                         labelFormatter={(value) => new Date(String(value)).toLocaleString()}
-                        formatter={(value: any) => [value, 'Accesses']}
+                        formatter={(value: TooltipValueType | undefined) => [value, 'Accesses']}
                       />
                       <Legend />
                       <Line

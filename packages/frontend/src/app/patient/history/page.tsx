@@ -17,6 +17,35 @@ interface MedicalHistoryPayload {
   lastUpdated: string | null;
 }
 
+interface EncounterConsideration {
+  conditionName?: string;
+  likelihood?: string;
+  urgency?: string;
+  explanation?: string;
+  doctorNotes?: string;
+}
+
+interface Encounter {
+  sessionId: string;
+  completedAt: string;
+  priority?: string;
+  durationMinutes?: number;
+  doctorName?: string;
+  nurseName?: string;
+  summary?: {
+    chiefComplaint?: string;
+    symptoms?: string[];
+    duration?: string;
+    severity?: string;
+  };
+  clinicalReasoning?: {
+    differentialDiagnosis?: string[];
+    diagnosticPlan?: string;
+    finalNotes?: string;
+  };
+  considerations?: EncounterConsideration[];
+}
+
 function asLines(value: string[]): string {
   return value.join('\n');
 }
@@ -196,12 +225,7 @@ function PatientHistoryContent() {
           />
         ) : (
           <div className="space-y-4">
-            {encountersData.data.encounters.map((encounter: any) => {
-              console.log('[Patient History] Rendering encounter:', encounter.sessionId, {
-                hasClinicalReasoning: !!encounter.clinicalReasoning,
-                diagnosticPlan: encounter.clinicalReasoning?.diagnosticPlan,
-                differentialDiagnosis: encounter.clinicalReasoning?.differentialDiagnosis,
-              });
+            {encountersData.data.encounters.map((encounter: Encounter) => {
               return (
               <div
                 key={encounter.sessionId}
@@ -310,7 +334,7 @@ function PatientHistoryContent() {
                           Clinical Assessment
                         </p>
                         <div className="mt-2 space-y-3">
-                          {encounter.considerations.map((consideration: any, idx: number) => (
+                          {encounter.considerations.map((consideration, idx: number) => (
                             <div key={idx} className="rounded-lg border border-emerald-200 bg-white p-3">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="text-sm font-semibold text-slate-900">

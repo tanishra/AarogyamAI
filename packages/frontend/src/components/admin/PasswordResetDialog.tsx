@@ -20,7 +20,7 @@ export function PasswordResetDialog({ user }: PasswordResetDialogProps) {
       showToast('success', `Password reset email sent to ${user.email}`);
       setShowConfirmDialog(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to initiate password reset');
     },
   });

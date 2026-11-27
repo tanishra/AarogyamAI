@@ -44,6 +44,45 @@ interface DoctorHistoryPayload {
   vitalsHistory?: Array<{ id: string; recordedAt?: string; recorded_at?: string; flaggedAbnormal?: boolean; flagged_abnormal?: boolean }>;
   reasoningHistory?: Array<{ id: string; status?: string; created_at?: string }>;
 }
+
+interface PatientVitals {
+  bloodPressureSystolic?: number | string | null;
+  bloodPressureDiastolic?: number | string | null;
+  heartRate?: number | string | null;
+  temperatureFahrenheit?: number | string | null;
+  oxygenSaturation?: number | string | null;
+  respiratoryRate?: number | string | null;
+  bmi?: number | string | null;
+  heightCm?: number | string | null;
+  weightKg?: number | string | null;
+}
+
+interface PatientContextPayload {
+  vitals?: PatientVitals | null;
+  summary?: {
+    chiefComplaint?: string;
+    symptoms?: string[];
+  } | null;
+  considerations?: Consideration[];
+  reasoning?: {
+    id: string;
+    differentialDiagnosis?: string[];
+    diagnosticPlan?: string;
+    reasoningRationale?: string;
+    finalNotes?: string;
+  } | null;
+}
+
+interface CompletedPatient {
+  patientId: string;
+  patientName: string;
+  patientEmail: string;
+  lastComplaint?: string;
+  lastPlan?: string;
+  lastVisit: string;
+  lastPriority?: 'emergency' | 'urgent' | 'routine';
+}
+
 type DashboardTab = 'workflow' | 'history' | 'profile';
 
 function DoctorDashboardContent() {
@@ -52,7 +91,7 @@ function DoctorDashboardContent() {
   const queryClient = useQueryClient();
 
   const [selectedPatient, setSelectedPatient] = useState<QueuePatient | null>(null);
-  const [patientContext, setPatientContext] = useState<any>(null);
+  const [patientContext, setPatientContext] = useState<PatientContextPayload | null>(null);
   const [considerations, setConsiderations] = useState<Consideration[]>([]);
   const [reasoning, setReasoning] = useState({
     differentialDiagnosis: '',
@@ -76,7 +115,10 @@ function DoctorDashboardContent() {
     enabled: !!token,
   });
 
-  const patients: QueuePatient[] = queueData?.data?.patients || [];
+  const patients = useMemo<QueuePatient[]>(
+    () => queueData?.data?.patients || [],
+    [queueData?.data?.patients]
+  );
 
   const activeCount = useMemo(() => patients.length, [patients]);
   const urgentCount = useMemo(() => patients.filter((p) => p.priority !== 'routine').length, [patients]);
@@ -320,7 +362,7 @@ function DoctorDashboardContent() {
             />
           ) : (
             <div className="space-y-3">
-              {completedPatientsData?.data?.patients?.map((patient: any) => (
+              {completedPatientsData?.data?.patients?.map((patient: CompletedPatient) => (
                 <div
                   key={patient.patientId}
                   className="rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"

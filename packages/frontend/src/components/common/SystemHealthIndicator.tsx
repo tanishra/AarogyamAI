@@ -17,10 +17,14 @@ export function SystemHealthIndicator() {
     consecutiveFailures: 0,
   });
   const [isExpanded, setIsExpanded] = useState(false);
+  // Updated on each health poll so relative-time rendering stays pure
+  // (no Date.now() during render).
+  const [lastCheckedAt, setLastCheckedAt] = useState(() => Date.now());
 
   useEffect(() => {
     // Monitor API health from localStorage (updated by API interceptor)
     const checkHealth = () => {
+      setLastCheckedAt(Date.now());
       const healthData = localStorage.getItem('apiHealth');
       if (healthData) {
         try {
@@ -76,7 +80,7 @@ export function SystemHealthIndicator() {
 
   const formatLastRequest = (date: Date | null) => {
     if (!date) return 'Never';
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const seconds = Math.floor((lastCheckedAt - date.getTime()) / 1000);
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;

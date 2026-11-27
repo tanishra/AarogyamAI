@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SessionManager } from './SessionManager';
 import { useAuth } from '@/lib/auth';
@@ -38,7 +38,7 @@ describe('SessionManager', () => {
   it('should not show warning when session has more than 5 minutes remaining', () => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: expiresAt,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,
@@ -52,7 +52,7 @@ describe('SessionManager', () => {
   it('should show warning when session has less than 5 minutes remaining', async () => {
     const expiresAt = new Date(Date.now() + 4 * 60 * 1000); // 4 minutes from now
 
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: expiresAt,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,
@@ -72,7 +72,7 @@ describe('SessionManager', () => {
 
     mockRefreshAccessToken.mockResolvedValueOnce(undefined);
 
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: expiresAt,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,
@@ -95,7 +95,7 @@ describe('SessionManager', () => {
   it('should call logout when session expires', async () => {
     const expiresAt = new Date(Date.now() + 1000); // 1 second from now
 
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: expiresAt,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,
@@ -114,7 +114,7 @@ describe('SessionManager', () => {
   it('should update time remaining countdown', async () => {
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes from now
 
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: expiresAt,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,
@@ -138,7 +138,7 @@ describe('SessionManager', () => {
   });
 
   it('should not render when sessionExpiresAt is null', () => {
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       sessionExpiresAt: null,
       refreshAccessToken: mockRefreshAccessToken,
       logout: mockLogout,

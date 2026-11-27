@@ -1,4 +1,5 @@
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { TooltipValueType } from 'recharts';
 
 interface PreparationTimeData {
   average: number;
@@ -51,7 +52,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip 
-                formatter={(value: any) => [value, 'Consultations']}
+                formatter={(value: TooltipValueType | undefined) => [value, 'Consultations']}
               />
               <Legend />
               <Bar 
@@ -87,7 +88,7 @@ export default function PreparationTimeChart({ data, period }: PreparationTimeCh
               />
               <Tooltip 
                 labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-                formatter={(value: any) => [`${Math.round(value / 60)} min`, 'Avg Time']}
+                formatter={(value: TooltipValueType | undefined) => [`${Math.round(Number(value) / 60)} min`, 'Avg Time']}
               />
               <Line 
                 type="monotone" 

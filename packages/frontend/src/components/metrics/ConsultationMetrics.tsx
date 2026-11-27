@@ -1,4 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { TooltipValueType } from 'recharts';
 
 interface ConsultationData {
   total: number;
@@ -58,7 +59,7 @@ export default function ConsultationMetrics({ data, period }: ConsultationMetric
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip 
               labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-              formatter={(value: any) => [value, 'Consultations']}
+              formatter={(value: TooltipValueType | undefined) => [value, 'Consultations']}
             />
             <Legend />
             <Line 

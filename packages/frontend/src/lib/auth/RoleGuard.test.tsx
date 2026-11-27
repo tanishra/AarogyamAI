@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { RoleGuard } from './RoleGuard';
@@ -18,11 +18,11 @@ describe('RoleGuard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    (useRouter as unknown as Mock).mockReturnValue({ push: mockPush });
   });
 
   it('should render children when user has allowed role', () => {
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       isAuthenticated: true,
       role: 'Administrator',
     });
@@ -38,7 +38,7 @@ describe('RoleGuard', () => {
   });
 
   it('should redirect to unauthorized when user role is not allowed', () => {
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       isAuthenticated: true,
       role: 'DPO',
     });
@@ -54,7 +54,7 @@ describe('RoleGuard', () => {
   });
 
   it('should redirect to login when not authenticated', () => {
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       isAuthenticated: false,
       role: null,
     });
@@ -70,7 +70,7 @@ describe('RoleGuard', () => {
   });
 
   it('should allow multiple roles', () => {
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       isAuthenticated: true,
       role: 'DPO',
     });

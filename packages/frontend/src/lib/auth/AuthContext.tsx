@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { setAuthTokenGetter, setRefreshTokenFunction } from '@/lib/api';
 import type { AuthState, LoginCredentials, RefreshResponse } from './types';
 
@@ -24,16 +24,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionExpiresAt: null,
   });
 
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Load auth state from localStorage on mount
+  // Load persisted auth state from localStorage. This must run in an effect
+  // (not a useState initializer): initializing from localStorage during render
+  // would make the first client render differ from the server HTML and cause
+  // a hydration mismatch.
   useEffect(() => {
     const token = localStorage.getItem('token');
     const refreshToken = localStorage.getItem('refreshToken');
     const userStr = localStorage.getItem('user');
-    
+
     if (token && userStr) {
       const user = JSON.parse(userStr);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating persisted auth state from localStorage must run post-mount to avoid an SSR hydration mismatch
       setAuthState({
         user,
         token,
@@ -50,29 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[AuthContext] Setting up token getter, token available:', !!authState.token);
     setAuthTokenGetter(() => authState.token);
   }, [authState.token]);
-
-  const scheduleTokenRefresh = useCallback((expiresAt: Date) => {
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-
-    const now = new Date().getTime();
-    const expiresAtMs = expiresAt.getTime();
-    const refreshAt = expiresAtMs - REFRESH_BUFFER_MS;
-    const delay = refreshAt - now;
-
-    if (delay > 0) {
-      refreshTimeoutRef.current = setTimeout(async () => {
-        try {
-          await refreshAccessToken();
-        } catch (error) {
-          console.error('Auto token refresh failed:', error);
-          // If auto-refresh fails, logout user
-          await logout();
-        }
-      }, delay);
-    }
-  }, []);
 
   const refreshAccessToken = useCallback(async () => {
     if (!authState.refreshToken) {
@@ -99,9 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token: data.token,
       sessionExpiresAt: expiresAt,
     }));
-
-    scheduleTokenRefresh(expiresAt);
-  }, [authState.refreshToken, scheduleTokenRefresh]);
+    // The refresh timer is rescheduled by the sessionExpiresAt effect below.
+  }, [authState.refreshToken]);
 
   // Setup API client refresh function
   useEffect(() => {
@@ -142,15 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: true,
       sessionExpiresAt: expiresAt,
     });
-
-    scheduleTokenRefresh(expiresAt);
-  }, [scheduleTokenRefresh]);
+    // The refresh timer is scheduled by the sessionExpiresAt effect below.
+  }, []);
 
   const logout = useCallback(async () => {
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-
     try {
       if (authState.token) {
         await fetch('/api/auth/logout', {
@@ -181,14 +154,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [authState.token]);
 
-  // Cleanup on unmount
+  // Schedule a token refresh REFRESH_BUFFER_MS before the session expires.
+  // Re-runs whenever the expiry changes (login, restore, refresh); setting it
+  // to null on logout clears any pending refresh via the effect cleanup.
   useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
+    const expiresAt = authState.sessionExpiresAt;
+    if (!expiresAt) {
+      return;
+    }
+
+    const delay = expiresAt.getTime() - REFRESH_BUFFER_MS - Date.now();
+    if (delay <= 0) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      void (async () => {
+        try {
+          await refreshAccessToken();
+        } catch (error) {
+          console.error('Auto token refresh failed:', error);
+          // If auto-refresh fails, logout user
+          await logout();
+        }
+      })();
+    }, delay);
+
+    return () => clearTimeout(timeout);
+  }, [authState.sessionExpiresAt, refreshAccessToken, logout]);
 
   const value: AuthContextValue = {
     ...authState,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import LoginPage from './page';
@@ -20,8 +20,8 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    (useRouter as any).mockReturnValue({ push: mockPush });
-    (useAuth as any).mockReturnValue({ login: mockLogin });
+    (useRouter as unknown as Mock).mockReturnValue({ push: mockPush });
+    (useAuth as unknown as Mock).mockReturnValue({ login: mockLogin });
   });
 
   it('should render sign-in form', () => {

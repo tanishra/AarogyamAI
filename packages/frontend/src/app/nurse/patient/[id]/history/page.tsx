@@ -72,7 +72,10 @@ function NursePatientHistoryContent() {
   });
 
   const history = data?.history;
-  const vitalsHistory = data?.vitalsHistory || [];
+  const vitalsHistory = useMemo<VitalsHistoryItem[]>(
+    () => data?.vitalsHistory || [],
+    [data?.vitalsHistory]
+  );
 
   const abnormalCount = useMemo(
     () => vitalsHistory.filter((item) => Boolean(item.flagged_abnormal)).length,

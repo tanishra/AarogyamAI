@@ -32,7 +32,7 @@ export function AccountStatusToggle({ user, onUpdate }: AccountStatusToggleProps
       setReason('');
       onUpdate();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to update account status');
     },
   });

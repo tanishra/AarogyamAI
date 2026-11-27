@@ -13,7 +13,7 @@ export default function DataAccessRequestList() {
   const queryClient = useQueryClient();
 
   // Fetch data access requests
-  const { data: requests = [], isLoading, error } = useQuery({
+  const { data: requests = [], isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['data-access-requests', statusFilter],
     queryFn: () =>
       ConsentAPI.getDataAccessRequests(
@@ -65,9 +65,11 @@ export default function DataAccessRequestList() {
     }
   };
 
+  // Uses the query's last-fetch timestamp rather than Date.now() so render
+  // stays pure; requests refetch every 30s, keeping the check fresh.
   const isOverdue = (submittedAt: string) => {
     const hoursSinceSubmission =
-      (Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60);
+      (dataUpdatedAt - new Date(submittedAt).getTime()) / (1000 * 60 * 60);
     return hoursSinceSubmission > 72;
   };
 

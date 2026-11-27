@@ -66,7 +66,7 @@ function NurseDashboardContent() {
     notes: '',
   });
 
-  const { data: queueData, isLoading } = useQuery({
+  const { data: queueData, dataUpdatedAt: queueUpdatedAt, isLoading } = useQuery({
     queryKey: ['nurseQueue'],
     queryFn: async () => {
       const response = await fetch('/api/nurse/queue', {
@@ -79,7 +79,13 @@ function NurseDashboardContent() {
     enabled: !!token,
   });
 
-  const patients: QueuePatient[] = queueData?.data?.patients || [];
+  const patients = useMemo<QueuePatient[]>(
+    () => queueData?.data?.patients || [],
+    [queueData?.data?.patients]
+  );
+
+  const waitMinutesFor = (chatCompletedAt: string) =>
+    Math.max(1, Math.floor((queueUpdatedAt - new Date(chatCompletedAt).getTime()) / 60000));
 
   const activeCount = useMemo(() => patients.length, [patients]);
   const emergencyCount = useMemo(() => patients.filter((p) => p.priority === 'emergency').length, [patients]);
@@ -87,11 +93,11 @@ function NurseDashboardContent() {
   const avgWaitMinutes = useMemo(() => {
     if (!patients.length) return 0;
     const total = patients.reduce((sum, patient) => {
-      const wait = Math.max(1, Math.floor((Date.now() - new Date(patient.chat_completed_at).getTime()) / 60000));
+      const wait = Math.max(1, Math.floor((queueUpdatedAt - new Date(patient.chat_completed_at).getTime()) / 60000));
       return sum + wait;
     }, 0);
     return Math.round(total / patients.length);
-  }, [patients]);
+  }, [patients, queueUpdatedAt]);
   const filteredPatients = useMemo(() => {
     if (queueFilter === 'all') return patients;
     if (queueFilter === 'vitals_added') return patients.filter((p) => p.status === 'vitals_added');
@@ -280,7 +286,7 @@ function NurseDashboardContent() {
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      {t('queue.waiting')} {Math.max(1, Math.floor((Date.now() - new Date(patient.chat_completed_at).getTime()) / 60000))} min
+                      {t('queue.waiting')} {waitMinutesFor(patient.chat_completed_at)} min
                     </p>
                     <p className="mt-1 text-[11px] font-medium text-slate-500">
                       {t('queue.status')}: {patient.status}
@@ -355,7 +361,7 @@ function NurseDashboardContent() {
                         <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
                         <input
                           type="number"
-                          value={(vitals as any)[key]}
+                          value={vitals[key as keyof typeof vitals]}
                           onChange={(e) => setVitals((prev) => ({ ...prev, [key]: e.target.value }))}
                           className="ui-focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition-all hover:border-cyan-300"
                         />

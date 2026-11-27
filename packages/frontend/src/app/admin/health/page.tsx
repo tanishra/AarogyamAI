@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { AppShell, StatTile, AnimatedButton } from '@/components/common';
 
@@ -11,17 +12,22 @@ interface HealthStatus {
   consecutiveFailures: number;
   version: string;
   deployedAt: string;
+  // Timestamp of the last health check; used instead of Date.now() during
+  // render so the component stays pure.
+  checkedAt: number;
 }
 
 export default function SystemHealthPage() {
-  const [health, setHealth] = useState<HealthStatus>({
+  const router = useRouter();
+  const [health, setHealth] = useState<HealthStatus>(() => ({
     apiConnected: true,
     lastSuccessfulRequest: new Date().toISOString(),
     avgResponseTime: 0,
     consecutiveFailures: 0,
     version: '1.0.0',
     deployedAt: new Date().toISOString(),
-  });
+    checkedAt: Date.now(),
+  }));
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -40,6 +46,7 @@ export default function SystemHealthPage() {
             lastSuccessfulRequest: new Date().toISOString(),
             version: data.version || prev.version,
             deployedAt: data.deployedAt || prev.deployedAt,
+            checkedAt: Date.now(),
           }));
           return;
         }
@@ -51,6 +58,7 @@ export default function SystemHealthPage() {
         ...prev,
         apiConnected: false,
         consecutiveFailures: prev.consecutiveFailures + 1,
+        checkedAt: Date.now(),
       }));
     };
 
@@ -95,7 +103,7 @@ export default function SystemHealthPage() {
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-slate-500">Last successful request</dt><dd className="font-medium text-slate-900">{new Date(health.lastSuccessfulRequest).toLocaleString()}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Deployment time</dt><dd className="font-medium text-slate-900">{new Date(health.deployedAt).toLocaleString()}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Uptime (approx)</dt><dd className="font-medium text-slate-900">{Math.floor((Date.now() - new Date(health.deployedAt).getTime()) / (1000 * 60 * 60))}h</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Uptime (approx)</dt><dd className="font-medium text-slate-900">{Math.floor((health.checkedAt - new Date(health.deployedAt).getTime()) / (1000 * 60 * 60))}h</dd></div>
             </dl>
           </div>
 
@@ -107,7 +115,7 @@ export default function SystemHealthPage() {
                 variant="secondary"
                 onClick={() => {
                   localStorage.clear();
-                  window.location.href = '/login';
+                  router.push('/login');
                 }}
               >
                 Clear Cache & Logout

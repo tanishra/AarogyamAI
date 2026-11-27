@@ -39,45 +39,37 @@ export function showToast(message: string, type: ToastType = 'info', duration = 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = useCallback((type: ToastType, message: string, duration: number = 5000) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    const toast: Toast = { id, type, message, duration };
-
-    setToasts((prev) => [...prev, toast]);
-
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-  }, []);
-
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
+
+  const showToast = useCallback(
+    (type: ToastType, message: string, duration: number = 5000) => {
+      const id = `toast-${Date.now()}-${Math.random()}`;
+      const toast: Toast = { id, type, message, duration };
+
+      setToasts((prev) => [...prev, toast]);
+
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(id);
+        }, duration);
+      }
+    },
+    [removeToast]
+  );
 
   useEffect(() => {
     const handleShowToast = (event: Event) => {
       const custom = event as CustomEvent<ToastEventPayload>;
       const payload = custom.detail;
       if (!payload?.message || !payload?.type) return;
-      showToastInternal(payload.type, payload.message, payload.duration);
-    };
-
-    const showToastInternal = (type: ToastType, message: string, duration: number = 5000) => {
-      const id = `toast-${Date.now()}-${Math.random()}`;
-      const toast: Toast = { id, type, message, duration };
-      setToasts((prev) => [...prev, toast]);
-      if (duration > 0) {
-        setTimeout(() => {
-          setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, duration);
-      }
+      showToast(payload.type, payload.message, payload.duration);
     };
 
     window.addEventListener(TOAST_EVENT, handleShowToast);
     return () => window.removeEventListener(TOAST_EVENT, handleShowToast);
-  }, []);
+  }, [showToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>

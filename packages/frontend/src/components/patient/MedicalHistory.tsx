@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { EmptyState, Skeleton } from '@/components/common';
@@ -18,23 +18,34 @@ interface ChatSession {
   message_count?: number;
 }
 
+interface SessionDetails {
+  summary?: {
+    chief_complaint?: string;
+    chiefComplaint?: string;
+    duration?: string;
+    severity?: string;
+    symptoms?: string[];
+  };
+  messages?: Array<{ id: string; role: string; content: string }>;
+  clinicalReasoning?: {
+    differentialDiagnosis?: string[];
+    diagnosticPlan?: string;
+    finalNotes?: string;
+    approvedAt?: string;
+  };
+}
+
 export function MedicalHistory() {
   const { user, token } = useAuth();
   const { t } = useI18n();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
-  const [sessionDetails, setSessionDetails] = useState<any>(null);
+  const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const selected = useMemo(() => sessions.find((s) => s.id === selectedSession), [sessions, selectedSession]);
 
-  useEffect(() => {
-    if (user && token) {
-      void loadChatHistory();
-    }
-  }, [user, token]);
-
-  const loadChatHistory = async () => {
+  const loadChatHistory = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/patient/chat/history', {
@@ -51,7 +62,14 @@ export function MedicalHistory() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (user && token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- loadChatHistory is an async fetch; its synchronous setIsLoading marks request state, which is the legitimate external-system sync pattern for effects
+      void loadChatHistory();
+    }
+  }, [user, token, loadChatHistory]);
 
   const loadSessionDetails = async (sessionId: string) => {
     try {
@@ -204,7 +222,7 @@ export function MedicalHistory() {
             <div className="ui-surface ui-surface-hover p-5">
               <h3 className="text-base font-semibold text-slate-900">Conversation Timeline</h3>
               <div className="mt-4 max-h-[46vh] space-y-3 overflow-y-auto pr-1">
-                {(sessionDetails?.messages || []).map((message: any) => (
+                {(sessionDetails?.messages || []).map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -280,8 +298,6 @@ export function MedicalHistory() {
                 )}
               </div>
             )}
-
-            {console.log('[MedicalHistory] Rendering - has clinicalReasoning?', !!sessionDetails?.clinicalReasoning, sessionDetails?.clinicalReasoning)}
           </div>
         )}
       </div>

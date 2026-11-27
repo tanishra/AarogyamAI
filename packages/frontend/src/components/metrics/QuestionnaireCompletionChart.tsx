@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { TooltipValueType } from 'recharts';
 
 interface QuestionnaireCompletionData {
   rate: number;
@@ -97,7 +98,7 @@ export default function QuestionnaireCompletionChart({ data }: QuestionnaireComp
                 tickFormatter={(value) => `${value}%`}
               />
               <Tooltip 
-                formatter={(value: any) => [`${value.toFixed(1)}%`, 'Abandonment Rate']}
+                formatter={(value: TooltipValueType | undefined) => [`${Number(value).toFixed(1)}%`, 'Abandonment Rate']}
               />
               <Legend />
               <Bar 

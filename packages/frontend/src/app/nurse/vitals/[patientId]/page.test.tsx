@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import NurseVitalsEntryPage from './page';
 import { useAuth } from '@/lib/auth';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: React.ComponentProps<'a'>) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -29,7 +29,7 @@ vi.mock('@/lib/auth', () => ({
   RoleGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-const QUERY_DATA: Record<string, any> = {};
+const QUERY_DATA: Record<string, unknown> = {};
 
 /**
  * Minimal useMutation stand-in: runs the real mutationFn against the stubbed
@@ -37,12 +37,17 @@ const QUERY_DATA: Record<string, any> = {};
  * works. Errors are captured into `error` (mutate-style) rather than rethrown
  * so no unhandled rejections escape the form's await.
  */
-function useMockMutation(opts: any) {
+interface MockMutationOptions {
+  mutationFn?: (variables?: unknown) => Promise<unknown> | unknown;
+  onSuccess?: (result: unknown, variables: unknown, context: unknown) => unknown;
+}
+
+function useMockMutation(opts: MockMutationOptions) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const mutateAsync = async (variables?: any) => {
+  const mutateAsync = async (variables?: unknown) => {
     setIsPending(true);
     setIsSuccess(false);
     setError(null);
@@ -60,7 +65,7 @@ function useMockMutation(opts: any) {
   };
 
   return {
-    mutate: (variables?: any) => {
+    mutate: (variables?: unknown) => {
       void mutateAsync(variables);
     },
     mutateAsync,
@@ -71,7 +76,7 @@ function useMockMutation(opts: any) {
 }
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(({ queryKey }: any) => ({
+  useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => ({
     data: QUERY_DATA[queryKey[0]],
     isLoading: false,
     error: null,
@@ -93,7 +98,7 @@ const PATIENT_SUMMARY = {
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 function renderPage() {
   return render(
@@ -124,7 +129,7 @@ describe('NurseVitalsEntryPage', () => {
     QUERY_DATA['nurse-patient-summary'] = PATIENT_SUMMARY;
     QUERY_DATA['active-alerts'] = [];
     QUERY_DATA['vitals-history'] = [];
-    (useAuth as any).mockReturnValue({
+    (useAuth as unknown as Mock).mockReturnValue({
       user: { id: 'n1', name: 'Nina Rao', email: 'nina.rao@example.com', role: 'Nurse' },
       role: 'Nurse',
       isAuthenticated: true,
@@ -132,9 +137,9 @@ describe('NurseVitalsEntryPage', () => {
       logout: vi.fn(),
       sessionExpiresAt: null,
     });
-    (useParams as any).mockReturnValue({ patientId: 'p1' });
-    (useSearchParams as any).mockReturnValue(new URLSearchParams('sessionId=sess-1'));
-    fetchMock.mockImplementation(async (input: any) => {
+    (useParams as unknown as Mock).mockReturnValue({ patientId: 'p1' });
+    (useSearchParams as unknown as Mock).mockReturnValue(new URLSearchParams('sessionId=sess-1'));
+    fetchMock.mockImplementation(async (input: unknown) => {
       const url = String(input);
       if (url.includes('/vitals')) {
         return { ok: true, json: async () => ({ data: { id: 'v-new' } }) } as Response;
@@ -204,7 +209,7 @@ describe('NurseVitalsEntryPage', () => {
   });
 
   it('shows the server error message when vitals submission fails', async () => {
-    fetchMock.mockImplementation(async (input: any) => {
+    fetchMock.mockImplementation(async (input: unknown) => {
       const url = String(input);
       if (url.includes('/vitals')) {
         return {
@@ -257,7 +262,7 @@ describe('NurseVitalsEntryPage', () => {
   });
 
   it('shows the missing-session empty state when sessionId is absent', () => {
-    (useSearchParams as any).mockReturnValue(new URLSearchParams());
+    (useSearchParams as unknown as Mock).mockReturnValue(new URLSearchParams());
     renderPage();
 
     expect(screen.getByText('Missing session ID')).toBeInTheDocument();

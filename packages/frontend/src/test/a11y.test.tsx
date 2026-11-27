@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: React.ComponentProps<'a'>) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -28,7 +28,7 @@ vi.mock('@/lib/auth', () => ({
   AuthGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-const QUERY_DATA: Record<string, any> = {
+const QUERY_DATA: Record<string, unknown> = {
   doctorQueue: { data: { patients: [] } },
   'doctor-patient-history': { data: {} },
   'doctor-completed-patients': { data: { patients: [] } },
@@ -36,7 +36,7 @@ const QUERY_DATA: Record<string, any> = {
 };
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(({ queryKey }: any) => ({
+  useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => ({
     data: QUERY_DATA[queryKey[0]],
     isLoading: false,
     error: null,
@@ -55,7 +55,7 @@ vi.stubGlobal(
 );
 
 function authAs(role: string) {
-  (useAuth as any).mockReturnValue({
+  (useAuth as unknown as Mock).mockReturnValue({
     user: { id: '1', name: 'Test User', email: 't@e.com', role },
     role,
     isAuthenticated: true,
@@ -98,7 +98,7 @@ describe('a11y — top-level pages', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('LoginPage has no violations', async () => {
-    (useAuth as any).mockReturnValue({ login: vi.fn() });
+    (useAuth as unknown as Mock).mockReturnValue({ login: vi.fn() });
     const { container } = renderI18n(<LoginPage />);
     expect(await axe(container)).toHaveNoViolations();
   });

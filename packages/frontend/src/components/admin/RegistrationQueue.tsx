@@ -28,7 +28,7 @@ export function RegistrationQueue() {
       queryClient.invalidateQueries({ queryKey: ['registrationRequests'] });
       setSelectedRequest(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to approve registration request');
     },
   });
@@ -44,7 +44,7 @@ export function RegistrationQueue() {
       setShowRejectDialog(false);
       setRejectionReason('');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to reject registration request');
     },
   });

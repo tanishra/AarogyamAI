@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import Home from './page';
@@ -17,11 +17,11 @@ describe('Home Page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    (useRouter as unknown as Mock).mockReturnValue({ push: mockPush });
   });
 
   it('redirects to /login when unauthenticated', async () => {
-    (useAuth as any).mockReturnValue({ isAuthenticated: false });
+    (useAuth as unknown as Mock).mockReturnValue({ isAuthenticated: false });
 
     render(<Home />);
 
@@ -31,7 +31,7 @@ describe('Home Page', () => {
   });
 
   it('redirects to /dashboard when authenticated', async () => {
-    (useAuth as any).mockReturnValue({ isAuthenticated: true });
+    (useAuth as unknown as Mock).mockReturnValue({ isAuthenticated: true });
 
     render(<Home />);
 
@@ -41,7 +41,7 @@ describe('Home Page', () => {
   });
 
   it('renders a loading spinner while resolving auth', () => {
-    (useAuth as any).mockReturnValue({ isAuthenticated: false });
+    (useAuth as unknown as Mock).mockReturnValue({ isAuthenticated: false });
 
     render(<Home />);
 

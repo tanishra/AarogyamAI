@@ -29,7 +29,7 @@ export function MFAManager({ user, onUpdate }: MFAManagerProps) {
       setShowDialog(false);
       onUpdate();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       showToast('error', error.message || 'Failed to update MFA settings');
     },
   });

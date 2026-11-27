@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AxiosError } from 'axios';
+import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import {
   mapErrorToMessage,
   extractValidationErrors,
@@ -17,7 +17,7 @@ describe('Error Mapper', () => {
         data: { message: 'Custom error message' },
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('Custom error message');
@@ -30,7 +30,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('Invalid request. Please check your input and try again.');
@@ -43,7 +43,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Unauthorized',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('Your session has expired. Please log in again.');
@@ -56,7 +56,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Forbidden',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('You do not have permission to perform this action.');
@@ -69,7 +69,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Not Found',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('The requested resource was not found.');
@@ -82,7 +82,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Conflict',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('This action conflicts with the current state. Please refresh and try again.');
@@ -95,7 +95,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Internal Server Error',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('An internal server error occurred. Please try again later.');
@@ -108,7 +108,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Service Unavailable',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(mapErrorToMessage(error)).toBe('The service is temporarily unavailable. Please try again later.');
@@ -161,7 +161,7 @@ describe('Error Mapper', () => {
         },
         statusText: 'Unprocessable Entity',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const result = extractValidationErrors(error);
@@ -182,7 +182,7 @@ describe('Error Mapper', () => {
         },
         statusText: 'Unprocessable Entity',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const result = extractValidationErrors(error);
@@ -198,7 +198,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(extractValidationErrors(error)).toBeNull();
@@ -219,7 +219,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isClientError(error)).toBe(true);
@@ -232,7 +232,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Internal Server Error',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isClientError(error)).toBe(false);
@@ -253,7 +253,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Internal Server Error',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isServerError(error)).toBe(true);
@@ -266,7 +266,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isServerError(error)).toBe(false);
@@ -308,7 +308,7 @@ describe('Error Mapper', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isNetworkError(error)).toBe(false);

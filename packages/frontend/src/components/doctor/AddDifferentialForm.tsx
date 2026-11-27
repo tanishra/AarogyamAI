@@ -37,8 +37,8 @@ export function AddDifferentialForm({
 
   useEffect(() => {
     if (searchQuery.length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
+      // Results are cleared in the input's onChange/onClick handlers when the
+      // query drops below the minimum length.
       return;
     }
 
@@ -106,6 +106,10 @@ export function AddDifferentialForm({
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setSelectedDiagnosis(null);
+              if (e.target.value.length < 2) {
+                setSearchResults([]);
+                setShowResults(false);
+              }
             }}
             onFocus={() => {
               if (searchResults.length > 0) {
@@ -166,6 +170,8 @@ export function AddDifferentialForm({
                   onClick={() => {
                     setSelectedDiagnosis(null);
                     setSearchQuery('');
+                    setSearchResults([]);
+                    setShowResults(false);
                   }}
                   className="text-green-600 hover:text-green-800"
                 >

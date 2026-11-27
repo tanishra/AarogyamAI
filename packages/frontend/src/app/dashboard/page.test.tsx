@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import DashboardPage from './page';
 import { useAuth } from '@/lib/auth';
 import { I18nProvider } from '@/lib/i18n';
@@ -18,7 +18,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock Next.js Link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: React.ComponentProps<'a'>) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -52,7 +52,7 @@ describe('DashboardPage', () => {
   });
 
   it('should display welcome message with user name', () => {
-    (useAuth as any).mockReturnValue(adminAuth);
+    (useAuth as unknown as Mock).mockReturnValue(adminAuth);
 
     renderPage();
 
@@ -60,7 +60,7 @@ describe('DashboardPage', () => {
   });
 
   it('should display user role badge', () => {
-    (useAuth as any).mockReturnValue(adminAuth);
+    (useAuth as unknown as Mock).mockReturnValue(adminAuth);
 
     renderPage();
 
@@ -68,7 +68,7 @@ describe('DashboardPage', () => {
   });
 
   it('should display Administrator quick action cards', () => {
-    (useAuth as any).mockReturnValue(adminAuth);
+    (useAuth as unknown as Mock).mockReturnValue(adminAuth);
 
     renderPage();
 
@@ -80,7 +80,7 @@ describe('DashboardPage', () => {
   });
 
   it('should display DPO quick action cards', () => {
-    (useAuth as any).mockReturnValue(dpoAuth);
+    (useAuth as unknown as Mock).mockReturnValue(dpoAuth);
 
     renderPage();
 
@@ -92,7 +92,7 @@ describe('DashboardPage', () => {
   });
 
   it('should link to user management page for Administrator', () => {
-    (useAuth as any).mockReturnValue(adminAuth);
+    (useAuth as unknown as Mock).mockReturnValue(adminAuth);
 
     renderPage();
 
@@ -101,7 +101,7 @@ describe('DashboardPage', () => {
   });
 
   it('should display the operational snapshot section', () => {
-    (useAuth as any).mockReturnValue(adminAuth);
+    (useAuth as unknown as Mock).mockReturnValue(adminAuth);
 
     renderPage();
 

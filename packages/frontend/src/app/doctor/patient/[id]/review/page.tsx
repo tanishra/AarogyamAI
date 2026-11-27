@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { RoleGuard, useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
-import { AIConsiderationsPanel } from '@/components/doctor/AIConsiderationsPanel';
+import { AIConsiderationsPanel, type Consideration } from '@/components/doctor/AIConsiderationsPanel';
 import { ClinicalReasoningForm } from '@/components/doctor/ClinicalReasoningForm';
 import { AnimatedButton, AppShell, EmptyState, PageHeader, Skeleton } from '@/components/common';
 
@@ -30,7 +30,7 @@ interface ContextPayload {
     heightCm?: number;
     bmi?: number;
   };
-  considerations?: any[];
+  considerations?: Consideration[];
   reasoning?: {
     id: string;
     differentialDiagnosis: string[];

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { AnimatedButton, EmptyState, Skeleton } from '@/components/common';
@@ -14,6 +15,21 @@ interface Message {
 }
 
 const QUICK_PROMPTS = ['Chest pain', 'Shortness of breath', 'Headache', 'Fever', 'Medication reaction'];
+
+interface RawMessage {
+  id?: unknown;
+  role?: unknown;
+  content?: unknown;
+  createdAt?: string;
+  created_at?: string;
+}
+
+const normalizeMessage = (raw: RawMessage): Message => ({
+  id: String(raw.id),
+  role: raw.role === 'assistant' ? 'assistant' : 'user',
+  content: String(raw.content || ''),
+  createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+});
 
 export function PatientChat() {
   const { user } = useAuth();
@@ -43,34 +59,23 @@ export function PatientChat() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    if (user?.id) {
-      void startChatSession();
-    }
-  }, [user?.id]);
-
-  const normalizeMessage = (raw: any): Message => ({
-    id: String(raw.id),
-    role: raw.role === 'assistant' ? 'assistant' : 'user',
-    content: String(raw.content || ''),
-    createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
-  });
-
-  const fetchSessionMessages = async (id: string) => {
+  const fetchSessionMessages = useCallback(async (id: string) => {
     const response = await apiClient.get(`/api/patient/chat/${id}`);
     const payload = response.data;
     const incoming = Array.isArray(payload?.data?.messages)
       ? payload.data.messages.map(normalizeMessage)
       : [];
     setMessages(incoming);
-  };
+  }, []);
 
-  const startChatSession = async () => {
+  const patientId = user?.id;
+
+  const startChatSession = useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
       const response = await apiClient.post('/api/patient/chat/start', {
-        patientId: user?.id,
+        patientId,
       });
 
       const data = response.data;
@@ -94,7 +99,14 @@ export function PatientChat() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [patientId, fetchSessionMessages]);
+
+  useEffect(() => {
+    if (patientId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- startChatSession is an async fetch against the chat API; its synchronous setIsLoading/setError mark request state, which is the legitimate external-system sync pattern for effects
+      void startChatSession();
+    }
+  }, [patientId, startChatSession]);
 
   const sendMessage = async () => {
     if (!canSend || !sessionId) return;
@@ -181,15 +193,17 @@ export function PatientChat() {
         console.log('[PatientChat] Starting new session...');
         void startChatSession();
       }, 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[PatientChat] Complete session error:', err);
+      const axiosError = axios.isAxiosError(err) ? err : null;
       console.error('[PatientChat] Error details:', {
-        message: err?.message,
-        response: err?.response?.data,
-        status: err?.response?.status,
+        message: err instanceof Error ? err.message : String(err),
+        response: axiosError?.response?.data,
+        status: axiosError?.response?.status,
       });
-      
-      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to complete session';
+
+      const responseMessage = (axiosError?.response?.data as { message?: string } | undefined)?.message;
+      const errorMsg = responseMessage || (err instanceof Error ? err.message : 'Failed to complete session');
       setError(`Error: ${errorMsg}`);
       alert(`Failed to complete session: ${errorMsg}`);
       setIsCompletingSession(false);

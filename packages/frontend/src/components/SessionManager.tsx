@@ -14,7 +14,8 @@ export function SessionManager() {
 
   useEffect(() => {
     if (!sessionExpiresAt) {
-      setShowWarning(false);
+      // Nothing to warn about without an active session; the render below
+      // already hides the banner when sessionExpiresAt is null.
       return;
     }
 
@@ -58,7 +59,7 @@ export function SessionManager() {
     }
   };
 
-  if (!showWarning) {
+  if (!showWarning || !sessionExpiresAt) {
     return null;
   }
 

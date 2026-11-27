@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, type Mock } from 'vitest';
 import { PatientChat } from './PatientChat';
 import { useAuth } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
@@ -18,8 +18,8 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-const apiGet = apiClient.get as any;
-const apiPost = apiClient.post as any;
+const apiGet = vi.mocked(apiClient.get);
+const apiPost = vi.mocked(apiClient.post);
 
 const START_PAYLOAD = {
   data: {
@@ -58,13 +58,13 @@ const WELCOME = /AI nurse assistant/;
 describe('PatientChat', () => {
   beforeAll(() => {
     // jsdom does not implement scrollIntoView; the component calls it on new messages.
-    (Element.prototype as any).scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-    (useAuth as any).mockReturnValue({
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    (useAuth as unknown as Mock).mockReturnValue({
       user: { id: 'pat-1', name: 'Ravi Kumar', email: 'ravi@example.com', role: 'Patient' },
       role: 'Patient',
       isAuthenticated: true,
@@ -141,7 +141,7 @@ describe('PatientChat', () => {
   });
 
   it('shows the thinking indicator while awaiting the reply', async () => {
-    let resolveReply: (value: any) => void = () => {};
+    let resolveReply: (value: unknown) => void = () => {};
     apiPost.mockImplementation((url: string) => {
       if (url === '/api/patient/chat/start') return Promise.resolve(START_PAYLOAD);
       return new Promise((resolve) => {

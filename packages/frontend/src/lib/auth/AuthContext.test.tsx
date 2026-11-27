@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
 
@@ -42,7 +42,7 @@ describe('AuthContext', () => {
       },
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as unknown as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
@@ -63,7 +63,7 @@ describe('AuthContext', () => {
   });
 
   it('should handle login failure', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as unknown as Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ message: 'Invalid credentials' }),
     });
@@ -96,7 +96,7 @@ describe('AuthContext', () => {
       },
     };
 
-    (global.fetch as any)
+    (global.fetch as unknown as Mock)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => mockLoginResponse,
@@ -148,7 +148,7 @@ describe('AuthContext', () => {
       expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
     };
 
-    (global.fetch as any)
+    (global.fetch as unknown as Mock)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => mockLoginResponse,

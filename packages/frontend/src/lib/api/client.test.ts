@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AxiosError } from 'axios';
+import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import {
   mapErrorToMessage,
   extractValidationErrors,
@@ -17,7 +17,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Unauthorized',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const message = mapErrorToMessage(error);
@@ -31,7 +31,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Forbidden',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const message = mapErrorToMessage(error);
@@ -45,7 +45,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Internal Server Error',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const message = mapErrorToMessage(error);
@@ -77,7 +77,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isClientError(error)).toBe(true);
@@ -92,7 +92,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Internal Server Error',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       expect(isClientError(error)).toBe(false);
@@ -123,7 +123,7 @@ describe('API Client Error Handling', () => {
         },
         statusText: 'Unprocessable Entity',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const validationErrors = extractValidationErrors(error);
@@ -140,7 +140,7 @@ describe('API Client Error Handling', () => {
         data: {},
         statusText: 'Bad Request',
         headers: {},
-        config: {} as any,
+        config: {} as InternalAxiosRequestConfig,
       };
 
       const validationErrors = extractValidationErrors(error);

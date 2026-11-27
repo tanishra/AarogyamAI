@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import { AnimatedButton, EmptyState, Skeleton } from '@/components/common';
@@ -42,40 +42,62 @@ interface ProfilePayload {
   };
 }
 
+interface ActivityItem {
+  id?: string | number;
+  patient_name?: string;
+  status?: string;
+  priority?: string;
+  updated_at?: string;
+  started_at?: string;
+  startedAt?: string;
+}
+
 interface ActivityPayload {
   role: string;
   stats: Record<string, number | string>;
-  recent: Array<Record<string, any>>;
+  recent: ActivityItem[];
 }
 
 const fieldClass =
   'ui-focus-ring w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition-all hover:border-cyan-300';
 
+const EMPTY_FORM_STATE: Record<string, string> = {
+  name: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: '',
+  country: '',
+  postalCode: '',
+  organization: '',
+  department: '',
+  specialization: '',
+  licenseNumber: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  preferredLanguage: '',
+  timezone: '',
+  bio: '',
+};
+
+function formStateFromProfile(data: ProfilePayload): Record<string, string> {
+  const state: Record<string, string> = { ...EMPTY_FORM_STATE, name: data.name || '' };
+  for (const key of Object.keys(EMPTY_FORM_STATE)) {
+    if (key === 'name') continue;
+    const value = data.profile[key as keyof ProfilePayload['profile']];
+    state[key] = value == null ? '' : String(value);
+  }
+  return state;
+}
+
 export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [formState, setFormState] = useState<Record<string, string>>({
-    name: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: '',
-    organization: '',
-    department: '',
-    specialization: '',
-    licenseNumber: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    preferredLanguage: '',
-    timezone: '',
-    bio: '',
-  });
+  const [formState, setFormState] = useState<Record<string, string>>(EMPTY_FORM_STATE);
 
   const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['self-profile'],
@@ -103,30 +125,15 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
     },
   });
 
-  useEffect(() => {
-    if (!profileData) return;
-    setFormState({
-      name: profileData.name || '',
-      phone: profileData.profile.phone || '',
-      dateOfBirth: profileData.profile.dateOfBirth || '',
-      gender: profileData.profile.gender || '',
-      addressLine1: profileData.profile.addressLine1 || '',
-      addressLine2: profileData.profile.addressLine2 || '',
-      city: profileData.profile.city || '',
-      state: profileData.profile.state || '',
-      country: profileData.profile.country || '',
-      postalCode: profileData.profile.postalCode || '',
-      organization: profileData.profile.organization || '',
-      department: profileData.profile.department || '',
-      specialization: profileData.profile.specialization || '',
-      licenseNumber: profileData.profile.licenseNumber || '',
-      emergencyContactName: profileData.profile.emergencyContactName || '',
-      emergencyContactPhone: profileData.profile.emergencyContactPhone || '',
-      preferredLanguage: profileData.profile.preferredLanguage || '',
-      timezone: profileData.profile.timezone || '',
-      bio: profileData.profile.bio || '',
-    });
-  }, [profileData]);
+  // Displayed (non-editing) values come straight from the fetched profile so
+  // they stay fresh after invalidations; formState is populated when the user
+  // enters edit mode.
+  const profileValue = (key: string): string => {
+    if (!profileData) return '';
+    if (key === 'name') return profileData.name || '';
+    const value = profileData.profile[key as keyof ProfilePayload['profile']];
+    return value == null ? '' : String(value);
+  };
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -187,7 +194,13 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
             <p className="mt-1 text-sm text-slate-600">Keep your personal and professional details up to date.</p>
           </div>
           {!isEditing ? (
-            <AnimatedButton variant="secondary" onClick={() => setIsEditing(true)}>
+            <AnimatedButton
+              variant="secondary"
+              onClick={() => {
+                setFormState(formStateFromProfile(profileData));
+                setIsEditing(true);
+              }}
+            >
               Edit Profile
             </AnimatedButton>
           ) : (
@@ -224,7 +237,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                 />
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                  {formState[key] || 'Not provided'}
+                  {profileValue(key) || 'Not provided'}
                 </div>
               )}
             </label>
@@ -247,7 +260,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                     />
                   ) : (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                      {formState[key] || 'Not provided'}
+                      {profileValue(key) || 'Not provided'}
                     </div>
                   )}
                 </label>
@@ -270,7 +283,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                     />
                   ) : (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                      {formState[key] || 'Not provided'}
+                      {profileValue(key) || 'Not provided'}
                     </div>
                   )}
                 </label>
@@ -291,7 +304,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
               />
             ) : (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                {formState.addressLine1 || 'Not provided'}
+                {profileValue('addressLine1') || 'Not provided'}
               </div>
             )}
           </label>
@@ -308,7 +321,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
                 />
               ) : (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                  {formState[key] || 'Not provided'}
+                  {profileValue(key) || 'Not provided'}
                 </div>
               )}
             </label>
@@ -326,7 +339,7 @@ export function ProfileWorkspace({ role }: ProfileWorkspaceProps) {
             />
           ) : (
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              {formState.bio || 'No bio added yet'}
+              {profileValue('bio') || 'No bio added yet'}
             </div>
           )}
         </label>

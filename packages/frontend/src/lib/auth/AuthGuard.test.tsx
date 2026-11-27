@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from './AuthGuard';
@@ -18,11 +18,11 @@ describe('AuthGuard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as any).mockReturnValue({ push: mockPush });
+    (useRouter as unknown as Mock).mockReturnValue({ push: mockPush });
   });
 
   it('should render children when authenticated', () => {
-    (useAuth as any).mockReturnValue({ isAuthenticated: true });
+    (useAuth as unknown as Mock).mockReturnValue({ isAuthenticated: true });
 
     render(
       <AuthGuard>
@@ -35,7 +35,7 @@ describe('AuthGuard', () => {
   });
 
   it('should redirect to login when not authenticated', () => {
-    (useAuth as any).mockReturnValue({ isAuthenticated: false });
+    (useAuth as unknown as Mock).mockReturnValue({ isAuthenticated: false });
 
     render(
       <AuthGuard>

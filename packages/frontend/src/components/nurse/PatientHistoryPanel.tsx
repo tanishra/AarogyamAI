@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface HistoricalVitals {
   id: string;
@@ -22,11 +22,7 @@ export function PatientHistoryPanel({ patientId, token }: PatientHistoryPanelPro
   const [vitalsHistory, setVitalsHistory] = useState<HistoricalVitals[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    void loadVitalsHistory();
-  }, [patientId]);
-
-  const loadVitalsHistory = async () => {
+  const loadVitalsHistory = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/nurse/patient/${patientId}/vitals-history`, {
@@ -41,7 +37,12 @@ export function PatientHistoryPanel({ patientId, token }: PatientHistoryPanelPro
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [patientId, token]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadVitalsHistory is an async fetch; its synchronous setIsLoading marks request state, which is the legitimate external-system sync pattern for effects
+    void loadVitalsHistory();
+  }, [loadVitalsHistory]);
 
   return (
     <div className="ui-surface p-4">

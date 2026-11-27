@@ -12,6 +12,39 @@ import {
   Skeleton,
 } from '@/components/common';
 
+interface Encounter {
+  sessionId: string;
+  completedAt: string;
+  priority?: string;
+  durationMinutes?: number;
+  doctorName?: string;
+  nurseName?: string;
+  summary?: {
+    chiefComplaint?: string;
+    symptoms?: string[];
+    duration?: string;
+    severity?: string;
+  };
+  clinicalReasoning?: {
+    differentialDiagnosis?: string[];
+    diagnosticPlan?: string;
+    finalNotes?: string;
+  };
+}
+
+interface VitalRecord {
+  id: string;
+  recordedAt?: string;
+  recorded_at?: string;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  heartRate?: number;
+  temperatureFahrenheit?: number;
+  oxygenSaturation?: number;
+  flaggedAbnormal?: boolean;
+  flagged_abnormal?: boolean;
+}
+
 function PatientHistoryContent() {
   const { token, logout } = useAuth();
   const { t } = useI18n();
@@ -70,7 +103,7 @@ function PatientHistoryContent() {
             </h2>
             
             <div className="space-y-4">
-              {encounters.map((encounter: any) => (
+              {encounters.map((encounter: Encounter) => (
                 <div
                   key={encounter.sessionId}
                   className="rounded-2xl border border-slate-200 bg-white p-5"
@@ -204,13 +237,13 @@ function PatientHistoryContent() {
               </h2>
               
               <div className="space-y-3">
-                {vitalsHistory.map((vital: any) => (
+                {vitalsHistory.map((vital: VitalRecord) => (
                   <div
                     key={vital.id}
                     className="rounded-xl border border-slate-200 bg-white p-4"
                   >
                     <p className="text-sm font-semibold text-slate-900">
-                      {new Date(vital.recordedAt || vital.recorded_at).toLocaleDateString()}
+                      {new Date(vital.recordedAt || vital.recorded_at || '').toLocaleDateString()}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                       {vital.bloodPressureSystolic && (

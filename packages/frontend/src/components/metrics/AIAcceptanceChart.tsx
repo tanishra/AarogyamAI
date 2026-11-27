@@ -1,4 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { TooltipValueType } from 'recharts';
 
 interface AIAcceptanceData {
   overallRate: number;
@@ -83,7 +84,7 @@ export default function AIAcceptanceChart({ data, period }: AIAcceptanceChartPro
             />
             <Tooltip 
               labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-              formatter={(value: any) => [`${value.toFixed(1)}%`, 'Acceptance Rate']}
+              formatter={(value: TooltipValueType | undefined) => [`${Number(value).toFixed(1)}%`, 'Acceptance Rate']}
             />
             <Legend />
             <Line 
