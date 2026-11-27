@@ -8,7 +8,8 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import express, { Express } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
+import type { TokenPayload } from '../auth/jwt';
 
 // Shared injected user — set per test
 let mockUser: { userId: string; email: string; role: string } = {
@@ -20,27 +21,27 @@ let mockUser: { userId: string; email: string; role: string } = {
 const mockQuery = vi.fn();
 
 vi.mock('../auth/authMiddleware', () => ({
-  authenticate: () => (req: any, _res: any, next: any) => {
-    req.user = mockUser;
-    if (req.headers['x-session-id']) req.sessionId = req.headers['x-session-id'];
+  authenticate: () => (req: Request, _res: Response, next: NextFunction) => {
+    req.user = mockUser as TokenPayload;
+    if (req.headers['x-session-id']) req.sessionId = req.headers['x-session-id'] as string;
     next();
   },
-  optionalAuthenticate: () => (req: any, _res: any, next: any) => {
-    req.user = mockUser;
+  optionalAuthenticate: () => (req: Request, _res: Response, next: NextFunction) => {
+    req.user = mockUser as TokenPayload;
     next();
   },
 }));
 
 vi.mock('../auth/authorizationMiddleware', () => ({
-  requireAdministrator: () => (_req: any, _res: any, next: any) => next(),
-  requireDPO: () => (_req: any, _res: any, next: any) => next(),
-  requireAdminOrDPO: () => (_req: any, _res: any, next: any) => next(),
-  requireHealthcareProfessional: () => (_req: any, _res: any, next: any) => next(),
-  requireAuthenticated: () => (_req: any, _res: any, next: any) => next(),
+  requireAdministrator: () => (_req: Request, _res: Response, next: NextFunction) => next(),
+  requireDPO: () => (_req: Request, _res: Response, next: NextFunction) => next(),
+  requireAdminOrDPO: () => (_req: Request, _res: Response, next: NextFunction) => next(),
+  requireHealthcareProfessional: () => (_req: Request, _res: Response, next: NextFunction) => next(),
+  requireAuthenticated: () => (_req: Request, _res: Response, next: NextFunction) => next(),
 }));
 
 vi.mock('../config/database', () => ({
-  query: (...args: any[]) => mockQuery(...args),
+  query: (...args: unknown[]) => mockQuery(...args),
   getDatabasePool: () => ({ query: vi.fn().mockResolvedValue({ rows: [] }) }),
   createDatabasePool: () => ({}),
   closeDatabasePool: vi.fn(),
@@ -138,7 +139,7 @@ vi.mock('../auth/session', () => ({
   getRefreshCutoff: vi.fn().mockResolvedValue(0),
   clearRefreshCutoff: vi.fn().mockResolvedValue(undefined),
   getSession: vi.fn().mockResolvedValue(null),
-  getUserSessions: (...args: any[]) => mockGetUserSessions(...args),
+  getUserSessions: (...args: unknown[]) => mockGetUserSessions(...args),
 }));
 
 import authRoutes from '../routes/auth';

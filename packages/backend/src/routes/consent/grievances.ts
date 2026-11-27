@@ -74,14 +74,12 @@ router.put('/grievances/:id', async (req: Request, res: Response) => {
     }
 
     // Update grievance
-    const updateData: any = { status };
-    if (dpoNotes) updateData.dpo_notes = dpoNotes;
-    if (status === 'resolved') {
-      updateData.resolved_at = new Date();
-      updateData.resolved_by = req.user!.userId;
-    }
-
-    const updatedGrievance = await grievanceRepo.updateStatus(id, updateData);
+    const updatedGrievance = await grievanceRepo.updateStatus(
+      id,
+      status,
+      dpoNotes,
+      status === 'resolved' ? req.user!.userId : undefined
+    );
 
     // Create audit log entry
     await writeAuditLog({

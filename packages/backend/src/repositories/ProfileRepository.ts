@@ -23,6 +23,76 @@ export interface ProfilePayload {
   bio?: string;
 }
 
+/** users row LEFT JOINed with user_profiles */
+export interface ProfileWithUserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Patient' | 'Nurse' | 'Doctor' | 'Administrator' | 'DPO';
+  is_active: boolean;
+  created_at: Date;
+  phone: string | null;
+  /** pg returns DATE columns as 'YYYY-MM-DD' strings */
+  date_of_birth: string | null;
+  gender: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postal_code: string | null;
+  organization: string | null;
+  department: string | null;
+  specialization: string | null;
+  license_number: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  preferred_language: string | null;
+  timezone: string | null;
+  bio: string | null;
+  profile_updated_at: Date | null;
+}
+
+/** chat_sessions projection for the patient activity view */
+export interface PatientSessionRow {
+  id: string;
+  status: string;
+  started_at: Date;
+  completed_at: Date | null;
+  emergency_detected: boolean | null;
+}
+
+/** patient_queue row joined with the patient's name (nurse activity) */
+export interface NurseHandledRow {
+  patient_id: string;
+  session_id: string;
+  status: string;
+  priority: string;
+  updated_at: Date;
+  patient_name: string;
+}
+
+/** clinical_reasoning row joined with the patient's name (doctor activity) */
+export interface DoctorReasoningRow {
+  id: string;
+  patient_id: string;
+  status: string;
+  updated_at: Date;
+  patient_name: string;
+}
+
+interface NurseQueueStatsRow {
+  assigned_count: string;
+  handed_off_count: string;
+  open_queue_count: string;
+}
+
+interface DoctorReviewStatsRow {
+  assigned_count: string;
+  under_review_count: string;
+  completed_count: string;
+}
+
 /**
  * ProfileRepository — owns user_profiles persistence and per-role
  * activity queries used by the profile routes.
@@ -65,8 +135,8 @@ export class ProfileRepository {
     profileTableReady = true;
   }
 
-  async getProfileWithUser(userId: string): Promise<any | null> {
-    const rows = await query<any>(
+  async getProfileWithUser(userId: string): Promise<ProfileWithUserRow | null> {
+    const rows = await query<ProfileWithUserRow>(
       `SELECT
         u.id,
         u.name,
@@ -159,8 +229,8 @@ export class ProfileRepository {
     );
   }
 
-  async getPatientSessions(userId: string): Promise<any[]> {
-    return query<any>(
+  async getPatientSessions(userId: string): Promise<PatientSessionRow[]> {
+    return query<PatientSessionRow>(
       `SELECT id, status, started_at, completed_at, emergency_detected
        FROM chat_sessions
        WHERE patient_id = $1
@@ -186,8 +256,8 @@ export class ProfileRepository {
     return Number(rows[0]?.count || 0);
   }
 
-  async getNurseQueueStats(userId: string): Promise<any> {
-    const rows = await query<any>(
+  async getNurseQueueStats(userId: string): Promise<Partial<NurseQueueStatsRow>> {
+    const rows = await query<NurseQueueStatsRow>(
       `SELECT
          COUNT(*) FILTER (WHERE assigned_nurse = $1) as assigned_count,
          COUNT(*) FILTER (WHERE assigned_nurse = $1 AND status = 'ready_for_doctor') as handed_off_count,
@@ -198,8 +268,8 @@ export class ProfileRepository {
     return rows[0] ?? {};
   }
 
-  async getNurseRecentHandled(userId: string): Promise<any[]> {
-    return query<any>(
+  async getNurseRecentHandled(userId: string): Promise<NurseHandledRow[]> {
+    return query<NurseHandledRow>(
       `SELECT
          pq.patient_id,
          pq.session_id,
@@ -216,8 +286,8 @@ export class ProfileRepository {
     );
   }
 
-  async getDoctorReviewStats(userId: string): Promise<any> {
-    const rows = await query<any>(
+  async getDoctorReviewStats(userId: string): Promise<Partial<DoctorReviewStatsRow>> {
+    const rows = await query<DoctorReviewStatsRow>(
       `SELECT
          COUNT(*) FILTER (WHERE assigned_doctor = $1) as assigned_count,
          COUNT(*) FILTER (WHERE assigned_doctor = $1 AND status = 'under_review') as under_review_count,
@@ -228,8 +298,8 @@ export class ProfileRepository {
     return rows[0] ?? {};
   }
 
-  async getDoctorRecentReasoning(userId: string): Promise<any[]> {
-    return query<any>(
+  async getDoctorRecentReasoning(userId: string): Promise<DoctorReasoningRow[]> {
+    return query<DoctorReasoningRow>(
       `SELECT
          cr.id,
          cr.patient_id,

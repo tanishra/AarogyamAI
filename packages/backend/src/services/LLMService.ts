@@ -28,6 +28,28 @@ interface LLMResponse {
   };
 }
 
+/** Structured summary extracted from a patient conversation by the LLM */
+export interface ExtractedPatientSummary {
+  chiefComplaint: string;
+  symptoms: string[];
+  duration: string;
+  severity: string;
+  medicalHistory: string[];
+  currentMedications: string[];
+  allergies: string[];
+  socialHistory: Record<string, unknown>;
+  reviewOfSystems: Record<string, unknown>;
+}
+
+/** One AI-generated clinical consideration (advisory; physician must review) */
+export interface GeneratedConsideration {
+  conditionName: string;
+  likelihood: 'high' | 'moderate' | 'low';
+  urgency: 'urgent' | 'routine' | 'non-urgent';
+  supportingFactors: string[];
+  explanation: string;
+}
+
 export class LLMUnavailableError extends Error {
   constructor() {
     super('LLM provider temporarily unavailable (circuit open)');
@@ -401,19 +423,20 @@ export class LLMService {
           totalTokens: (responseBody.usage?.input_tokens || 0) + (responseBody.usage?.output_tokens || 0),
         },
       };
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Bedrock API error:', error);
-      
+
       // Provide helpful error messages
-      if (error.name === 'AccessDeniedException') {
+      const err = error as { name?: string; message?: string };
+      if (err.name === 'AccessDeniedException') {
         throw new Error('AWS Bedrock access denied. Please enable Claude model access in AWS Bedrock console (Model access page).');
-      } else if (error.name === 'ResourceNotFoundException') {
+      } else if (err.name === 'ResourceNotFoundException') {
         throw new Error(`Model ${model} not found. Please check the model ID in your .env file.`);
-      } else if (error.name === 'ValidationException') {
+      } else if (err.name === 'ValidationException') {
         throw new Error('Invalid request to Bedrock. Please check your message format.');
       }
-      
-      throw new Error(`Failed to generate AI response from Bedrock: ${error.message}`);
+
+      throw new Error(`Failed to generate AI response from Bedrock: ${err.message}`);
     }
   }
 
@@ -484,7 +507,9 @@ Remember: You are gathering information for the doctor, not providing medical ad
   /**
    * Extract structured data from conversation
    */
-  async extractPatientSummary(conversationHistory: ChatMessage[]): Promise<any> {
+  async extractPatientSummary(
+    conversationHistory: ChatMessage[]
+  ): Promise<ExtractedPatientSummary> {
     const systemPrompt: ChatMessage = {
       role: 'system',
       content: `Extract structured medical information from the patient conversation.
@@ -537,7 +562,7 @@ If information not mentioned, use null or empty array. Be accurate and don't inf
         content = content.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
       
-      return JSON.parse(content.trim());
+      return JSON.parse(content.trim()) as ExtractedPatientSummary;
     } catch (error) {
       logger.error('Failed to parse extracted summary:', error);
       logger.error('Raw response content:', response.content);
@@ -556,8 +581,8 @@ If information not mentioned, use null or empty array. Be accurate and don't inf
     medicalHistory: string[];
     currentMedications: string[];
     allergies: string[];
-    vitals?: any;
-  }): Promise<any[]> {
+    vitals?: Record<string, unknown>;
+  }): Promise<GeneratedConsideration[]> {
     const systemPrompt: ChatMessage = {
       role: 'system',
       content: `You are a clinical decision support system helping physicians consider possible diagnoses.
@@ -618,7 +643,7 @@ Generate clinical considerations for the physician to review.
         content = content.replace(/\n?```\s*$/, '');
       }
       
-      return JSON.parse(content);
+      return JSON.parse(content) as GeneratedConsideration[];
     } catch (error) {
       logger.error('Failed to parse clinical considerations:', error);
       logger.error('Raw response:', response.content);
@@ -629,7 +654,10 @@ Generate clinical considerations for the physician to review.
   /**
    * Assist with clinical reasoning documentation
    */
-  async assistClinicalReasoning(patientContext: any, considerations: any[]): Promise<string> {
+  async assistClinicalReasoning(
+    patientContext: { chiefComplaint: string },
+    considerations: Array<{ conditionName: string }>
+  ): Promise<string> {
     const systemPrompt: ChatMessage = {
       role: 'system',
       content: `You are assisting a physician in documenting their clinical reasoning.

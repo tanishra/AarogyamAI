@@ -4,7 +4,7 @@ import { UserRepository } from '../repositories/UserRepository';
 import { RegistrationRequestRepository } from '../repositories/RegistrationRequestRepository';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { invalidateUserSessions } from '../auth/session';
-import { User, RegistrationRequest } from '../repositories/types';
+import { User, RegistrationRequest, AuditLogEntry } from '../repositories/types';
 
 // Mock dependencies
 vi.mock('../repositories/UserRepository');
@@ -21,9 +21,14 @@ describe('UserManagementService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new UserManagementService();
-    userRepo = (service as any).userRepo;
-    registrationRepo = (service as any).registrationRepo;
-    auditRepo = (service as any).auditRepo;
+    const internals = service as unknown as {
+      userRepo: UserRepository;
+      registrationRepo: RegistrationRequestRepository;
+      auditRepo: AuditLogRepository;
+    };
+    userRepo = internals.userRepo;
+    registrationRepo = internals.registrationRepo;
+    auditRepo = internals.auditRepo;
   });
 
   describe('approveRegistration', () => {
@@ -56,7 +61,7 @@ describe('UserManagementService', () => {
         request: { ...mockRequest, status: 'approved' },
         user: mockUser,
       });
-      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as any);
+      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as AuditLogEntry);
 
       const result = await service.approveRegistration({
         registrationRequestId: 'req-123',
@@ -144,7 +149,7 @@ describe('UserManagementService', () => {
 
       vi.spyOn(registrationRepo, 'findById').mockResolvedValue(mockRequest);
       vi.spyOn(registrationRepo, 'reject').mockResolvedValue(rejectedRequest);
-      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as any);
+      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as AuditLogEntry);
 
       const result = await service.rejectRegistration({
         registrationRequestId: 'req-123',
@@ -208,7 +213,7 @@ describe('UserManagementService', () => {
       vi.spyOn(userRepo, 'findById').mockResolvedValue(mockUser);
       vi.spyOn(userRepo, 'update').mockResolvedValue(updatedUser);
       vi.mocked(invalidateUserSessions).mockResolvedValue(2);
-      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as any);
+      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as AuditLogEntry);
 
       const result = await service.changeUserRole({
         userId: 'user-123',
@@ -287,7 +292,7 @@ describe('UserManagementService', () => {
       vi.spyOn(userRepo, 'findById').mockResolvedValue(mockUser);
       vi.spyOn(userRepo, 'update').mockResolvedValue(deactivatedUser);
       vi.mocked(invalidateUserSessions).mockResolvedValue(3);
-      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as any);
+      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as AuditLogEntry);
 
       const result = await service.deactivateAccount({
         userId: 'user-123',
@@ -377,7 +382,7 @@ describe('UserManagementService', () => {
 
       vi.spyOn(userRepo, 'findById').mockResolvedValue(mockUser);
       vi.spyOn(userRepo, 'update').mockResolvedValue(activatedUser);
-      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as any);
+      vi.spyOn(auditRepo, 'create').mockResolvedValue({} as AuditLogEntry);
 
       const result = await service.activateAccount({
         userId: 'user-123',

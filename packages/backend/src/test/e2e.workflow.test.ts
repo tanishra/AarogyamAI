@@ -18,7 +18,9 @@ describe('E2E clinical workflow', () => {
     role,
   });
 
-  let patient: any, nurse: any, doctor: any;
+  let patient: { token: string; id: string },
+    nurse: { token: string; id: string },
+    doctor: { token: string; id: string };
   let sessionId: string;
   let reasoningId: string;
 
@@ -126,7 +128,7 @@ describe('E2E clinical workflow', () => {
 
   it('audit chain verified after workflow writes', async () => {
     const { AuditLogService } = await import('../services/AuditLogService');
-    const svc = new AuditLogService(pool as any);
+    const svc = new AuditLogService(pool);
     const result = await svc.verifyIntegrity();
     expect(result.isValid).toBe(true);
   });

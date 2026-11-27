@@ -5,11 +5,11 @@ export interface ChatSession {
   patientId: string;
   status: 'active' | 'completed' | 'abandoned' | 'emergency';
   startedAt: Date;
-  completedAt?: Date;
-  durationMinutes?: number;
+  completedAt?: Date | null;
+  durationMinutes?: number | null;
   messageCount: number;
   emergencyDetected: boolean;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 export interface ChatMessage {
@@ -17,7 +17,7 @@ export interface ChatMessage {
   sessionId: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -32,8 +32,37 @@ export interface PatientSummary {
   medicalHistory: string[];
   currentMedications: string[];
   allergies: string[];
-  socialHistory: any;
-  reviewOfSystems: any;
+  socialHistory: Record<string, unknown>;
+  reviewOfSystems: Record<string, unknown>;
+}
+
+/** Raw chat_sessions table row */
+interface ChatSessionRow {
+  id: string;
+  patient_id: string;
+  status: 'active' | 'completed' | 'abandoned' | 'emergency';
+  started_at: Date;
+  completed_at: Date | null;
+  duration_minutes: number | null;
+  message_count: number;
+  emergency_detected: boolean;
+  metadata: Record<string, unknown>;
+}
+
+/** Raw patient_summaries table row */
+interface PatientSummaryRow {
+  id: string;
+  session_id: string;
+  patient_id: string;
+  chief_complaint: string;
+  symptoms: string[];
+  duration: string;
+  severity: string;
+  medical_history: string[];
+  current_medications: string[];
+  allergies: string[];
+  social_history: Record<string, unknown>;
+  review_of_systems: Record<string, unknown>;
 }
 
 export class ChatRepository {
@@ -41,7 +70,7 @@ export class ChatRepository {
    * Create new chat session
    */
   async createSession(patientId: string): Promise<ChatSession> {
-    const result = await query(
+    const result = await query<ChatSessionRow>(
       `INSERT INTO chat_sessions (patient_id, status, started_at)
        VALUES ($1, 'active', CURRENT_TIMESTAMP)
        RETURNING *`,
@@ -68,7 +97,7 @@ export class ChatRepository {
    * Get chat session by ID
    */
   async getSession(sessionId: string): Promise<ChatSession | null> {
-    const result = await query(
+    const result = await query<ChatSessionRow>(
       'SELECT * FROM chat_sessions WHERE id = $1',
       [sessionId]
     );
@@ -95,7 +124,7 @@ export class ChatRepository {
    * Get active session for patient
    */
   async getActiveSession(patientId: string): Promise<ChatSession | null> {
-    const result = await query(
+    const result = await query<ChatSessionRow>(
       `SELECT * FROM chat_sessions 
        WHERE patient_id = $1 AND status = 'active'
        ORDER BY started_at DESC
@@ -157,7 +186,7 @@ export class ChatRepository {
     sessionId: string,
     role: 'user' | 'assistant' | 'system',
     content: string,
-    metadata: any = {}
+    metadata: Record<string, unknown> = {}
   ): Promise<ChatMessage> {
     return await transaction(async (client) => {
       // Insert message
@@ -196,7 +225,7 @@ export class ChatRepository {
    * Save patient summary
    */
   async saveSummary(summary: Omit<PatientSummary, 'id'>): Promise<PatientSummary> {
-    const result = await query(
+    const result = await query<PatientSummaryRow>(
       `INSERT INTO patient_summaries (
         session_id, patient_id, chief_complaint, symptoms, duration, severity,
         medical_history, current_medications, allergies, social_history, review_of_systems
@@ -252,7 +281,7 @@ export class ChatRepository {
    * Get patient summary by session
    */
   async getSummary(sessionId: string): Promise<PatientSummary | null> {
-    const result = await query(
+    const result = await query<PatientSummaryRow>(
       'SELECT * FROM patient_summaries WHERE session_id = $1',
       [sessionId]
     );
@@ -282,7 +311,7 @@ export class ChatRepository {
    * Get patient's chat history
    */
   async getPatientSessions(patientId: string, limit: number = 10): Promise<ChatSession[]> {
-    const result = await query(
+    const result = await query<ChatSessionRow>(
       `SELECT * FROM chat_sessions 
        WHERE patient_id = $1 
        ORDER BY started_at DESC 
@@ -291,7 +320,7 @@ export class ChatRepository {
     );
     
     // Transform snake_case to camelCase for each session
-    return result.map((raw: any) => ({
+    return result.map((raw) => ({
       id: raw.id,
       patientId: raw.patient_id,
       status: raw.status,

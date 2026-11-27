@@ -104,7 +104,7 @@ export class DifferentialManager {
    */
   async updateDiagnosis(params: UpdateDiagnosisParams): Promise<void> {
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     if (params.priority !== undefined) {

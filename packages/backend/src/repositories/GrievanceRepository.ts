@@ -100,7 +100,7 @@ export class GrievanceRepository {
    */
   async update(id: string, updates: Partial<Grievance>): Promise<Grievance | null> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     Object.entries(updates).forEach(([key, value]) => {

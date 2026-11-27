@@ -1,7 +1,7 @@
 import { maskEmail } from '../../lib/pii';
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../auth/jwt';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, TokenPayload } from '../../auth/jwt';
 import { invalidateUserSessions } from '../../auth/session';
 import { blacklistToken, isTokenBlacklisted, setRefreshCutoff, getRefreshCutoff } from '../../auth/session';
 import { decodeToken } from '../../auth/jwt';
@@ -79,7 +79,7 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
     }
 
     // Verify refresh token
-    let payload;
+    let payload: TokenPayload;
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch (error) {
@@ -92,7 +92,8 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
 
     // Token-family cutoff: tokens issued before a detected replay are dead.
     const cutoff = await getRefreshCutoff(payload.userId);
-    if (cutoff > 0 && (payload as any).iat && (payload as any).iat * 1000 < cutoff) {
+    const jwtClaims = payload as TokenPayload & { iat?: number; exp?: number };
+    if (cutoff > 0 && jwtClaims.iat && jwtClaims.iat * 1000 < cutoff) {
       res.status(401).json({
         error: 'Unauthorized',
         message: 'Refresh token predates a security revocation — please log in again',
@@ -127,8 +128,8 @@ router.post('/refresh', authRateLimit, async (req: Request, res: Response) => {
     // Revoke the used refresh token — rotation without revocation leaves the
     // old token valid until natural expiry (replay window).
     try {
-      const expSec = (payload as any).exp
-        ? Math.max(0, (payload as any).exp - Math.floor(Date.now() / 1000))
+      const expSec = jwtClaims.exp
+        ? Math.max(0, jwtClaims.exp - Math.floor(Date.now() / 1000))
         : 30 * 24 * 60 * 60;
       await blacklistToken(refreshToken, expSec);
     } catch (error) {

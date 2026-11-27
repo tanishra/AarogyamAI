@@ -8,7 +8,7 @@ import { getDatabasePool } from '../config/database';
  */
 describe('MetricsRepository (real DB)', () => {
   const pool = getDatabasePool();
-  const repo = new MetricsRepository(pool as any);
+  const repo = new MetricsRepository(pool);
   const suffix = Date.now().toString(36);
   let patientId: string;
   let doctorId: string;

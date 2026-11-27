@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../../lib/logger';
 import { auditRepo, searchLogsSchema } from './shared';
+import type { SearchFilters } from '../../repositories/types';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.get('/logs', async (req: Request, res: Response) => {
     const { userId, actionType, resource, startDate, endDate, page, limit } = validation.data;
 
     // Build filter
-    const filter: any = { page, limit };
+    const filter: SearchFilters = { page, limit };
     if (userId) filter.userId = userId;
     if (actionType) filter.actionType = actionType;
     if (resource) filter.resource = resource;

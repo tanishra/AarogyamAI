@@ -57,7 +57,7 @@ describe('Session management', () => {
       .get('/api/auth/sessions')
       .set({ Authorization: `Bearer ${logins[1].token}`, 'x-session-id': logins[1].sessionId });
     expect(res.status).toBe(200);
-    const current = res.body.data.filter((s: any) => s.current);
+    const current = res.body.data.filter((s: { sessionId: string; current?: boolean }) => s.current);
     expect(current).toHaveLength(1);
     expect(current[0].sessionId).toBe(logins[1].sessionId);
   });
@@ -78,7 +78,7 @@ describe('Session management', () => {
     const list = await request(app)
       .get('/api/auth/sessions')
       .set({ Authorization: `Bearer ${logins[0].token}` });
-    const ids = list.body.data.map((s: any) => s.sessionId);
+    const ids = list.body.data.map((s: { sessionId: string }) => s.sessionId);
     expect(ids).not.toContain(logins[2].sessionId);
     expect(ids).toContain(logins[0].sessionId);
     expect(ids).toContain(logins[1].sessionId);
@@ -101,7 +101,7 @@ describe('Session management', () => {
     const list = await request(app)
       .get('/api/auth/sessions')
       .set({ Authorization: `Bearer ${logins[1].token}` });
-    const ids = list.body.data.map((s: any) => s.sessionId);
+    const ids = list.body.data.map((s: { sessionId: string }) => s.sessionId);
     expect(ids).toEqual([logins[1].sessionId]);
   });
 });

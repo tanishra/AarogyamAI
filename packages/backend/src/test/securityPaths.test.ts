@@ -11,7 +11,7 @@ vi.mock('openai', () => {
     throw new Error('provider down (test)');
   });
   return {
-    default: vi.fn(function (this: any) {
+    default: vi.fn(function (this: { chat: unknown }) {
       this.chat = { completions: { create } };
     }),
   };
@@ -29,8 +29,6 @@ describe('Security paths (E2E)', () => {
   const password = 'secpath-password-12345';
   const email = `secpath-${suffix}@test.local`;
 
-  let accessToken = '';
-  let sessionId = '';
   let userId = '';
   const chatSessionIds: string[] = [];
 
@@ -47,8 +45,6 @@ describe('Security paths (E2E)', () => {
 
   beforeAll(async () => {
     const data = await signup(email);
-    accessToken = data.accessToken;
-    sessionId = data.sessionId;
     userId = data.user.id;
   });
 

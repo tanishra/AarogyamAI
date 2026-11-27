@@ -61,7 +61,7 @@ export class ConsentGrievanceService {
       LEFT JOIN users u ON cr.patient_id = u.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (patientId) {
       params.push(patientId);
@@ -171,7 +171,7 @@ export class ConsentGrievanceService {
       LEFT JOIN users u ON g.patient_id = u.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (status) {
       params.push(status);
@@ -269,7 +269,7 @@ export class ConsentGrievanceService {
       LEFT JOIN users u ON dar.patient_id = u.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (status) {
       params.push(status);

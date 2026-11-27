@@ -4,6 +4,43 @@ import { query as pgQuery, getDatabasePool } from '../config/database';
 import { logger } from '../lib/logger';
 import { computeAuditHash } from '../lib/auditHash';
 
+/** Raw audit_logs table row (snake_case columns) */
+interface AuditLogRow {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  action_type: string;
+  resource: string;
+  resource_id: string | null;
+  outcome: 'success' | 'failure';
+  ip_address: string;
+  user_agent: string;
+  request_id: string;
+  error_details: string | null;
+  hash: string;
+  previous_hash: string | null;
+  timestamp: Date;
+}
+
+interface AccessorRow {
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  access_count: number;
+  last_access: Date;
+}
+
+interface TimelineRow {
+  day: Date;
+  count: number;
+}
+
+interface AccessTotalsRow {
+  total: number;
+  unique_accessors: number;
+}
+
 /**
  * Audit Log Repository
  *
@@ -109,7 +146,7 @@ export class AuditLogRepository {
    */
   async search(filters: SearchFilters): Promise<PaginatedResult<AuditLogEntry>> {
     let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | Date)[] = [];
     let paramIndex = 1;
 
     if (filters.userId) {
@@ -141,8 +178,11 @@ export class AuditLogRepository {
     const page = filters.page || 1;
 
     const [countResult, rows] = await Promise.all([
-      pgQuery<any>(`SELECT COUNT(*)::int AS total FROM audit_logs ${whereClause}`, params),
-      pgQuery<any>(
+      pgQuery<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM audit_logs ${whereClause}`,
+        params
+      ),
+      pgQuery<AuditLogRow>(
         `SELECT * FROM audit_logs ${whereClause}
          ORDER BY timestamp DESC, id DESC
          LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -151,7 +191,7 @@ export class AuditLogRepository {
     ]);
 
     const total = countResult[0]?.total ?? 0;
-    const items = rows.map((row: any) => ({
+    const items = rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
       userName: row.user_name,
@@ -192,13 +232,13 @@ export class AuditLogRepository {
       userName: string;
       role: string;
       accessCount: number;
-      lastAccess: string;
+      lastAccess: Date;
       isAnomalous: boolean;
     }>;
-    timeline: Array<{ date: string; count: number }>;
+    timeline: Array<{ date: Date; count: number }>;
     statistics: { totalAccesses: number; uniqueAccessors: number };
   }> {
-    const params: any[] = [patientId];
+    const params: string[] = [patientId];
     let rangeClause = '';
     if (startDate) {
       params.push(startDate);
@@ -210,7 +250,7 @@ export class AuditLogRepository {
     }
 
     const [accessors, timeline, totals] = await Promise.all([
-      pgQuery<any>(
+      pgQuery<AccessorRow>(
         `SELECT
           user_id,
           user_name,
@@ -223,7 +263,7 @@ export class AuditLogRepository {
         ORDER BY access_count DESC`,
         params
       ),
-      pgQuery<any>(
+      pgQuery<TimelineRow>(
         `SELECT
           date_trunc('day', timestamp) AS day,
           COUNT(*)::int AS count
@@ -233,7 +273,7 @@ export class AuditLogRepository {
         ORDER BY 1`,
         params
       ),
-      pgQuery<any>(
+      pgQuery<AccessTotalsRow>(
         `SELECT COUNT(*)::int AS total, COUNT(DISTINCT user_id)::int AS unique_accessors
         FROM audit_logs
         WHERE resource_id = $1${rangeClause}`,
@@ -249,7 +289,7 @@ export class AuditLogRepository {
     const dominantThreshold = totalAccesses >= 10 ? totalAccesses * 0.5 : Infinity;
 
     return {
-      accessors: accessors.map((row: any) => ({
+      accessors: accessors.map((row) => ({
         userId: row.user_id,
         userName: row.user_name,
         role: row.user_role,
@@ -257,7 +297,7 @@ export class AuditLogRepository {
         lastAccess: row.last_access,
         isAnomalous: row.access_count > dominantThreshold,
       })),
-      timeline: timeline.map((row: any) => ({
+      timeline: timeline.map((row) => ({
         date: row.day,
         count: row.count,
       })),

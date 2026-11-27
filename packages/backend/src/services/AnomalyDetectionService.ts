@@ -280,7 +280,11 @@ export class AnomalyDetectionService {
   async runAllChecks(): Promise<{
     highFrequency: AnomalyAlert[];
     offHours: AnomalyAlert[];
-    statistical: { anomalousUsers: any[]; mean: number; stdDev: number };
+    statistical: {
+      anomalousUsers: Array<{ userId: string; userName: string; accessCount: number; zScore: number }>;
+      mean: number;
+      stdDev: number;
+    };
   }> {
     const [highFrequency, offHours, statistical] = await Promise.all([
       this.detectHighFrequencyAccess(),

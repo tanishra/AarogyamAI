@@ -10,8 +10,8 @@ export interface User {
   role: 'Patient' | 'Nurse' | 'Doctor' | 'Administrator' | 'DPO';
   is_active: boolean;
   mfa_enabled: boolean;
-  mfa_method?: 'totp' | 'sms';
-  mfa_secret?: string;
+  mfa_method?: 'totp' | 'sms' | null;
+  mfa_secret?: string | null;
   last_password_change?: Date;
   last_mfa_verification?: Date;
   created_at: Date;

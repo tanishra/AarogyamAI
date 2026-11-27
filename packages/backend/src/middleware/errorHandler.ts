@@ -47,13 +47,13 @@ export const errorHandler = (
   }
 
   logger.error('request failed', {
-    requestId: (req as any).id,
+    requestId: (req as Request & { id?: string }).id,
     method: req.method,
     path: req.path,
     statusCode,
     message: err.message,
     stack: err.stack,
-    userId: (req as any).user?.id,
+    userId: (req.user as { id?: string } | undefined)?.id,
     isOperational,
   });
 

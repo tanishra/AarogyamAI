@@ -77,9 +77,9 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 /**
  * Execute a query with automatic connection management
  */
-export async function query<T = any>(
+export async function query<T = unknown>(
   text: string,
-  params?: any[]
+  params?: unknown[]
 ): Promise<T[]> {
   const dbPool = getDatabasePool();
   const result = await dbPool.query(text, params);

@@ -36,7 +36,7 @@ if (process.env.SENTRY_DSN) {
 app.use((req, res, next) => {
   const inbound = req.headers['x-request-id'];
   const requestId = typeof inbound === 'string' && inbound.length <= 128 ? inbound : undefined;
-  (req as any).requestId = requestId;
+  (req as typeof req & { requestId?: string }).requestId = requestId;
   res.setHeader('X-Request-Id', requestId ?? '');
   next();
 });

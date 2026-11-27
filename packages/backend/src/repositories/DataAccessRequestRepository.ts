@@ -90,7 +90,7 @@ export class DataAccessRequestRepository {
     request_type?: DataAccessRequest['request_type'];
   }): Promise<DataAccessRequest[]> {
     const conditions: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     if (filters?.patient_id) {
@@ -136,7 +136,7 @@ export class DataAccessRequestRepository {
    */
   async update(id: string, updates: Partial<DataAccessRequest>): Promise<DataAccessRequest | null> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     Object.entries(updates).forEach(([key, value]) => {

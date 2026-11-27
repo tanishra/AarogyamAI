@@ -62,7 +62,7 @@ router.get('/completed-patients', authenticate({}), async (req: Request, res: Re
       parseInt(limit as string)
     );
 
-    const patients = completedPatients.map((raw: any) => ({
+    const patients = completedPatients.map((raw) => ({
       patientId: raw.patient_id,
       patientName: raw.patient_name,
       patientEmail: raw.patient_email,

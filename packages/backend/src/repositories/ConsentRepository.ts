@@ -73,7 +73,7 @@ export class ConsentRepository {
    */
   async update(id: string, updates: Partial<ConsentRecord>): Promise<ConsentRecord | null> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     Object.entries(updates).forEach(([key, value]) => {
@@ -122,7 +122,7 @@ export class ConsentRepository {
     consent_type?: string;
   }): Promise<ConsentRecord[]> {
     const conditions: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     if (filters?.patient_id) {

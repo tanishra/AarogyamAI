@@ -563,7 +563,7 @@ describe('AI Explanations Table Migration', () => {
 
     const storedSymptoms = result.rows[0].key_symptoms;
     expect(storedSymptoms.length).toBe(3);
-    expect(storedSymptoms.filter((s: any) => s.relevance === 'high').length).toBe(1);
+    expect(storedSymptoms.filter((s: { relevance?: string }) => s.relevance === 'high').length).toBe(1);
 
     // Clean up
     await pool.query('DELETE FROM ai_explanations WHERE differential_id = $1', [testDifferentialId]);
@@ -593,7 +593,7 @@ describe('AI Explanations Table Migration', () => {
 
     const storedRules = result.rows[0].clinical_decision_rules;
     expect(storedRules.length).toBe(2);
-    expect(storedRules.filter((r: any) => r.applied === true).length).toBe(1);
+    expect(storedRules.filter((r: { applied?: boolean }) => r.applied === true).length).toBe(1);
 
     // Clean up
     await pool.query('DELETE FROM ai_explanations WHERE differential_id = $1', [testDifferentialId]);
@@ -624,7 +624,7 @@ describe('AI Explanations Table Migration', () => {
 
     const storedHistory = result.rows[0].relevant_history;
     expect(storedHistory.length).toBe(3);
-    expect(storedHistory.filter((h: any) => h.type === 'past-medical').length).toBe(1);
+    expect(storedHistory.filter((h: { type?: string }) => h.type === 'past-medical').length).toBe(1);
 
     // Clean up
     await pool.query('DELETE FROM ai_explanations WHERE differential_id = $1', [testDifferentialId]);

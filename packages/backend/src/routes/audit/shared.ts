@@ -1,3 +1,4 @@
+import type { AuditLogEntry } from '../../repositories/types';
 import { z } from 'zod';
 import { getContainer } from '../../composition';
 
@@ -6,7 +7,7 @@ export const auditLogService = getContainer().services.auditLog;
 export const anomalyService = getContainer().services.anomalyDetection;
 
 // Audit logging helper (failures are logged inside the repository, never thrown)
-export const writeAuditLog = async (data: any) => {
+export const writeAuditLog = async (data: Omit<AuditLogEntry, 'id' | 'timestamp'>) => {
   await auditRepo.create(data);
 };
 

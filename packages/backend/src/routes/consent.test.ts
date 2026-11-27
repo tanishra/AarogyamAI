@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import request from 'supertest';
-import express, { Express } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import consentRoutes from './consent';
 
 // Mock the repositories and middleware
@@ -67,33 +68,35 @@ vi.mock('../repositories/AuditLogRepository', () => {
 });
 
 vi.mock('../auth/authMiddleware', () => ({
-  authenticate: () => (req: any, _res: any, next: any) => {
+  authenticate: () => (req: Request, _res: Response, next: NextFunction) => {
     req.user = {
       userId: 'test-dpo-id',
       email: 'dpo@test.com',
       role: 'DPO',
+      type: 'access',
+      jti: 'test-jti',
     };
     next();
   },
 }));
 
 vi.mock('../auth/authorizationMiddleware', () => ({
-  requireDPO: () => (_req: any, _res: any, next: any) => next(),
-  requireAdminOrDPO: () => (_req: any, _res: any, next: any) => next(),
+  requireDPO: () => (_req: Request, _res: Response, next: NextFunction) => next(),
+  requireAdminOrDPO: () => (_req: Request, _res: Response, next: NextFunction) => next(),
 }));
 
 describe('Consent Routes', () => {
   let app: Express;
-  let mockConsentFindAll: any;
-  let mockGetPendingWithdrawals: any;
-  let mockProcessWithdrawalRequest: any;
-  let mockWithdraw: any;
-  let mockGrievanceFindAll: any;
-  let mockGrievanceFindById: any;
-  let mockGrievanceUpdateStatus: any;
-  let mockDataAccessFindAll: any;
-  let mockDataAccessFulfill: any;
-  let mockAuditCreate: any;
+  let mockConsentFindAll: Mock;
+  let mockGetPendingWithdrawals: Mock;
+  let mockProcessWithdrawalRequest: Mock;
+  let mockWithdraw: Mock;
+  let mockGrievanceFindAll: Mock;
+  let mockGrievanceFindById: Mock;
+  let mockGrievanceUpdateStatus: Mock;
+  let mockDataAccessFindAll: Mock;
+  let mockDataAccessFulfill: Mock;
+  let mockAuditCreate: Mock;
 
   beforeEach(async () => {
     // Get the mocked functions

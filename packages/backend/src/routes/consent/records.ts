@@ -7,6 +7,7 @@ import { getContainer } from '../../composition';
 import { logger } from '../../lib/logger';
 import { uuidParam } from '../../lib/uuidParam';
 import { writeAuditLog } from './auditLog';
+import type { ConsentRecord } from '../../repositories/types';
 
 const router = Router();
 const consentRepo = getContainer().repositories.consent;
@@ -39,7 +40,11 @@ router.get('/consent/records', async (req: Request, res: Response) => {
     const { patientId, status, consentType } = validation.data;
 
     // Build filters
-    const filters: any = {};
+    const filters: {
+      patient_id?: string;
+      status?: ConsentRecord['status'];
+      consent_type?: string;
+    } = {};
     if (patientId) filters.patient_id = patientId;
     if (status) filters.status = status;
     if (consentType) filters.consent_type = consentType;

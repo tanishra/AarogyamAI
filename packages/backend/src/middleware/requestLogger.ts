@@ -2,13 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../lib/logger';
 
+/** Request carrying a correlation id attached by this middleware */
+type RequestWithId = Request & { requestId?: string; id?: string };
+
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const requestId = (req as any).requestId ?? uuidv4();
-  (req as any).requestId = requestId;
+  const requestId = (req as RequestWithId).requestId ?? uuidv4();
+  (req as RequestWithId).requestId = requestId;
   const startTime = Date.now();
 
   // Attach request ID to request object
-  (req as any).id = requestId;
+  (req as RequestWithId).id = requestId;
 
   // Log request
   logger.debug({
@@ -17,7 +20,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     method: req.method,
     path: req.path,
     query: req.query,
-    userId: (req as any).user?.id,
+    userId: (req.user as { id?: string } | undefined)?.id,
     ipAddress: req.ip,
     userAgent: req.get('user-agent'),
   });
@@ -32,7 +35,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
       path: req.path,
       statusCode: res.statusCode,
       duration: `${duration}ms`,
-      userId: (req as any).user?.id,
+      userId: (req.user as { id?: string } | undefined)?.id,
     });
   });
 

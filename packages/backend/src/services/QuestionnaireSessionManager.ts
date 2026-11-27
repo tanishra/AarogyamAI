@@ -12,7 +12,7 @@ import { logger } from '../lib/logger';
 export interface QuestionnaireSessionData {
   patientId: string;
   currentQuestionIndex: number;
-  answers: Record<string, any>;
+  answers: Record<string, unknown>;
   skippedQuestions: number[];
   uncertainAnswers: number[];
   startedAt: Date;

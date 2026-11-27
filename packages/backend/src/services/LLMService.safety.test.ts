@@ -17,10 +17,12 @@ function makeService(): LLMService {
   return new LLMService();
 }
 
+type DispatchFn = (messages: unknown, options?: unknown) => Promise<{ content: string }>;
+
 /** Stub the private dispatch layer so tests never hit a real provider. */
 function stubDispatch(service: LLMService, content = 'Safe advisory response') {
   const dispatch = vi
-    .spyOn(service as any, 'dispatch')
+    .spyOn(service as unknown as { dispatch: DispatchFn }, 'dispatch')
     .mockResolvedValue({ content });
   return dispatch;
 }
@@ -124,7 +126,7 @@ describe('LLMService safety pipeline', () => {
 
   it('patientChat falls back when the provider itself fails', async () => {
     const service = makeService();
-    vi.spyOn(service as any, 'dispatch').mockRejectedValue(
+    vi.spyOn(service as unknown as { dispatch: DispatchFn }, 'dispatch').mockRejectedValue(
       new Error('provider down')
     );
 

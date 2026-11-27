@@ -3,30 +3,62 @@ import { query } from '../config/database';
 export interface ClinicalConsideration {
   id: string;
   patientId: string;
-  sessionId?: string;
+  sessionId?: string | null;
   conditionName: string;
   likelihood: 'high' | 'moderate' | 'low';
   urgency: 'urgent' | 'routine' | 'non-urgent';
   supportingFactors: string[];
   explanation: string;
   status: 'pending' | 'accepted' | 'modified' | 'rejected';
-  doctorNotes?: string;
-  reviewedBy?: string;
-  reviewedAt?: Date;
+  doctorNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: Date | null;
   generatedAt: Date;
 }
 
 export interface ClinicalReasoning {
   id: string;
   patientId: string;
-  sessionId?: string;
+  sessionId?: string | null;
   doctorId: string;
-  differentialDiagnosis: any[];
-  diagnosticPlan?: string;
-  reasoningRationale?: string;
-  finalNotes?: string;
+  differentialDiagnosis: unknown[];
+  diagnosticPlan?: string | null;
+  reasoningRationale?: string | null;
+  finalNotes?: string | null;
   status: 'draft' | 'under_review' | 'approved' | 'rejected';
-  approvedAt?: Date;
+  approvedAt?: Date | null;
+  version: number;
+}
+
+/** Raw differentials table row */
+interface DifferentialRow {
+  id: string;
+  patient_id: string;
+  encounter_id: string | null;
+  diagnosis_name: string;
+  likelihood: 'high' | 'moderate' | 'low';
+  urgency: 'urgent' | 'routine' | 'non-urgent';
+  supporting_evidence: string[];
+  clinical_reasoning: string;
+  status: 'pending' | 'accepted' | 'modified' | 'rejected';
+  doctor_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: Date | null;
+  added_at: Date;
+}
+
+/** Raw clinical_reasoning table row */
+interface ClinicalReasoningRow {
+  id: string;
+  patient_id: string;
+  session_id: string | null;
+  doctor_id: string;
+  differential_diagnosis: unknown[];
+  diagnostic_plan: string | null;
+  reasoning_rationale: string | null;
+  final_notes: string | null;
+  status: 'draft' | 'under_review' | 'approved' | 'rejected';
+  approved_at: Date | null;
   version: number;
 }
 
@@ -48,7 +80,7 @@ export class ClinicalRepository {
     const results: ClinicalConsideration[] = [];
 
     for (const consideration of considerations) {
-      const result = await query(
+      const result = await query<DifferentialRow>(
         `INSERT INTO differentials (
           patient_id, encounter_id, diagnosis_name, likelihood, urgency,
           supporting_evidence, clinical_reasoning, status, source, added_by
@@ -71,7 +103,7 @@ export class ClinicalRepository {
     return results;
   }
 
-  private mapConsideration(raw: any): ClinicalConsideration {
+  private mapConsideration(raw: DifferentialRow): ClinicalConsideration {
     return {
       id: raw.id,
       patientId: raw.patient_id,
@@ -93,7 +125,7 @@ export class ClinicalRepository {
    * Get considerations by session
    */
   async getConsiderationsBySession(sessionId: string): Promise<ClinicalConsideration[]> {
-    const result = await query(
+    const result = await query<DifferentialRow>(
       `SELECT * FROM differentials
        WHERE encounter_id = $1 AND source = 'ai'
        ORDER BY
@@ -110,7 +142,7 @@ export class ClinicalRepository {
       [sessionId]
     );
 
-    return result.map((raw: any) => this.mapConsideration(raw));
+    return result.map((raw) => this.mapConsideration(raw));
   }
 
   /**
@@ -137,12 +169,12 @@ export class ClinicalRepository {
     patientId: string;
     sessionId?: string;
     doctorId: string;
-    differentialDiagnosis: any[];
+    differentialDiagnosis: unknown[];
     diagnosticPlan?: string;
     reasoningRationale?: string;
     finalNotes?: string;
   }): Promise<ClinicalReasoning> {
-    const result = await query(
+    const result = await query<ClinicalReasoningRow>(
       `INSERT INTO clinical_reasoning (
         patient_id, session_id, doctor_id, differential_diagnosis,
         diagnostic_plan, reasoning_rationale, final_notes, status, version
@@ -183,7 +215,7 @@ export class ClinicalRepository {
   async updateReasoning(
     reasoningId: string,
     updates: {
-      differentialDiagnosis?: any[];
+      differentialDiagnosis?: unknown[];
       diagnosticPlan?: string;
       reasoningRationale?: string;
       finalNotes?: string;
@@ -191,7 +223,7 @@ export class ClinicalRepository {
     }
   ): Promise<void> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: string[] = [];
     let paramIndex = 1;
 
     if (updates.differentialDiagnosis !== undefined) {
@@ -231,7 +263,7 @@ export class ClinicalRepository {
    * Get reasoning by session
    */
   async getReasoningBySession(sessionId: string): Promise<ClinicalReasoning | null> {
-    const result = await query(
+    const result = await query<ClinicalReasoningRow>(
       `SELECT * FROM clinical_reasoning 
        WHERE session_id = $1 
        ORDER BY created_at DESC 
@@ -263,7 +295,7 @@ export class ClinicalRepository {
    * Get reasoning by ID
    */
   async getReasoningById(reasoningId: string): Promise<ClinicalReasoning | null> {
-    const result = await query(
+    const result = await query<ClinicalReasoningRow>(
       'SELECT * FROM clinical_reasoning WHERE id = $1',
       [reasoningId]
     );

@@ -7,6 +7,7 @@ import { encryptMfaSecret } from '../../lib/mfaCrypto';
 
 import { logger } from '../../lib/logger';
 import { userRepo, emailService, writeAuditLog } from './shared';
+import type { User } from '../../repositories/types';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.put('/users/:id/mfa', async (req: Request, res: Response) => {
     }
 
     // Update MFA settings
-    const updateData: any = { mfa_enabled: enabled };
+    const updateData: Partial<User> = { mfa_enabled: enabled };
     if (enabled && method) {
       updateData.mfa_method = method;
       const secret = speakeasy.generateSecret({ length: 20, name: `AarogyamAI (${id})` });

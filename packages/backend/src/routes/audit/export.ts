@@ -43,7 +43,7 @@ router.post('/export', async (req: Request, res: Response) => {
     };
     const csv = [
       header,
-      ...items.map((e: any) =>
+      ...items.map((e) =>
         [
           e.id, e.userId, e.userName, e.userRole, e.actionType,
           e.resource, e.resourceId, e.outcome, e.ipAddress, e.timestamp,

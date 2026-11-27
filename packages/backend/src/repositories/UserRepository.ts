@@ -73,7 +73,7 @@ export class UserRepository {
    */
   async update(id: string, updates: Partial<User>): Promise<User | null> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     // Build dynamic update query
@@ -126,7 +126,7 @@ export class UserRepository {
     const offset = (page - 1) * limit;
 
     const conditions: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     if (filters.role) {

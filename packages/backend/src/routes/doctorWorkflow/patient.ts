@@ -116,7 +116,7 @@ router.get('/patient/:patientId/history', authenticate({}), async (req: Request,
     const completedEncounters = await workflowRepository.getCompletedEncounters(patientId);
 
     // Transform to camelCase and structure the data
-    const encounters = completedEncounters.map((raw: any) => ({
+    const encounters = completedEncounters.map((raw) => ({
       sessionId: raw.session_id,
       status: raw.status,
       startedAt: raw.started_at,
@@ -153,7 +153,7 @@ router.get('/patient/:patientId/history', authenticate({}), async (req: Request,
     // Get all clinical reasoning (including drafts)
     const allReasoning = await workflowRepository.getReasoningHistoryByPatient(patientId);
 
-    const reasoningHistory = allReasoning.map((raw: any) => ({
+    const reasoningHistory = allReasoning.map((raw) => ({
       id: raw.id,
       patientId: raw.patient_id,
       sessionId: raw.session_id,

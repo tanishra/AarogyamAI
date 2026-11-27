@@ -124,7 +124,7 @@ export class AuditLogService {
     let predecessorLoaded = false;
 
     for (;;) {
-      const params: any[] = [];
+      const params: unknown[] = [];
       let where = 'WHERE 1=1';
       if (startDate) { params.push(startDate); where += ` AND timestamp >= $${params.length}`; }
       if (endDate) { params.push(endDate); where += ` AND timestamp <= $${params.length}`; }
@@ -229,7 +229,7 @@ export class AuditLogService {
     const offset = (page - 1) * limit;
 
     let query = 'SELECT * FROM audit_logs WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (filters.userId) {
       params.push(filters.userId);

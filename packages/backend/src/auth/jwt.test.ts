@@ -137,7 +137,7 @@ describe('JWT Token Generation and Verification', () => {
   describe('Token expiration', () => {
     it('should include expiration claim in access token', () => {
       const token = generateAccessToken(testPayload);
-      const decoded = decodeToken(token) as any;
+      const decoded = decodeToken(token) as TokenPayload & { exp?: number };
       
       expect(decoded.exp).toBeTruthy();
       expect(typeof decoded.exp).toBe('number');
@@ -145,7 +145,7 @@ describe('JWT Token Generation and Verification', () => {
 
     it('should include expiration claim in refresh token', () => {
       const token = generateRefreshToken(testPayload);
-      const decoded = decodeToken(token) as any;
+      const decoded = decodeToken(token) as TokenPayload & { exp?: number };
       
       expect(decoded.exp).toBeTruthy();
       expect(typeof decoded.exp).toBe('number');

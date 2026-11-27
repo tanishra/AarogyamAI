@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { getContainer } from '../../composition';
+import type { SearchFilters } from '../../repositories/types';
 import { logger } from '../../lib/logger';
 
 const router = Router();
@@ -124,7 +125,7 @@ router.get('/users/:id/activity', async (req: Request, res: Response) => {
     }
 
     // Build filter
-    const filter: any = { userId: id };
+    const filter: SearchFilters = { userId: id };
     if (startDate) filter.startDate = new Date(startDate);
     if (endDate) filter.endDate = new Date(endDate);
     if (actionType) filter.actionType = actionType;

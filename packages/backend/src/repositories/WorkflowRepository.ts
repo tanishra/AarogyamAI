@@ -1,5 +1,147 @@
 import { query } from '../config/database';
 
+/** patient_queue row joined with patient/chat session info (doctor queue) */
+export interface DoctorQueueRow {
+  queue_id: string;
+  patient_id: string;
+  session_id: string;
+  status: string;
+  priority: string;
+  created_at: Date;
+  patient_name: string;
+  patient_email: string;
+  chat_completed_at: Date | null;
+  emergency_detected: boolean | null;
+  nurse_name: string | null;
+}
+
+/** patient_queue row joined with patient/chat session info (nurse queue) */
+export type NurseQueueRow = Omit<DoctorQueueRow, 'nurse_name'>;
+
+/** Completed-encounter projection across chat_sessions, summaries, reasoning */
+export interface CompletedEncounterRow {
+  session_id: string;
+  status: string;
+  started_at: Date;
+  completed_at: Date | null;
+  duration_minutes: number | null;
+  emergency_detected: boolean | null;
+  chief_complaint: string | null;
+  symptoms: unknown;
+  symptom_duration: string | null;
+  severity: string | null;
+  medical_history: unknown;
+  current_medications: unknown;
+  allergies: unknown;
+  reasoning_id: string | null;
+  differential_diagnosis: unknown;
+  diagnostic_plan: unknown;
+  reasoning_rationale: string | null;
+  final_notes: string | null;
+  reasoning_status: string | null;
+  approved_at: Date | null;
+  doctor_name: string | null;
+  doctor_email: string | null;
+  priority: string | null;
+  nurse_name: string | null;
+}
+
+/** clinical_reasoning row (cr.*) plus joined doctor info */
+export interface ReasoningHistoryRow {
+  id: string;
+  patient_id: string;
+  session_id: string;
+  doctor_id: string | null;
+  doctor_name: string | null;
+  doctor_email: string | null;
+  differential_diagnosis: unknown;
+  diagnostic_plan: unknown;
+  reasoning_rationale: string | null;
+  final_notes: string | null;
+  status: string;
+  approved_at: Date | null;
+  created_at: Date;
+  version: number;
+}
+
+/** DISTINCT ON (u.id) completed-patient projection for a doctor */
+export interface CompletedPatientRow {
+  patient_id: string;
+  patient_name: string;
+  patient_email: string;
+  last_session_id: string;
+  last_visit: Date | null;
+  last_complaint: string | null;
+  last_plan: unknown;
+  reasoning_status: string;
+  last_priority: string | null;
+}
+
+/** patient_summaries row joined with session start time */
+export interface PatientSummaryRow {
+  id: string;
+  session_id: string;
+  medical_history: unknown;
+  current_medications: unknown;
+  allergies: unknown;
+  social_history: unknown;
+  updated_at: Date | null;
+  started_at: Date | null;
+}
+
+/** Approved clinical_reasoning projection with owning patient id */
+export interface ApprovedReasoningRow {
+  id: string;
+  session_id: string;
+  differential_diagnosis: unknown;
+  diagnostic_plan: unknown;
+  reasoning_rationale: string | null;
+  final_notes: string | null;
+  status: string;
+  approved_at: Date | null;
+  patient_id: string;
+}
+
+/** Approved clinical_reasoning projection without the patient join */
+export type ApprovedReasoningPlainRow = Omit<ApprovedReasoningRow, 'patient_id'>;
+
+/** differentials projection exposed as encounter considerations */
+export interface ConsiderationRow {
+  condition_name: string;
+  likelihood: string;
+  urgency: string;
+  explanation: string | null;
+  doctor_notes: string | null;
+  status: string;
+}
+
+interface ConsentCountsRow {
+  total: number;
+  active: number;
+  withdrawn: number;
+  expired: number;
+}
+
+interface WithdrawalCountsRow {
+  total: number;
+  processed: number;
+  pending: number;
+}
+
+interface GrievanceCountsRow {
+  total: number;
+  pending: number;
+  investigating: number;
+  resolved: number;
+  escalated: number;
+}
+
+interface DataAccessCountsRow {
+  total: number;
+  pending: number;
+  fulfilled: number;
+}
+
 /**
  * WorkflowRepository — owns cross-table clinical workflow queries:
  * patient_queue, encounter history, reasoning lookups, nurse/doctor queues,
@@ -7,8 +149,8 @@ import { query } from '../config/database';
  */
 export class WorkflowRepository {
   /** Doctor queue: patients ready for review */
-  async getDoctorQueue(): Promise<any[]> {
-    return query(
+  async getDoctorQueue(): Promise<DoctorQueueRow[]> {
+    return query<DoctorQueueRow>(
       `SELECT
         pq.id as queue_id,
         pq.patient_id,
@@ -37,8 +179,8 @@ export class WorkflowRepository {
   }
 
   /** Nurse queue: patients waiting for vitals/review */
-  async getNurseQueue(): Promise<any[]> {
-    return query(
+  async getNurseQueue(): Promise<NurseQueueRow[]> {
+    return query<NurseQueueRow>(
       `SELECT
         pq.id as queue_id,
         pq.patient_id,
@@ -113,8 +255,8 @@ export class WorkflowRepository {
     sessionId: string,
     status: string,
     nurseId: string
-  ): Promise<any[]> {
-    return query(
+  ): Promise<Record<string, unknown>[]> {
+    return query<Record<string, unknown>>(
       `UPDATE patient_queue
        SET status = $4, assigned_nurse = $3
        WHERE patient_id = $1 AND session_id = $2
@@ -133,8 +275,8 @@ export class WorkflowRepository {
   }
 
   /** Full encounter details for a patient's completed sessions */
-  async getCompletedEncounters(patientId: string): Promise<any[]> {
-    return query(
+  async getCompletedEncounters(patientId: string): Promise<CompletedEncounterRow[]> {
+    return query<CompletedEncounterRow>(
       `SELECT
         cs.id as session_id,
         cs.status,
@@ -176,8 +318,8 @@ export class WorkflowRepository {
   }
 
   /** All clinical reasoning rows (any status) for a patient, newest first */
-  async getReasoningHistoryByPatient(patientId: string): Promise<any[]> {
-    return query(
+  async getReasoningHistoryByPatient(patientId: string): Promise<ReasoningHistoryRow[]> {
+    return query<ReasoningHistoryRow>(
       `SELECT
         cr.*,
         doctor.name as doctor_name,
@@ -192,8 +334,11 @@ export class WorkflowRepository {
   }
 
   /** Distinct patients a doctor has completed+approved encounters with */
-  async getCompletedPatientsForDoctor(doctorId: string, limit: number): Promise<any[]> {
-    return query(
+  async getCompletedPatientsForDoctor(
+    doctorId: string,
+    limit: number
+  ): Promise<CompletedPatientRow[]> {
+    return query<CompletedPatientRow>(
       `SELECT DISTINCT ON (u.id)
         u.id as patient_id,
         u.name as patient_name,
@@ -227,8 +372,8 @@ export class WorkflowRepository {
   }
 
   /** Latest patient summary row, newest first */
-  async getLatestSummary(patientId: string): Promise<any | null> {
-    const rows = await query(
+  async getLatestSummary(patientId: string): Promise<Record<string, unknown> | null> {
+    const rows = await query<Record<string, unknown>>(
       `SELECT *
        FROM patient_summaries
        WHERE patient_id = $1
@@ -240,8 +385,8 @@ export class WorkflowRepository {
   }
 
   /** Summary rows for a patient including session start time */
-  async getSummariesByPatient(patientId: string): Promise<any[]> {
-    return query(
+  async getSummariesByPatient(patientId: string): Promise<PatientSummaryRow[]> {
+    return query<PatientSummaryRow>(
       `SELECT
         ps.id,
         ps.session_id,
@@ -273,8 +418,8 @@ export class WorkflowRepository {
   }
 
   /** Approved clinical reasoning for a session (doctor-facing) */
-  async getApprovedReasoning(sessionId: string): Promise<any | null> {
-    const rows = await query(
+  async getApprovedReasoning(sessionId: string): Promise<ApprovedReasoningRow | null> {
+    const rows = await query<ApprovedReasoningRow>(
       `SELECT
         cr.id,
         cr.session_id,
@@ -295,8 +440,10 @@ export class WorkflowRepository {
   }
 
   /** Approved reasoning without the patient join (patientChat view) */
-  async getApprovedReasoningPlain(sessionId: string): Promise<any | null> {
-    const rows = await query(
+  async getApprovedReasoningPlain(
+    sessionId: string
+  ): Promise<ApprovedReasoningPlainRow | null> {
+    const rows = await query<ApprovedReasoningPlainRow>(
       `SELECT
         id,
         session_id,
@@ -315,8 +462,8 @@ export class WorkflowRepository {
   }
 
   /** Considerations for one encounter, ordered by likelihood */
-  async getConsiderationsForEncounter(sessionId: string): Promise<any[]> {
-    return query(
+  async getConsiderationsForEncounter(sessionId: string): Promise<ConsiderationRow[]> {
+    return query<ConsiderationRow>(
       `SELECT
         diagnosis_name AS condition_name,
         likelihood,
@@ -338,8 +485,8 @@ export class WorkflowRepository {
   }
 
   /** Active critical alerts with patient info, severity-ordered */
-  async getActiveAlerts(): Promise<any[]> {
-    return query(
+  async getActiveAlerts(): Promise<Record<string, unknown>[]> {
+    return query<Record<string, unknown>>(
       `SELECT
         ca.*,
         u.name as patient_name,
@@ -358,8 +505,13 @@ export class WorkflowRepository {
     );
   }
 
-  async findUserBasic(userId: string): Promise<any | null> {
-    const rows = await query('SELECT id, name, email FROM users WHERE id = $1', [userId]);
+  async findUserBasic(
+    userId: string
+  ): Promise<{ id: string; name: string; email: string } | null> {
+    const rows = await query<{ id: string; name: string; email: string }>(
+      'SELECT id, name, email FROM users WHERE id = $1',
+      [userId]
+    );
     return rows[0] ?? null;
   }
 
@@ -387,7 +539,7 @@ export class WorkflowRepository {
     };
 
     const [consent, withdrawals, grievanceRows, darRows] = await Promise.all([
-      query<any>(
+      query<ConsentCountsRow>(
         `SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE status = 'active')::int AS active,
@@ -395,14 +547,14 @@ export class WorkflowRepository {
           COUNT(*) FILTER (WHERE status = 'expired')::int AS expired
         FROM consent_records WHERE 1=1${range('granted_at')}`
       ),
-      query<any>(
+      query<WithdrawalCountsRow>(
         `SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE status = 'processed')::int AS processed,
           COUNT(*) FILTER (WHERE status = 'pending')::int AS pending
         FROM consent_withdrawal_requests WHERE 1=1${range('requested_at')}`
       ),
-      query<any>(
+      query<GrievanceCountsRow>(
         `SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
@@ -411,7 +563,7 @@ export class WorkflowRepository {
           COUNT(*) FILTER (WHERE status = 'escalated')::int AS escalated
         FROM grievances WHERE 1=1${range('submitted_at')}`
       ),
-      query<any>(
+      query<DataAccessCountsRow>(
         `SELECT
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,

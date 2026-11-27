@@ -29,14 +29,14 @@ router.get('/encounters', authenticate({}), async (req: Request, res: Response) 
 
     // For each encounter, get clinical considerations
     const encountersWithConsiderations = await Promise.all(
-      completedEncounters.map(async (encounter: any) => {
+      completedEncounters.map(async (encounter) => {
         const considerations = await workflowRepository.getConsiderationsForEncounter(
           encounter.session_id
         );
 
         return {
           ...encounter,
-          considerations: considerations.map((c: any) => ({
+          considerations: considerations.map((c) => ({
             conditionName: c.condition_name,
             likelihood: c.likelihood,
             urgency: c.urgency,
@@ -49,7 +49,7 @@ router.get('/encounters', authenticate({}), async (req: Request, res: Response) 
     );
 
     // Transform to camelCase and structure the data
-    const encounters = encountersWithConsiderations.map((raw: any) => ({
+    const encounters = encountersWithConsiderations.map((raw) => ({
       sessionId: raw.session_id,
       status: raw.status,
       startedAt: raw.started_at,

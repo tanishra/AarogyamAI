@@ -50,7 +50,7 @@ export class CacheService {
     }
   }
 
-  async set(key: string, value: any, ttlSeconds?: number): Promise<boolean> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<boolean> {
     if (!this.client || !this.isConnected) return false;
     
     try {

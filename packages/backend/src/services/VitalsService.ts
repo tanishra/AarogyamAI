@@ -36,6 +36,27 @@ export interface ValidationWarning {
   severity: 'warning' | 'critical';
 }
 
+/** A persisted vital_signs row mapped to camelCase */
+export interface VitalSignsRecord {
+  id: string;
+  patientId?: string;
+  encounterId: string;
+  systolicBp: number | null;
+  diastolicBp: number | null;
+  heartRate: number | null;
+  respiratoryRate: number | null;
+  temperature: number | null;
+  temperatureUnit: 'F' | 'C';
+  oxygenSaturation: number | null;
+  height: number | null;
+  heightUnit: 'cm' | 'in';
+  weight: number | null;
+  weightUnit: 'kg' | 'lb';
+  bmi: number | null;
+  recordedAt: Date;
+  recordedBy?: string;
+}
+
 export class VitalsService {
   private pool: Pool;
 
@@ -252,7 +273,7 @@ export class VitalsService {
    * Get previous vitals for comparison display
    * Requirement: 28.6
    */
-  async getPreviousVitals(patientId: string, limit: number = 5): Promise<any[]> {
+  async getPreviousVitals(patientId: string, limit: number = 5): Promise<VitalSignsRecord[]> {
     const result = await this.pool.query(
       `SELECT id, encounter_id, systolic_bp, diastolic_bp, heart_rate,
               respiratory_rate, temperature, temperature_unit, oxygen_saturation,
@@ -286,7 +307,7 @@ export class VitalsService {
   /**
    * Get latest vitals for an encounter
    */
-  async getLatestVitals(encounterId: string): Promise<any | null> {
+  async getLatestVitals(encounterId: string): Promise<VitalSignsRecord | null> {
     const result = await this.pool.query(
       `SELECT id, patient_id, encounter_id, systolic_bp, diastolic_bp, heart_rate,
               respiratory_rate, temperature, temperature_unit, oxygen_saturation,

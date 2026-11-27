@@ -23,7 +23,7 @@ describe('Authentication and Authorization Middleware', () => {
     };
     
     mockResponse = {
-      status: statusMock as any,
+      status: statusMock as unknown as Response['status'],
       json: jsonMock,
     };
     

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 import request from 'supertest';
-import express, { Express } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import auditRoutes from './audit';
 
 // Mock the repositories and middleware
@@ -33,25 +34,27 @@ vi.mock('../services/AnomalyDetectionService', () => ({
 }));
 
 vi.mock('../auth/authMiddleware', () => ({
-  authenticate: () => (req: any, _res: any, next: any) => {
+  authenticate: () => (req: Request, _res: Response, next: NextFunction) => {
     req.user = {
       userId: 'test-admin-id',
       email: 'admin@test.com',
       role: 'Administrator',
+      type: 'access',
+      jti: 'test-jti',
     };
     next();
   },
 }));
 
 vi.mock('../auth/authorizationMiddleware', () => ({
-  requireAdminOrDPO: () => (_req: any, _res: any, next: any) => next(),
+  requireAdminOrDPO: () => (_req: Request, _res: Response, next: NextFunction) => next(),
 }));
 
 describe('Audit Routes', () => {
   let app: Express;
-  let mockSearch: any;
-  let mockCreate: any;
-  let mockGetAccessPatterns: any;
+  let mockSearch: Mock;
+  let mockCreate: Mock;
+  let mockGetAccessPatterns: Mock;
 
   beforeEach(async () => {
     // Get the mocked functions

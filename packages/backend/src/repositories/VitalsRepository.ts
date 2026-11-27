@@ -5,6 +5,25 @@ export interface Vitals {
   patientId: string;
   sessionId?: string;
   recordedBy: string;
+  bloodPressureSystolic?: number | null;
+  bloodPressureDiastolic?: number | null;
+  heartRate?: number | null;
+  temperatureFahrenheit?: number | null;
+  oxygenSaturation?: number | null;
+  respiratoryRate?: number | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  bmi?: number | null;
+  notes?: string;
+  flaggedAbnormal: boolean;
+  recordedAt: Date;
+}
+
+/** Vitals fields accepted by create() */
+export interface VitalsInput {
+  patientId: string;
+  sessionId?: string;
+  recordedBy: string;
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   heartRate?: number;
@@ -13,30 +32,34 @@ export interface Vitals {
   respiratoryRate?: number;
   weightKg?: number;
   heightCm?: number;
-  bmi?: number;
   notes?: string;
-  flaggedAbnormal: boolean;
-  recordedAt: Date;
+}
+
+/** Raw vital_signs table row */
+interface VitalsRow {
+  id: string;
+  patient_id: string;
+  encounter_id: string;
+  recorded_by: string;
+  systolic_bp: number | null;
+  diastolic_bp: number | null;
+  heart_rate: number | null;
+  temperature: number | null;
+  oxygen_saturation: number | null;
+  respiratory_rate: number | null;
+  weight: number | null;
+  height: number | null;
+  bmi: number | null;
+  notes: string | null;
+  flagged_abnormal: boolean | null;
+  recorded_at: Date;
 }
 
 export class VitalsRepository {
   /**
    * Add vitals for patient
    */
-  async create(vitals: {
-    patientId: string;
-    sessionId?: string;
-    recordedBy: string;
-    bloodPressureSystolic?: number;
-    bloodPressureDiastolic?: number;
-    heartRate?: number;
-    temperatureFahrenheit?: number;
-    oxygenSaturation?: number;
-    respiratoryRate?: number;
-    weightKg?: number;
-    heightCm?: number;
-    notes?: string;
-  }): Promise<Vitals> {
+  async create(vitals: VitalsInput): Promise<Vitals> {
     // Calculate BMI if height and weight provided
     let bmi: number | undefined;
     if (vitals.weightKg && vitals.heightCm) {
@@ -47,7 +70,7 @@ export class VitalsRepository {
     // Flag abnormal vitals
     const flaggedAbnormal = this.checkAbnormalVitals(vitals);
 
-    const result = await query<any>(
+    const result = await query<VitalsRow>(
       `INSERT INTO vital_signs (
         patient_id, encounter_id, recorded_by,
         systolic_bp, diastolic_bp,
@@ -77,7 +100,7 @@ export class VitalsRepository {
     return this.mapRow(result[0]);
   }
 
-  private mapRow(row: any): Vitals {
+  private mapRow(row: VitalsRow): Vitals {
     return {
       id: row.id,
       patientId: row.patient_id,
@@ -102,7 +125,7 @@ export class VitalsRepository {
    * Get vitals by session
    */
   async getBySession(sessionId: string): Promise<Vitals | null> {
-    const result = await query<any>(
+    const result = await query<VitalsRow>(
       `SELECT * FROM vital_signs
        WHERE encounter_id = $1
        ORDER BY recorded_at DESC
@@ -118,7 +141,7 @@ export class VitalsRepository {
    * Get patient's vitals history
    */
   async getByPatient(patientId: string, limit: number = 10): Promise<Vitals[]> {
-    const result = await query<any>(
+    const result = await query<VitalsRow>(
       `SELECT * FROM vital_signs
        WHERE patient_id = $1
        ORDER BY recorded_at DESC
@@ -132,7 +155,7 @@ export class VitalsRepository {
   /**
    * Check if vitals are abnormal
    */
-  private checkAbnormalVitals(vitals: any): boolean {
+  private checkAbnormalVitals(vitals: VitalsInput): boolean {
     // Systolic BP: normal 90-120
     if (vitals.bloodPressureSystolic && 
         (vitals.bloodPressureSystolic < 90 || vitals.bloodPressureSystolic > 140)) {
