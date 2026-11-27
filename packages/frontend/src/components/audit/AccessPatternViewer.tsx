@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AuditLogAPI } from '@/lib/api/services/auditLog';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { TooltipValueType } from 'recharts';
@@ -28,6 +29,7 @@ interface AccessPatternsResponse {
 }
 
 export default function AccessPatternViewer() {
+  const { t } = useI18n();
   const [patientId, setPatientId] = useState('');
   const [searchPatientId, setSearchPatientId] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -58,26 +60,26 @@ export default function AccessPatternViewer() {
       {/* Search Form */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Patient Data Access Patterns
+          {t('audit.patternsTitle')}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="md:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Patient ID *
+              {t('audit.patientIdLabel')}
             </label>
             <input
               type="text"
               value={patientId}
               onChange={(e) => setPatientId(e.target.value)}
-              placeholder="Enter patient ID"
+              placeholder={t('audit.enterPatientId')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
+              {t('admin.startDate')}
             </label>
             <input
               type="date"
@@ -89,7 +91,7 @@ export default function AccessPatternViewer() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Date
+              {t('admin.endDate')}
             </label>
             <input
               type="date"
@@ -105,7 +107,7 @@ export default function AccessPatternViewer() {
           disabled={!patientId}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Search Access Patterns
+          {t('audit.searchPatterns')}
         </button>
       </div>
 
@@ -121,9 +123,9 @@ export default function AccessPatternViewer() {
           ) : error ? (
             <div className="bg-white rounded-lg shadow p-6">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="text-red-800 font-semibold">Error Loading Access Patterns</h3>
+                <h3 className="text-red-800 font-semibold">{t('audit.patternsLoadError')}</h3>
                 <p className="text-red-600 mt-2">
-                  {error instanceof Error ? error.message : 'Failed to load access patterns'}
+                  {error instanceof Error ? error.message : t('audit.patternsLoadFailed')}
                 </p>
               </div>
             </div>
@@ -133,7 +135,7 @@ export default function AccessPatternViewer() {
               {timeline.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                    Access Timeline
+                    {t('audit.timelineTitle')}
                   </h4>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={timeline}>
@@ -146,7 +148,7 @@ export default function AccessPatternViewer() {
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip
                         labelFormatter={(value) => new Date(String(value)).toLocaleString()}
-                        formatter={(value: TooltipValueType | undefined) => [value, 'Accesses']}
+                        formatter={(value: TooltipValueType | undefined) => [value, t('audit.accesses')]}
                       />
                       <Legend />
                       <Line
@@ -154,7 +156,7 @@ export default function AccessPatternViewer() {
                         dataKey="count"
                         stroke="#3b82f6"
                         strokeWidth={2}
-                        name="Access Count"
+                        name={t('audit.accessCount')}
                         dot={{ fill: '#3b82f6' }}
                       />
                     </LineChart>
@@ -166,10 +168,10 @@ export default function AccessPatternViewer() {
               <div className="bg-white rounded-lg shadow">
                 <div className="p-6 border-b border-gray-200">
                   <h4 className="text-lg font-semibold text-gray-900">
-                    Users Who Accessed This Patient
+                    {t('audit.usersWhoAccessed')}
                   </h4>
                   <p className="text-sm text-gray-600 mt-1">
-                    {patterns.length} user{patterns.length !== 1 ? 's' : ''} found
+                    {t('audit.usersFound', { count: patterns.length, plural: patterns.length !== 1 ? 's' : '' })}
                   </p>
                 </div>
 
@@ -178,19 +180,19 @@ export default function AccessPatternViewer() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          User
+                          {t('admin.user')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Access Count
+                          {t('audit.accessCount')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Last Access
+                          {t('audit.lastAccess')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Purpose
+                          {t('audit.purpose')}
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                          {t('common.status')}
                         </th>
                       </tr>
                     </thead>
@@ -198,7 +200,7 @@ export default function AccessPatternViewer() {
                       {patterns.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                            No access patterns found for this patient
+                            {t('audit.noPatterns')}
                           </td>
                         </tr>
                       ) : (
@@ -230,11 +232,11 @@ export default function AccessPatternViewer() {
                                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                   </svg>
-                                  Anomaly
+                                  {t('audit.anomaly')}
                                 </span>
                               ) : (
                                 <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                  Normal
+                                  {t('history.normal')}
                                 </span>
                               )}
                             </td>

@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ConsentAPI } from '@/lib/api/services/consent';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 import type { ConsentRecord } from '@/lib/api/types';
 
 export default function ConsentRecordList() {
+  const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -60,9 +62,9 @@ export default function ConsentRecordList() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error Loading Consent Records</h3>
+          <h3 className="text-red-800 font-semibold">{t('consent.loadError')}</h3>
           <p className="text-red-600 mt-2">
-            {error instanceof Error ? error.message : 'Failed to load consent records'}
+            {error instanceof Error ? error.message : t('consent.loadFailed')}
           </p>
         </div>
       </div>
@@ -73,19 +75,19 @@ export default function ConsentRecordList() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Search Consent Records</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('consent.searchRecords')}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search Patient
+              {t('consent.searchPatient')}
             </label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Name or ID"
+              placeholder={t('consent.searchPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -93,35 +95,35 @@ export default function ConsentRecordList() {
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
+              {t('common.status')}
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="withdrawn">Withdrawn</option>
-              <option value="expired">Expired</option>
+              <option value="all">{t('common.allStatuses')}</option>
+              <option value="active">{t('common.active')}</option>
+              <option value="withdrawn">{t('consent.withdrawn')}</option>
+              <option value="expired">{t('consent.expired')}</option>
             </select>
           </div>
 
           {/* Type Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Consent Type
+              {t('admin.consentType')}
             </label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Types</option>
-              <option value="treatment">Treatment</option>
-              <option value="research">Research</option>
-              <option value="data_sharing">Data Sharing</option>
-              <option value="marketing">Marketing</option>
+              <option value="all">{t('common.allTypes')}</option>
+              <option value="treatment">{t('consent.typeTreatment')}</option>
+              <option value="research">{t('consent.typeResearch')}</option>
+              <option value="data_sharing">{t('consent.typeDataSharing')}</option>
+              <option value="marketing">{t('consent.typeMarketing')}</option>
             </select>
           </div>
         </div>
@@ -130,9 +132,9 @@ export default function ConsentRecordList() {
       {/* Records Table */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Consent Records</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('admin.consentRecords')}</h3>
           <p className="text-sm text-gray-600 mt-1">
-            {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
+            {t('consent.recordsFound', { count: filteredRecords.length, plural: filteredRecords.length !== 1 ? 's' : '' })}
           </p>
         </div>
 
@@ -141,22 +143,22 @@ export default function ConsentRecordList() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  {t('queue.patient')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Consent Type
+                  {t('admin.consentType')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Granted Date
+                  {t('consent.grantedDate')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Expiration
+                  {t('consent.expiration')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -164,7 +166,7 @@ export default function ConsentRecordList() {
               {filteredRecords.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No consent records found
+                    {t('consent.noRecords')}
                   </td>
                 </tr>
               ) : (
@@ -186,7 +188,7 @@ export default function ConsentRecordList() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {record.expiresAt
                           ? new Date(record.expiresAt).toLocaleDateString()
-                          : 'No expiration'}
+                          : t('consent.noExpiration')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -204,7 +206,7 @@ export default function ConsentRecordList() {
                           }
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          {expandedRow === record.id ? 'Hide Details' : 'View Details'}
+                          {expandedRow === record.id ? t('common.hideDetails') : t('admin.viewDetails')}
                         </button>
                       </td>
                     </tr>
@@ -217,7 +219,7 @@ export default function ConsentRecordList() {
                             {/* Data Categories */}
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                Data Categories
+                                {t('admin.dataCategories')}
                               </h4>
                               <div className="flex flex-wrap gap-2">
                                 {record.scope.dataCategories.map((category, idx) => (
@@ -234,7 +236,7 @@ export default function ConsentRecordList() {
                             {/* Processing Purposes */}
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                Processing Purposes
+                                {t('consent.processingPurposes')}
                               </h4>
                               <div className="flex flex-wrap gap-2">
                                 {record.scope.processingPurposes.map((purpose, idx) => (
@@ -252,7 +254,7 @@ export default function ConsentRecordList() {
                             {record.withdrawnAt && (
                               <div className="bg-red-50 border border-red-200 rounded p-3">
                                 <p className="text-sm text-red-800">
-                                  <span className="font-semibold">Withdrawn on:</span>{' '}
+                                  <span className="font-semibold">{t('consent.withdrawnOn')}</span>{' '}
                                   {new Date(record.withdrawnAt).toLocaleString()}
                                 </p>
                               </div>

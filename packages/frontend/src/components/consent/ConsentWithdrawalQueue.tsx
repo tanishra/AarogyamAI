@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConsentAPI } from '@/lib/api/services/consent';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function ConsentWithdrawalQueue() {
+  const { t } = useI18n();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -47,9 +49,9 @@ export default function ConsentWithdrawalQueue() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error Loading Withdrawal Requests</h3>
+          <h3 className="text-red-800 font-semibold">{t('consent.withdrawLoadError')}</h3>
           <p className="text-red-600 mt-2">
-            {error instanceof Error ? error.message : 'Failed to load withdrawal requests'}
+            {error instanceof Error ? error.message : t('consent.withdrawLoadFailed')}
           </p>
         </div>
       </div>
@@ -62,9 +64,9 @@ export default function ConsentWithdrawalQueue() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900">Consent Withdrawal Queue</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{t('consent.withdrawQueue')}</h3>
         <p className="text-sm text-gray-600 mt-1">
-          {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+          {t(pendingRequests.length === 1 ? 'admin.pendingOne' : 'admin.pendingMany', { count: pendingRequests.length })}
         </p>
       </div>
 
@@ -72,7 +74,7 @@ export default function ConsentWithdrawalQueue() {
       {processWithdrawal.isSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 font-medium">
-            ✓ Withdrawal request processed successfully
+            {t('consent.withdrawSuccess')}
           </p>
         </div>
       )}
@@ -84,19 +86,19 @@ export default function ConsentWithdrawalQueue() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  {t('queue.patient')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Consent ID
+                  {t('consent.consentId')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Request Date
+                  {t('consent.requestDate')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -104,7 +106,7 @@ export default function ConsentWithdrawalQueue() {
               {pendingRequests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    No pending withdrawal requests
+                    {t('consent.noWithdrawals')}
                   </td>
                 </tr>
               ) : (
@@ -135,14 +137,14 @@ export default function ConsentWithdrawalQueue() {
                             disabled={processingId === request.id}
                             className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
                           >
-                            {processingId === request.id ? 'Processing...' : 'Confirm'}
+                            {processingId === request.id ? t('common.processing') : t('common.confirm')}
                           </button>
                           <button
                             onClick={() => setShowConfirm(null)}
                             disabled={processingId === request.id}
                             className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       ) : (
@@ -150,7 +152,7 @@ export default function ConsentWithdrawalQueue() {
                           onClick={() => setShowConfirm(request.id)}
                           className="text-red-600 hover:text-red-800 font-medium"
                         >
-                          Process Withdrawal
+                          {t('consent.processWithdrawal')}
                         </button>
                       )}
                     </td>
@@ -165,7 +167,7 @@ export default function ConsentWithdrawalQueue() {
       {/* Processed Requests */}
       {requests.filter((r) => r.status === 'processed').length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4">Recently Processed</h4>
+          <h4 className="text-md font-semibold text-gray-900 mb-4">{t('consent.recentlyProcessed')}</h4>
           <div className="space-y-2">
             {requests
               .filter((r) => r.status === 'processed')
@@ -180,11 +182,11 @@ export default function ConsentWithdrawalQueue() {
                       {request.patientName}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Processed {new Date(request.processedAt!).toLocaleString()}
+                      {t('consent.processedAt', { date: new Date(request.processedAt!).toLocaleString() })}
                     </p>
                   </div>
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                    Processed
+                    {t('consent.processed')}
                   </span>
                 </div>
               ))}

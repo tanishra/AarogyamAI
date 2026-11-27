@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AuditLogAPI } from '@/lib/api/services/auditLog';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { showToast } from '@/lib/notifications/toast';
 
@@ -14,6 +15,7 @@ interface VerificationResult {
 }
 
 export default function LogVerification() {
+  const { t } = useI18n();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -30,14 +32,14 @@ export default function LogVerification() {
       };
       setResult(mapped);
       if (data.verified) {
-        showToast('Log integrity verified successfully', 'success');
+        showToast(t('audit.verifyToastOk'), 'success');
       } else {
-        showToast(`Warning: ${data.tamperedEntries.length} tampered entries detected`, 'error');
+        showToast(t('audit.tamperedToast', { count: data.tamperedEntries.length }), 'error');
       }
     },
     onError: (error) => {
       showToast(
-        error instanceof Error ? error.message : 'Failed to verify log integrity',
+        error instanceof Error ? error.message : t('audit.verifyToastFailed'),
         'error'
       );
     },
@@ -52,18 +54,17 @@ export default function LogVerification() {
       {/* Verification Form */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Verify Log Integrity
+          {t('audit.verifyTitle')}
         </h3>
 
         <p className="text-sm text-gray-600 mb-6">
-          Verify the cryptographic integrity of audit log entries to detect any tampering or
-          unauthorized modifications. This process computes and compares hash values for each entry.
+          {t('audit.verifyDesc')}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date (Optional)
+              {t('audit.startDateOptional')}
             </label>
             <input
               type="date"
@@ -75,7 +76,7 @@ export default function LogVerification() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Date (Optional)
+              {t('audit.endDateOptional')}
             </label>
             <input
               type="date"
@@ -92,12 +93,12 @@ export default function LogVerification() {
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             <div className="text-sm text-blue-800">
-              <p className="font-medium">Verification Process:</p>
+              <p className="font-medium">{t('audit.processTitle')}</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>Computes SHA-256 hash for each log entry</li>
-                <li>Compares computed hash with stored hash</li>
-                <li>Verifies hash chain integrity</li>
-                <li>Identifies any tampered entries</li>
+                <li>{t('audit.processHash')}</li>
+                <li>{t('audit.processCompare')}</li>
+                <li>{t('audit.processChain')}</li>
+                <li>{t('audit.processIdentify')}</li>
               </ul>
             </div>
           </div>
@@ -111,14 +112,14 @@ export default function LogVerification() {
           {verifyMutation.isPending ? (
             <>
               <LoadingSpinner size="small" />
-              Verifying...
+              {t('admin.verifying')}
             </>
           ) : (
             <>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              Verify Integrity
+              {t('admin.verifyIntegrity')}
             </>
           )}
         </button>
@@ -128,7 +129,7 @@ export default function LogVerification() {
       {result && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Verification Results
+            {t('audit.resultsTitle')}
           </h3>
 
           {/* Status Banner */}
@@ -147,10 +148,10 @@ export default function LogVerification() {
                   </svg>
                   <div>
                     <h4 className="text-green-800 font-semibold text-lg">
-                      Integrity Verified
+                      {t('audit.integrityVerified')}
                     </h4>
                     <p className="text-green-600 text-sm mt-1">
-                      All audit log entries passed integrity verification. No tampering detected.
+                      {t('audit.verifiedDesc')}
                     </p>
                   </div>
                 </>
@@ -161,10 +162,13 @@ export default function LogVerification() {
                   </svg>
                   <div>
                     <h4 className="text-red-800 font-semibold text-lg">
-                      Tampering Detected
+                      {t('audit.tamperingDetected')}
                     </h4>
                     <p className="text-red-600 text-sm mt-1">
-                      {result.tamperedEntries.length} audit log entr{result.tamperedEntries.length > 1 ? 'ies' : 'y'} failed integrity verification.
+                      {t('audit.tamperedFailed', {
+                        count: result.tamperedEntries.length,
+                        plural: result.tamperedEntries.length > 1 ? 'ies' : 'y',
+                      })}
                     </p>
                   </div>
                 </>
@@ -175,19 +179,19 @@ export default function LogVerification() {
           {/* Statistics */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600">Total Entries</div>
+              <div className="text-sm text-gray-600">{t('audit.statTotal')}</div>
               <div className="text-2xl font-bold text-gray-900 mt-1">
                 {result.entriesVerified.toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600">Verified</div>
+              <div className="text-sm text-gray-600">{t('audit.statVerified')}</div>
               <div className="text-2xl font-bold text-green-600 mt-1">
                 {(result.entriesVerified - result.tamperedEntries.length).toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600">Tampered</div>
+              <div className="text-sm text-gray-600">{t('audit.statTampered')}</div>
               <div className="text-2xl font-bold text-red-600 mt-1">
                 {result.tamperedEntries.length}
               </div>
@@ -196,16 +200,16 @@ export default function LogVerification() {
 
           {/* Verification Metadata */}
           <div className="text-sm text-gray-600 mb-6">
-            <div>Verification completed: {new Date(result.verifiedAt).toLocaleString()}</div>
-            {startDate && <div>Start date: {new Date(startDate).toLocaleDateString()}</div>}
-            {endDate && <div>End date: {new Date(endDate).toLocaleDateString()}</div>}
+            <div>{t('audit.completedAt', { date: new Date(result.verifiedAt).toLocaleString() })}</div>
+            {startDate && <div>{t('audit.startDateLabel', { date: new Date(startDate).toLocaleDateString() })}</div>}
+            {endDate && <div>{t('audit.endDateLabel', { date: new Date(endDate).toLocaleDateString() })}</div>}
           </div>
 
           {/* Tampered Entries List */}
           {result.tamperedEntries.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                Tampered Entry IDs
+                {t('audit.tamperedIds')}
               </h4>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="space-y-2">
@@ -220,7 +224,7 @@ export default function LogVerification() {
                 </div>
               </div>
               <p className="text-sm text-red-600 mt-3">
-                ⚠️ These entries should be investigated immediately. Contact your security team.
+                {t('audit.tamperedWarn')}
               </p>
             </div>
           )}

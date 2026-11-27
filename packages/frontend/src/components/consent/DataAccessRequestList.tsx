@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConsentAPI } from '@/lib/api/services/consent';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import type { DataAccessRequest } from '@/lib/api/types';
 
 export default function DataAccessRequestList() {
+  const { t } = useI18n();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [fulfillingId, setFulfillingId] = useState<string | null>(null);
   const [responseUrl, setResponseUrl] = useState('');
@@ -35,7 +37,7 @@ export default function DataAccessRequestList() {
 
   const handleFulfill = (id: string) => {
     if (!responseUrl.trim()) {
-      alert('Please enter a response document URL');
+      alert(t('consent.enterResponseUrl'));
       return;
     }
     fulfillRequest.mutate({ id, url: responseUrl });
@@ -44,11 +46,11 @@ export default function DataAccessRequestList() {
   const getRequestTypeLabel = (type: string) => {
     switch (type) {
       case 'data_copy':
-        return 'Data Copy';
+        return t('consent.typeDataCopy');
       case 'data_correction':
-        return 'Data Correction';
+        return t('consent.typeDataCorrection');
       case 'data_deletion':
-        return 'Data Deletion';
+        return t('consent.typeDataDeletion');
       default:
         return type;
     }
@@ -87,9 +89,9 @@ export default function DataAccessRequestList() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error Loading Data Access Requests</h3>
+          <h3 className="text-red-800 font-semibold">{t('consent.accessLoadError')}</h3>
           <p className="text-red-600 mt-2">
-            {error instanceof Error ? error.message : 'Failed to load data access requests'}
+            {error instanceof Error ? error.message : t('consent.accessLoadFailed')}
           </p>
         </div>
       </div>
@@ -103,21 +105,21 @@ export default function DataAccessRequestList() {
     <div className="space-y-6">
       {/* Header with Warning */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Access Requests</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('consent.accessRequests')}</h3>
 
         <div className="flex items-center gap-4 mb-4">
-          <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+          <label className="text-sm font-medium text-gray-700">{t('common.filterByStatus')}</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="fulfilled">Fulfilled</option>
+            <option value="all">{t('common.allStatuses')}</option>
+            <option value="pending">{t('admin.statusPending')}</option>
+            <option value="fulfilled">{t('consent.fulfilled')}</option>
           </select>
           <span className="text-sm text-gray-600">
-            {requests.length} request{requests.length !== 1 ? 's' : ''} found
+            {t('consent.requestsFound', { count: requests.length, plural: requests.length !== 1 ? 's' : '' })}
           </span>
         </div>
 
@@ -125,8 +127,7 @@ export default function DataAccessRequestList() {
         {overdueRequests.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800 font-medium">
-              ⚠️ {overdueRequests.length} request{overdueRequests.length !== 1 ? 's' : ''} overdue
-              ({">"} 72 hours)
+              {t('consent.overdueWarn', { count: overdueRequests.length, plural: overdueRequests.length !== 1 ? 's' : '' })}
             </p>
           </div>
         )}
@@ -136,7 +137,7 @@ export default function DataAccessRequestList() {
       {fulfillRequest.isSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 font-medium">
-            ✓ Data access request fulfilled successfully
+            {t('consent.fulfillSuccess')}
           </p>
         </div>
       )}
@@ -148,22 +149,22 @@ export default function DataAccessRequestList() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  {t('queue.patient')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Request Type
+                  {t('consent.requestType')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Scope
+                  {t('consent.scope')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submission Date
+                  {t('common.submissionDate')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -171,7 +172,7 @@ export default function DataAccessRequestList() {
               {requests.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No data access requests found
+                    {t('consent.noAccessRequests')}
                   </td>
                 </tr>
               ) : (
@@ -200,7 +201,7 @@ export default function DataAccessRequestList() {
                           {new Date(request.submittedAt).toLocaleDateString()}
                         </div>
                         {overdue && (
-                          <div className="text-xs text-red-600 font-medium">Overdue!</div>
+                          <div className="text-xs text-red-600 font-medium">{t('consent.overdue')}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -229,7 +230,7 @@ export default function DataAccessRequestList() {
                                   disabled={fulfillRequest.isPending}
                                   className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs"
                                 >
-                                  {fulfillRequest.isPending ? 'Saving...' : 'Submit'}
+                                  {fulfillRequest.isPending ? t('common.saving') : t('common.submit')}
                                 </button>
                                 <button
                                   onClick={() => {
@@ -239,7 +240,7 @@ export default function DataAccessRequestList() {
                                   disabled={fulfillRequest.isPending}
                                   className="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50 text-xs"
                                 >
-                                  Cancel
+                                  {t('common.cancel')}
                                 </button>
                               </div>
                             </div>
@@ -248,12 +249,12 @@ export default function DataAccessRequestList() {
                               onClick={() => setFulfillingId(request.id)}
                               className="text-green-600 hover:text-green-800 font-medium"
                             >
-                              Fulfill Request
+                              {t('consent.fulfillRequest')}
                             </button>
                           )
                         ) : (
                           <div className="text-sm text-gray-500">
-                            <div>Fulfilled {new Date(request.fulfilledAt!).toLocaleDateString()}</div>
+                            <div>{t('consent.fulfilledAt', { date: new Date(request.fulfilledAt!).toLocaleDateString() })}</div>
                             {request.responseDocumentUrl && (
                               <a
                                 href={request.responseDocumentUrl}
@@ -261,7 +262,7 @@ export default function DataAccessRequestList() {
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:text-blue-800 text-xs"
                               >
-                                View Document
+                                {t('consent.viewDocument')}
                               </a>
                             )}
                           </div>

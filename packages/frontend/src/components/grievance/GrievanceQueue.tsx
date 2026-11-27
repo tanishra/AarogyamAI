@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConsentAPI } from '@/lib/api/services/consent';
+import { useI18n } from '@/lib/i18n';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import type { Grievance } from '@/lib/api/types';
 
 export default function GrievanceQueue() {
+  const { t } = useI18n();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,9 +76,9 @@ export default function GrievanceQueue() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-red-800 font-semibold">Error Loading Grievances</h3>
+          <h3 className="text-red-800 font-semibold">{t('grievance.loadError')}</h3>
           <p className="text-red-600 mt-2">
-            {error instanceof Error ? error.message : 'Failed to load grievances'}
+            {error instanceof Error ? error.message : t('grievance.loadFailed')}
           </p>
         </div>
       </div>
@@ -87,23 +89,23 @@ export default function GrievanceQueue() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Grievance Management</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('grievance.management')}</h3>
 
         <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+          <label className="text-sm font-medium text-gray-700">{t('common.filterByStatus')}</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="investigating">Investigating</option>
-            <option value="resolved">Resolved</option>
-            <option value="escalated">Escalated</option>
+            <option value="all">{t('common.allStatuses')}</option>
+            <option value="pending">{t('admin.statusPending')}</option>
+            <option value="investigating">{t('admin.statusInvestigating')}</option>
+            <option value="resolved">{t('admin.statusResolved')}</option>
+            <option value="escalated">{t('admin.statusEscalated')}</option>
           </select>
           <span className="text-sm text-gray-600">
-            {grievances.length} grievance{grievances.length !== 1 ? 's' : ''} found
+            {t('grievance.found', { count: grievances.length, plural: grievances.length !== 1 ? 's' : '' })}
           </span>
         </div>
       </div>
@@ -112,7 +114,7 @@ export default function GrievanceQueue() {
       {updateGrievance.isSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-green-800 font-medium">
-            ✓ Grievance updated successfully
+            {t('grievance.updateSuccess')}
           </p>
         </div>
       )}
@@ -124,19 +126,19 @@ export default function GrievanceQueue() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
+                  {t('queue.patient')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submission Date
+                  {t('common.submissionDate')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
+                  {t('common.description')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -144,7 +146,7 @@ export default function GrievanceQueue() {
               {grievances.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    No grievances found
+                    {t('grievance.noFound')}
                   </td>
                 </tr>
               ) : (
@@ -179,7 +181,7 @@ export default function GrievanceQueue() {
                           }
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          {expandedRow === grievance.id ? 'Hide Details' : 'View Details'}
+                          {expandedRow === grievance.id ? t('common.hideDetails') : t('admin.viewDetails')}
                         </button>
                       </td>
                     </tr>
@@ -192,7 +194,7 @@ export default function GrievanceQueue() {
                             {/* Full Description */}
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                Full Description
+                                {t('grievance.fullDescription')}
                               </h4>
                               <p className="text-sm text-gray-900">{grievance.description}</p>
                             </div>
@@ -200,7 +202,7 @@ export default function GrievanceQueue() {
                             {/* Affected Data */}
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                Affected Data
+                                {t('grievance.affectedData')}
                               </h4>
                               <p className="text-sm text-gray-900">{grievance.affectedData}</p>
                             </div>
@@ -209,7 +211,7 @@ export default function GrievanceQueue() {
                             {grievance.resolutionTimeline && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                  Resolution Timeline
+                                  {t('grievance.resolutionTimeline')}
                                 </h4>
                                 <p className="text-sm text-gray-900">
                                   {grievance.resolutionTimeline}
@@ -221,7 +223,7 @@ export default function GrievanceQueue() {
                             {grievance.dpoNotes && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                                  DPO Notes
+                                  {t('admin.dpoNotes')}
                                 </h4>
                                 <p className="text-sm text-gray-900">{grievance.dpoNotes}</p>
                               </div>
@@ -232,7 +234,7 @@ export default function GrievanceQueue() {
                               <div className="border-t pt-4 space-y-4">
                                 <div>
                                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Update Status
+                                    {t('grievance.updateStatus')}
                                   </label>
                                   <select
                                     value={newStatus}
@@ -241,23 +243,23 @@ export default function GrievanceQueue() {
                                     }
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                   >
-                                    <option value="pending">Pending</option>
-                                    <option value="investigating">Investigating</option>
-                                    <option value="resolved">Resolved</option>
-                                    <option value="escalated">Escalated</option>
+                                    <option value="pending">{t('admin.statusPending')}</option>
+                                    <option value="investigating">{t('admin.statusInvestigating')}</option>
+                                    <option value="resolved">{t('admin.statusResolved')}</option>
+                                    <option value="escalated">{t('admin.statusEscalated')}</option>
                                   </select>
                                 </div>
 
                                 <div>
                                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    DPO Notes
+                                    {t('admin.dpoNotes')}
                                   </label>
                                   <textarea
                                     value={dpoNotes}
                                     onChange={(e) => setDpoNotes(e.target.value)}
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Add notes about investigation or resolution..."
+                                    placeholder={t('grievance.notesPlaceholder')}
                                   />
                                 </div>
 
@@ -267,14 +269,14 @@ export default function GrievanceQueue() {
                                     disabled={updateGrievance.isPending}
                                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                                   >
-                                    {updateGrievance.isPending ? 'Saving...' : 'Save Changes'}
+                                    {updateGrievance.isPending ? t('common.saving') : t('profile.saveChanges')}
                                   </button>
                                   <button
                                     onClick={() => setEditingId(null)}
                                     disabled={updateGrievance.isPending}
                                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
                                   >
-                                    Cancel
+                                    {t('common.cancel')}
                                   </button>
                                 </div>
                               </div>
@@ -283,7 +285,7 @@ export default function GrievanceQueue() {
                                 onClick={() => startEditing(grievance)}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                               >
-                                Update Status
+                                {t('grievance.updateStatus')}
                               </button>
                             )}
                           </div>
